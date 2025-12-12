@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="">
+        <file>view/pictures/full_screen.svg</file>
+    </qresource>
+</RCC>
