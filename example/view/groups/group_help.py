@@ -2,7 +2,7 @@
 GroupHelp - Help group with help-related actions
 """
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QAction, QIcon
 
 
@@ -16,14 +16,10 @@ class GroupHelp(QObject):
         self.ribbon_group = ribbon_group
 
         # Create Help Document action
-        self.help_document_act = QAction(QIcon(":/view/pictures/full_screen.svg"), "Help Document", self)
-        self.help_document_act.setToolTip("Help Document")
-        ribbon_group.add_action(self.help_document_act, "icon_text")
+        self.help_document_act = ribbon_group.addAction(QIcon(":/view/pictures/full_screen.svg"), "Help Document", "Open Help Documentation")
 
         # Create Assistant action
-        self.assistant_act = QAction(QIcon(":/view/pictures/full_screen.svg"), "Assistant", self)
-        self.assistant_act.setToolTip("Assistant")
-        ribbon_group.add_action(self.assistant_act, "icon_text")
+        self.assistant_act = ribbon_group.addAction(QIcon(":/view/pictures/full_screen.svg"), "Assistant", "Open Assistant (Ctrl+H)")
 
         # Connect signals and slots
         self.help_document_act.triggered.connect(self.on_help_document_triggered)

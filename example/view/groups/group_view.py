@@ -2,7 +2,7 @@
 GroupView - View group with display-related actions
 """
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QAction, QIcon
 
 
@@ -17,24 +17,16 @@ class GroupView(QObject):
         self.is_fullscreen = False
 
         # Create Full Screen action
-        self.full_screen_act = QAction(QIcon(":/view/pictures/full_screen.svg"), "Full Screen", self)
-        self.full_screen_act.setToolTip("Full Screen")
-        ribbon_group.add_action(self.full_screen_act, "icon_text")
+        self.full_screen_act = ribbon_group.addAction(QIcon(":/view/pictures/full_screen.svg"), "Full Screen", "Full Screen (F11)")
 
         # Create MDI Mode action
-        self.mdi_mode_act = QAction(QIcon(":/view/pictures/full_screen.svg"), "MDI Mode", self)
-        self.mdi_mode_act.setToolTip("MDI Mode")
-        ribbon_group.add_action(self.mdi_mode_act, "text_beside")
+        self.mdi_mode_act = ribbon_group.addAction(QIcon(":/view/pictures/full_screen.svg"), "MDI Mode", "Switch to MDI Mode", Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         # Create Tab Mode action
-        self.tab_mode_act = QAction(QIcon(":/view/pictures/full_screen.svg"), "Tab Mode", self)
-        self.tab_mode_act.setToolTip("Tab Mode")
-        ribbon_group.add_action(self.tab_mode_act, "text_beside")
+        self.tab_mode_act = ribbon_group.addAction(QIcon(":/view/pictures/full_screen.svg"), "Tab Mode", "Switch to Tab Mode", Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         # Create Tile Window action
-        self.tile_window_act = QAction(QIcon(":/view/pictures/full_screen.svg"), "Tile Window", self)
-        self.tile_window_act.setToolTip("Tile Window")
-        ribbon_group.add_action(self.tile_window_act, "text_beside")
+        self.tile_window_act = ribbon_group.addAction(QIcon(":/view/pictures/full_screen.svg"), "Tile Window", "Tile Windows", Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         # Connect signals and slots
         self.full_screen_act.triggered.connect(self.on_full_screen_triggered)

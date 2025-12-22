@@ -2,7 +2,7 @@
 GroupVersion - Version group with version-related actions
 """
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QAction, QIcon
 
 
@@ -16,14 +16,10 @@ class GroupVersion(QObject):
         self.ribbon_group = ribbon_group
 
         # Create Version action
-        self.version_act = QAction(QIcon(":/view/pictures/full_screen.svg"), "Version", self)
-        self.version_act.setToolTip("Version")
-        ribbon_group.add_action(self.version_act, "icon_text")
+        self.version_act = ribbon_group.addAction(QIcon(":/view/pictures/full_screen.svg"), "Version", "Show Application Version")
 
         # Create Check Update action
-        self.check_update_act = QAction(QIcon(":/view/pictures/full_screen.svg"), "Check Update", self)
-        self.check_update_act.setToolTip("Check Update")
-        ribbon_group.add_action(self.check_update_act, "icon_text")
+        self.check_update_act = ribbon_group.addAction(QIcon(":/view/pictures/full_screen.svg"), "Check Update", "Check for software updates")
 
         # Connect signals and slots
         self.version_act.triggered.connect(self.on_version_triggered)

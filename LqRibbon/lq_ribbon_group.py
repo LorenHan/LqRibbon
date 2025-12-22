@@ -41,13 +41,44 @@ class LqRibbonGroup(QGroupBox):
         self.grid_column = 0
         self.grid_row = 0
 
-    def add_action(self, action_or_icon, text_or_style="icon_text", button_style=None):
+    def addAction(self, icon, text, tooltip=None, style=None):
+        """Add an action button to the group (One-liner)
+
+        Args:
+            icon: QIcon or icon path string
+            text: Text for the action
+            tooltip: Tooltip for the action
+            style: Qt.ToolButtonStyle style
+
+        Returns:
+            QAction: The created action
+        """
+        # Handle backward compatibility: if the third argument is a style
+        if isinstance(tooltip, Qt.ToolButtonStyle):
+            style = tooltip
+            tooltip = None
+
+        if style is None:
+            style = Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+
+        if isinstance(icon, str):
+            icon = QIcon(icon)
+
+        action = QAction(icon, text, self)
+        if tooltip:
+            action.setToolTip(tooltip)
+            
+        self.add_action(action, style)
+        return action
+
+    def add_action(self, action_or_icon, text_or_style=Qt.ToolButtonStyle.ToolButtonTextUnderIcon, button_style=None, tooltip=None):
         """Add an action button to the group
 
         Args:
             action_or_icon: QAction object, QIcon, or icon path string
             text_or_style: Text for the button (if icon passed) or button_style (if QAction passed)
-            button_style: Style of button - "icon_text", "text_beside" (only when icon passed)
+            button_style: Style of button - Qt.ToolButtonStyle
+            tooltip: Tooltip for the action (if action created here)
 
         Returns:
             LqRibbonButton: The created button
@@ -62,13 +93,17 @@ class LqRibbonGroup(QGroupBox):
             # Backward-compatible call: add_action(icon, text, button_style)
             icon = action_or_icon
             text = text_or_style
-            if button_style is None:
-                button_style = "icon_text"
 
             if isinstance(icon, str):
                 icon = QIcon(icon)
 
             action = QAction(icon, text, self)
+
+        if tooltip:
+            action.setToolTip(tooltip)
+
+        if button_style is None:
+            button_style = Qt.ToolButtonStyle.ToolButtonTextUnderIcon
 
         action.triggered.connect(lambda: self.on_action_triggered(action.text()))
 
@@ -78,8 +113,8 @@ class LqRibbonGroup(QGroupBox):
         self.actions.append(action)
 
         # Add to layout based on style
-        if button_style == "text_beside":
-            # Add to grid layout for text_beside buttons - vertical arrangement (3 rows per column)
+        if button_style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
+            # Add to grid layout for ToolButtonTextBesideIcon buttons - vertical arrangement (3 rows per column)
             self.grid_layout.addWidget(button, self.grid_row, self.grid_column)
             self.grid_row += 1
 
@@ -92,7 +127,7 @@ class LqRibbonGroup(QGroupBox):
             if self.main_layout.indexOf(self.grid_layout) == -1:
                 self.main_layout.addLayout(self.grid_layout)
         else:
-            # Add directly to main layout for large buttons (icon_text style)
+            # Add directly to main layout for large buttons (ToolButtonTextUnderIcon style)
             self.main_layout.addWidget(button)
 
         return button

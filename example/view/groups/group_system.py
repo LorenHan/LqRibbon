@@ -2,7 +2,7 @@
 GroupSystem - System group with system-related actions
 """
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QAction, QIcon
 
 
@@ -16,9 +16,7 @@ class GroupSystem(QObject):
         self.ribbon_group = ribbon_group
 
         # Create Language action
-        self.language_act = QAction(QIcon(":/view/pictures/full_screen.svg"), "Language", self)
-        self.language_act.setToolTip("Language")
-        ribbon_group.add_action(self.language_act, "icon_text")
+        self.language_act = ribbon_group.addAction(QIcon(":/view/pictures/full_screen.svg"), "Language", "Language Settings")
 
         # Connect signals and slots
         self.language_act.triggered.connect(self.on_language_triggered)

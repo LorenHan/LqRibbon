@@ -10,7 +10,7 @@ from PySide6.QtGui import QAction
 class LqRibbonButton(QToolButton):
     """Ribbon button that can display icon and text in different styles"""
 
-    def __init__(self, action=None, button_style="icon_text", parent=None):
+    def __init__(self, action=None, button_style=Qt.ToolButtonStyle.ToolButtonTextUnderIcon, parent=None):
         super().__init__(parent)
         self.button_style = button_style
         self.init_ui()
@@ -21,27 +21,20 @@ class LqRibbonButton(QToolButton):
     def init_ui(self):
         """Initialize the button UI"""
         # Set button properties based on style
-        if self.button_style == "icon_text":
+        self.setToolButtonStyle(self.button_style)
+
+        if self.button_style == Qt.ToolButtonStyle.ToolButtonTextUnderIcon:
             # Large button with icon on top and text below
-            self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
             self.setProperty("buttonStyle", "0")
             self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
 
-        elif self.button_style == "text_beside":
+        elif self.button_style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
             # Medium button with icon and text side by side
-            self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             self.setProperty("buttonStyle", "1")
             self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
 
-        elif self.button_style == "small":
-            # Small button with icon and text side by side
-            self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-            self.setProperty("buttonStyle", "1")
-            self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-
-        elif self.button_style == "icon_only":
+        elif self.button_style == Qt.ToolButtonStyle.ToolButtonIconOnly:
             # Icon only button
-            self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
             self.setProperty("buttonStyle", "2")
             self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
@@ -55,7 +48,7 @@ class LqRibbonButton(QToolButton):
         """Change the button style
 
         Args:
-            style: New button style
+            style: New button style (Qt.ToolButtonStyle)
         """
         self.button_style = style
         self.init_ui()
@@ -81,12 +74,12 @@ class LqRibbonButton(QToolButton):
 
     def set_large_style(self):
         """Set button to large style with icon on top"""
-        self.set_button_style("icon_text")
+        self.set_button_style(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
     def set_medium_style(self):
         """Set button to medium style with icon beside text"""
-        self.set_button_style("text_beside")
+        self.set_button_style(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
     def set_small_style(self):
         """Set button to small style"""
-        self.set_button_style("small")
+        self.set_button_style(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)

@@ -20,6 +20,8 @@ pip install -r example/requirements.txt
 ## Quick Start
 
 ```python
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from LqRibbon import LqRibbonWindow, LqRibbonBar
 
 class MyWindow(LqRibbonWindow):
@@ -33,9 +35,9 @@ class MyWindow(LqRibbonWindow):
         # Add groups
         group = page.add_group("File")
 
-        # Add actions
-        group.add_action("", "Open", "icon_text")
-        group.add_action("", "Save", "icon_text")
+        # Add actions (One-liner)
+        settings_act = group.addAction(QIcon("settings.svg"), "Settings", Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        settings_act.triggered.connect(self.on_settings)
 ```
 
 ## Example Application
@@ -92,11 +94,10 @@ Individual page/tab in the ribbon containing groups.
 Group container for related actions and controls.
 
 ### LqRibbonButton
-Customizable button with different display styles:
-- `icon_text`: Large button with icon above text
-- `text_beside`: Medium button with icon beside text
-- `small`: Small button
-- `icon_only`: Icon only button
+Customizable button that supports standard `Qt.ToolButtonStyle` enums:
+- `ToolButtonTextUnderIcon`: Large button with icon above text
+- `ToolButtonTextBesideIcon`: Medium button with icon beside text
+- `ToolButtonIconOnly`: Icon only button
 
 ## Usage Example
 
