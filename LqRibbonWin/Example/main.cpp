@@ -32,18 +32,6 @@ int main(int argc, char *argv[])
         QObject::tr("Tab Mode"),
         Qt::ToolButtonTextBesideIcon);
 
-    QObject::connect(fullScreenAction, &QAction::triggered, [&mainWindow]() {
-        mainWindow.setWindowState(mainWindow.windowState() ^ Qt::WindowFullScreen);
-    });
-
-    QObject::connect(mdiAction, &QAction::triggered, [&mainWindow]() {
-        QMessageBox::information(&mainWindow, QObject::tr("LqRibbon"), QObject::tr("Mdi Mode"));
-    });
-
-    QObject::connect(tabAction, &QAction::triggered, [&mainWindow]() {
-        QMessageBox::information(&mainWindow, QObject::tr("LqRibbon"), QObject::tr("Tab Mode"));
-    });
-
     LqRibbon::RibbonPage *driverPage = mainWindow.ribbonBar()->addPage(QObject::tr("Driver"));
     LqRibbon::RibbonGroup *communicationGroup = driverPage->addGroup(QObject::tr("Communication"));
     QAction *settingsAction = communicationGroup->addAction(
@@ -54,6 +42,34 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
         QObject::tr("Connect"),
         Qt::ToolButtonTextUnderIcon);
+
+    QObject::connect(fullScreenAction, &QAction::triggered, [&mainWindow]() {
+        mainWindow.setWindowState(mainWindow.windowState() ^ Qt::WindowFullScreen);
+    });
+
+    QObject::connect(mdiAction, &QAction::triggered, [&mainWindow]() {
+        QMessageBox::information(&mainWindow,
+                                 QObject::tr("LqRibbon"),
+                                 QObject::tr("Mdi Mode"));
+    });
+
+    QObject::connect(tabAction, &QAction::triggered, [&mainWindow]() {
+        QMessageBox::information(&mainWindow,
+                                 QObject::tr("LqRibbon"),
+                                 QObject::tr("Tab Mode"));
+    });
+
+    QObject::connect(settingsAction, &QAction::triggered, [&mainWindow]() {
+        QMessageBox::information(&mainWindow,
+                                 QObject::tr("LqRibbon"),
+                                 QObject::tr("Settings"));
+    });
+
+    QObject::connect(connectAction, &QAction::triggered, [&mainWindow]() {
+        QMessageBox::information(&mainWindow,
+                                 QObject::tr("LqRibbon"),
+                                 QObject::tr("Connect"));
+    });
 
     QLabel *contentLabel = new QLabel(QObject::tr("LqRibbon Qt 5.15.2 C++ example"));
     contentLabel->setAlignment(Qt::AlignCenter);
@@ -71,7 +87,7 @@ int main(int argc, char *argv[])
                      [&mainWindow](const QString &strText) {
                          QMessageBox::information(&mainWindow,
                                                   QObject::tr("Search"),
-                                                  strText);
+                                                  QObject::tr("No command: %1").arg(strText));
                      });
 
     mainWindow.show();

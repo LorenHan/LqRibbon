@@ -98,6 +98,9 @@ public:
     void unregisterSearchAction(QAction *action);
     QList<QAction *> searchActions() const;
     QAction *searchAction(const QString &strText) const;
+    bool triggerSearchAction(const QString &strText);
+    void setSearchActionTriggerEnabled(bool enabled);
+    bool isSearchActionTriggerEnabled() const;
     void setCurrentPageIndex(int index);
     void setFrameThemeEnabled(bool enabled);
     bool isFrameThemeEnabled() const;
@@ -107,6 +110,7 @@ signals:
     void searchTextChanged(const QString &strText);
     void searchAccepted(const QString &strText);
     void searchSuggestionActivated(const QString &strText);
+    void searchActionTriggered(QAction *action);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -137,6 +141,7 @@ private:
     QHash<QString, QPointer<QAction>> m_searchActionIndex;
     QStringListModel *m_searchSuggestionModel;
     QCompleter *m_searchCompleter;
+    bool m_searchActionTriggerEnabled;
     bool m_frameThemeEnabled;
 };
 

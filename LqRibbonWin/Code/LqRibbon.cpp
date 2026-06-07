@@ -232,6 +232,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_searchEdit(new QLineEdit(this))
     , m_searchSuggestionModel(new QStringListModel(this))
     , m_searchCompleter(new QCompleter(m_searchSuggestionModel, this))
+    , m_searchActionTriggerEnabled(true)
     , m_frameThemeEnabled(false)
 {
     setDocumentMode(false);
@@ -255,14 +256,19 @@ RibbonBar::RibbonBar(QWidget *parent)
     connect(m_searchEdit, &QLineEdit::textChanged,
             this, &RibbonBar::searchTextChanged);
     connect(m_searchEdit, &QLineEdit::returnPressed, this, [this]() {
-        emit searchAccepted(m_searchEdit->text());
+        const QString strText = m_searchEdit->text();
+        if (!triggerSearchAction(strText)) {
+            emit searchAccepted(strText);
+        }
     });
     connect(m_searchCompleter,
             QOverload<const QString &>::of(&QCompleter::activated),
             this, [this](const QString &strText) {
                 m_searchEdit->setText(strText);
                 emit searchSuggestionActivated(strText);
-                emit searchAccepted(strText);
+                if (!triggerSearchAction(strText)) {
+                    emit searchAccepted(strText);
+                }
             });
 
     updateStyleSheet();
@@ -404,6 +410,32 @@ QList<QAction *> RibbonBar::searchActions() const
 QAction *RibbonBar::searchAction(const QString &strText) const
 {
     return m_searchActionIndex.value(normalizedSearchText(strText)).data();
+}
+
+bool RibbonBar::triggerSearchAction(const QString &strText)
+{
+    if (!m_searchActionTriggerEnabled) {
+        return false;
+    }
+
+    QAction *action = searchAction(strText);
+    if (!action || !action->isEnabled()) {
+        return false;
+    }
+
+    action->trigger();
+    emit searchActionTriggered(action);
+    return true;
+}
+
+void RibbonBar::setSearchActionTriggerEnabled(bool enabled)
+{
+    m_searchActionTriggerEnabled = enabled;
+}
+
+bool RibbonBar::isSearchActionTriggerEnabled() const
+{
+    return m_searchActionTriggerEnabled;
 }
 
 void RibbonBar::setCurrentPageIndex(int index)
