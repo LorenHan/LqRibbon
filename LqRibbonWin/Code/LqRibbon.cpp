@@ -4,6 +4,14 @@
 #include <QGridLayout>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QTabBar>
+
+#ifdef Q_OS_WIN
+#include <qt_windows.h>
+#ifndef SM_CXPADDEDBORDER
+#define SM_CXPADDEDBORDER 92
+#endif
+#endif
 
 namespace {
 
@@ -762,6 +770,9 @@ RibbonMainWindow::RibbonMainWindow(QWidget *parent)
     , m_rootWidget(new QWidget(this))
     , m_rootLayout(new QVBoxLayout(m_rootWidget))
     , m_ribbonBar(new RibbonBar(m_rootWidget))
+    , m_nativeFrameEnabled(false)
+    , m_nativeCaptionHeight(30)
+    , m_nativeResizeBorderWidth(0)
 {
     m_rootLayout->setContentsMargins(0, 0, 0, 0);
     m_rootLayout->setSpacing(0);
@@ -794,4 +805,183 @@ void RibbonMainWindow::setCentralWidget(QWidget *widget)
     m_rootLayout->addWidget(widget, 1);
 }
 
+void RibbonMainWindow::setNativeFrameEnabled(bool enabled)
+{
+    if (m_nativeFrameEnabled == enabled) {
+        return;
+    }
+
+    const bool wasVisible = isVisible();
+    m_nativeFrameEnabled = enabled;
+
+    Qt::WindowFlags flags = windowFlags();
+    if (enabled) {
+        flags |= Qt::FramelessWindowHint;
+    } else {
+        flags &= ~Qt::FramelessWindowHint;
+    }
+
+    setWindowFlags(flags);
+    setAttribute(Qt::WA_NativeWindow, enabled);
+
+    if (wasVisible) {
+        show();
+    }
+}
+
+bool RibbonMainWindow::isNativeFrameEnabled() const
+{
+    return m_nativeFrameEnabled;
+}
+
+void RibbonMainWindow::setNativeCaptionHeight(int height)
+{
+    m_nativeCaptionHeight = qMax(0, height);
+}
+
+int RibbonMainWindow::nativeCaptionHeight() const
+{
+    return m_nativeCaptionHeight;
+}
+
+void RibbonMainWindow::setNativeResizeBorderWidth(int width)
+{
+    m_nativeResizeBorderWidth = qMax(0, width);
+}
+
+int RibbonMainWindow::nativeResizeBorderWidth() const
+{
+    return m_nativeResizeBorderWidth;
+}
+
+bool RibbonMainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result)
+{
+#ifdef Q_OS_WIN
+    Q_UNUSED(eventType)
+
+    if (!m_nativeFrameEnabled) {
+        return QMainWindow::nativeEvent(eventType, message, result);
+    }
+
+    MSG *nativeMessage = reinterpret_cast<MSG *>(message);
+    if (!nativeMessage || nativeMessage->message != WM_NCHITTEST) {
+        return QMainWindow::nativeEvent(eventType, message, result);
+    }
+
+    const int x = static_cast<short>(LOWORD(nativeMessage->lParam));
+    const int y = static_cast<short>(HIWORD(nativeMessage->lParam));
+    *result = nativeHitTestResult(QPoint(x, y));
+    return true;
+#else
+    Q_UNUSED(eventType)
+    Q_UNUSED(message)
+    Q_UNUSED(result)
+    return false;
+#endif
+}
+
+bool RibbonMainWindow::isNativeCaptionPoint(const QPoint &globalPoint) const
+{
+    if (m_nativeCaptionHeight <= 0 || !m_ribbonBar->isVisible()) {
+        return false;
+    }
+
+    const QPoint ribbonPoint = m_ribbonBar->mapFromGlobal(globalPoint);
+    if (!m_ribbonBar->rect().contains(ribbonPoint)
+        || ribbonPoint.y() >= m_nativeCaptionHeight) {
+        return false;
+    }
+
+    if (m_ribbonBar->searchLineEdit()->isVisible()
+        && m_ribbonBar->searchLineEdit()->geometry().contains(ribbonPoint)) {
+        return false;
+    }
+
+    if (m_ribbonBar->quickAccessBar()->isVisible()
+        && m_ribbonBar->quickAccessBar()->geometry().contains(ribbonPoint)) {
+        return false;
+    }
+
+    QTabBar *tabBar = m_ribbonBar->findChild<QTabBar *>();
+    if (tabBar) {
+        const QPoint tabPoint = tabBar->mapFrom(m_ribbonBar, ribbonPoint);
+        for (int index = 0; index < tabBar->count(); ++index) {
+            if (tabBar->tabRect(index).contains(tabPoint)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+int RibbonMainWindow::nativeHitTestResult(const QPoint &globalPoint) const
+{
+#ifdef Q_OS_WIN
+    HWND windowHandle = reinterpret_cast<HWND>(winId());
+    RECT windowRect;
+    if (!GetWindowRect(windowHandle, &windowRect)) {
+        return HTCLIENT;
+    }
+
+    const bool isMaximized = IsZoomed(windowHandle);
+    const int borderWidth = effectiveNativeResizeBorderWidth();
+    if (!isMaximized && borderWidth > 0) {
+        const bool onLeft = globalPoint.x() >= windowRect.left
+            && globalPoint.x() < windowRect.left + borderWidth;
+        const bool onRight = globalPoint.x() <= windowRect.right
+            && globalPoint.x() > windowRect.right - borderWidth;
+        const bool onTop = globalPoint.y() >= windowRect.top
+            && globalPoint.y() < windowRect.top + borderWidth;
+        const bool onBottom = globalPoint.y() <= windowRect.bottom
+            && globalPoint.y() > windowRect.bottom - borderWidth;
+
+        if (onTop && onLeft) {
+            return HTTOPLEFT;
+        }
+        if (onTop && onRight) {
+            return HTTOPRIGHT;
+        }
+        if (onBottom && onLeft) {
+            return HTBOTTOMLEFT;
+        }
+        if (onBottom && onRight) {
+            return HTBOTTOMRIGHT;
+        }
+        if (onLeft) {
+            return HTLEFT;
+        }
+        if (onRight) {
+            return HTRIGHT;
+        }
+        if (onTop) {
+            return HTTOP;
+        }
+        if (onBottom) {
+            return HTBOTTOM;
+        }
+    }
+
+    if (isNativeCaptionPoint(globalPoint)) {
+        return HTCAPTION;
+    }
+#endif
+
+    return HTCLIENT;
+}
+
+int RibbonMainWindow::effectiveNativeResizeBorderWidth() const
+{
+#ifdef Q_OS_WIN
+    if (m_nativeResizeBorderWidth > 0) {
+        return m_nativeResizeBorderWidth;
+    }
+
+    const int frameWidth = GetSystemMetrics(SM_CXSIZEFRAME);
+    const int paddedWidth = GetSystemMetrics(SM_CXPADDEDBORDER);
+    return qMax(4, frameWidth + paddedWidth);
+#else
+    return m_nativeResizeBorderWidth;
+#endif
+}
 } // namespace LqRibbon

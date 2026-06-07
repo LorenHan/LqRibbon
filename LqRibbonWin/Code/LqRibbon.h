@@ -2,6 +2,7 @@
 #define LQRIBBON_H
 
 #include <QAction>
+#include <QByteArray>
 #include <QCompleter>
 #include <QDebug>
 #include <QFrame>
@@ -14,6 +15,7 @@
 #include <QMainWindow>
 #include <QPaintEvent>
 #include <QPointer>
+#include <QPoint>
 #include <QResizeEvent>
 #include <QStatusBar>
 #include <QStringList>
@@ -170,12 +172,29 @@ public:
 
     RibbonBar *ribbonBar() const;
     void setCentralWidget(QWidget *widget);
+    void setNativeFrameEnabled(bool enabled);
+    bool isNativeFrameEnabled() const;
+    void setNativeCaptionHeight(int height);
+    int nativeCaptionHeight() const;
+    void setNativeResizeBorderWidth(int width);
+    int nativeResizeBorderWidth() const;
+
+protected:
+    bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
+
+private:
+    bool isNativeCaptionPoint(const QPoint &globalPoint) const;
+    int nativeHitTestResult(const QPoint &globalPoint) const;
+    int effectiveNativeResizeBorderWidth() const;
 
 private:
     QWidget *m_rootWidget;
     QVBoxLayout *m_rootLayout;
     RibbonBar *m_ribbonBar;
     QPointer<QWidget> m_centralWidget;
+    bool m_nativeFrameEnabled;
+    int m_nativeCaptionHeight;
+    int m_nativeResizeBorderWidth;
 };
 
 using LqRibbonGroup = RibbonGroup;
