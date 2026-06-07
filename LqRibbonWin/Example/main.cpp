@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->setFrameThemeEnabled(true);
     mainWindow.ribbonBar()->setSearchVisible(true);
     mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
+    mainWindow.ribbonBar()->setRecentSearchLimit(5);
     mainWindow.ribbonBar()->registerSearchAction(fullScreenAction);
     mainWindow.ribbonBar()->registerSearchAction(mdiAction);
     mainWindow.ribbonBar()->registerSearchAction(tabAction);

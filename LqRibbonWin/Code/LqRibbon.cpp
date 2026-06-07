@@ -233,6 +233,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_searchSuggestionModel(new QStringListModel(this))
     , m_searchCompleter(new QCompleter(m_searchSuggestionModel, this))
     , m_searchActionTriggerEnabled(true)
+    , m_recentSearchLimit(8)
     , m_frameThemeEnabled(false)
 {
     setDocumentMode(false);
@@ -387,7 +388,19 @@ void RibbonBar::unregisterSearchAction(QAction *action)
         }
     }
 
-    if (!removed) {
+    bool recentRemoved = false;
+    for (int index = m_recentSearchActionList.count() - 1; index >= 0; --index) {
+        if (m_recentSearchActionList.at(index).data() == action) {
+            m_recentSearchActionList.removeAt(index);
+            recentRemoved = true;
+        }
+    }
+
+    if (recentRemoved) {
+        emit recentSearchActionsChanged();
+    }
+
+    if (!removed && !recentRemoved) {
         return;
     }
 
@@ -423,8 +436,12 @@ bool RibbonBar::triggerSearchAction(const QString &strText)
         return false;
     }
 
+    QPointer<QAction> actionPointer = action;
+    recordRecentSearchAction(action);
     action->trigger();
-    emit searchActionTriggered(action);
+    if (!actionPointer.isNull()) {
+        emit searchActionTriggered(actionPointer.data());
+    }
     return true;
 }
 
@@ -436,6 +453,45 @@ void RibbonBar::setSearchActionTriggerEnabled(bool enabled)
 bool RibbonBar::isSearchActionTriggerEnabled() const
 {
     return m_searchActionTriggerEnabled;
+}
+
+QList<QAction *> RibbonBar::recentSearchActions() const
+{
+    QList<QAction *> actionList;
+    for (const QPointer<QAction> &action : m_recentSearchActionList) {
+        if (!action.isNull()) {
+            actionList.append(action.data());
+        }
+    }
+
+    return actionList;
+}
+
+void RibbonBar::clearRecentSearchActions()
+{
+    if (m_recentSearchActionList.isEmpty()) {
+        return;
+    }
+
+    m_recentSearchActionList.clear();
+    updateSearchSuggestions();
+    emit recentSearchActionsChanged();
+}
+
+void RibbonBar::setRecentSearchLimit(int count)
+{
+    m_recentSearchLimit = qMax(0, count);
+    while (m_recentSearchActionList.count() > m_recentSearchLimit) {
+        m_recentSearchActionList.removeLast();
+    }
+
+    updateSearchSuggestions();
+    emit recentSearchActionsChanged();
+}
+
+int RibbonBar::recentSearchLimit() const
+{
+    return m_recentSearchLimit;
 }
 
 void RibbonBar::setCurrentPageIndex(int index)
@@ -490,7 +546,24 @@ void RibbonBar::updateSearchGeometry()
 
 void RibbonBar::updateSearchSuggestions()
 {
-    QStringList strList = m_searchSuggestionList;
+    QStringList strList;
+    for (const QPointer<QAction> &action : m_recentSearchActionList) {
+        if (action.isNull()) {
+            continue;
+        }
+
+        const QString strText = searchActionText(action.data());
+        if (!strText.isEmpty() && !strList.contains(strText)) {
+            strList.append(strText);
+        }
+    }
+
+    for (const QString &strText : m_searchSuggestionList) {
+        if (!strText.isEmpty() && !strList.contains(strText)) {
+            strList.append(strText);
+        }
+    }
+
     for (const SearchCommand &command : m_searchCommandList) {
         if (command.action.isNull() || command.strText.isEmpty()) {
             continue;
@@ -504,12 +577,45 @@ void RibbonBar::updateSearchSuggestions()
     m_searchSuggestionModel->setStringList(strList);
 }
 
+void RibbonBar::recordRecentSearchAction(QAction *action)
+{
+    if (!action || m_recentSearchLimit <= 0) {
+        return;
+    }
+
+    for (int index = m_recentSearchActionList.count() - 1; index >= 0; --index) {
+        if (m_recentSearchActionList.at(index).data() == action) {
+            m_recentSearchActionList.removeAt(index);
+        }
+    }
+
+    m_recentSearchActionList.prepend(action);
+    while (m_recentSearchActionList.count() > m_recentSearchLimit) {
+        m_recentSearchActionList.removeLast();
+    }
+
+    updateSearchSuggestions();
+    emit recentSearchActionsChanged();
+}
+
 void RibbonBar::removeInvalidSearchActions()
 {
+    bool recentRemoved = false;
+    for (int index = m_recentSearchActionList.count() - 1; index >= 0; --index) {
+        if (m_recentSearchActionList.at(index).isNull()) {
+            m_recentSearchActionList.removeAt(index);
+            recentRemoved = true;
+        }
+    }
+
     for (int index = m_searchCommandList.count() - 1; index >= 0; --index) {
         if (m_searchCommandList.at(index).action.isNull()) {
             m_searchCommandList.removeAt(index);
         }
+    }
+
+    if (recentRemoved) {
+        emit recentSearchActionsChanged();
     }
 
     rebuildSearchActionIndex();
