@@ -1,5 +1,6 @@
 #include "LqRibbon.h"
 
+#include <QAbstractItemView>
 #include <QGridLayout>
 #include <QPainter>
 #include <QPaintEvent>
@@ -41,6 +42,12 @@ const char ribbonStyleSheet[] =
     "}"
     "QLineEdit#lqRibbonSearchEdit:focus {"
     "    border-color: #5f95d0;"
+    "}"
+    "QAbstractItemView#lqRibbonSearchSuggestionPopup {"
+    "    border: 1px solid #9eb6d8;"
+    "    background: #ffffff;"
+    "    selection-background-color: #dcecff;"
+    "    selection-color: #202020;"
     "}"
     "LqRibbon--RibbonGroup {"
     "    background: #ffffff;"
@@ -223,6 +230,8 @@ void RibbonPage::setTitle(const QString &strTitle)
 RibbonBar::RibbonBar(QWidget *parent)
     : QTabWidget(parent)
     , m_searchEdit(new QLineEdit(this))
+    , m_searchSuggestionModel(new QStringListModel(this))
+    , m_searchCompleter(new QCompleter(m_searchSuggestionModel, this))
     , m_frameThemeEnabled(false)
 {
     setDocumentMode(false);
@@ -234,6 +243,13 @@ RibbonBar::RibbonBar(QWidget *parent)
     m_searchEdit->setPlaceholderText(tr("Search"));
     m_searchEdit->setClearButtonEnabled(true);
     m_searchEdit->hide();
+    m_searchCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+    m_searchCompleter->setFilterMode(Qt::MatchContains);
+    m_searchCompleter->setCompletionMode(QCompleter::PopupCompletion);
+    m_searchCompleter->setMaxVisibleItems(8);
+    m_searchCompleter->popup()->setObjectName(
+        QStringLiteral("lqRibbonSearchSuggestionPopup"));
+    m_searchEdit->setCompleter(m_searchCompleter);
 
     connect(this, &QTabWidget::currentChanged, this, &RibbonBar::pageChanged);
     connect(m_searchEdit, &QLineEdit::textChanged,
@@ -241,6 +257,13 @@ RibbonBar::RibbonBar(QWidget *parent)
     connect(m_searchEdit, &QLineEdit::returnPressed, this, [this]() {
         emit searchAccepted(m_searchEdit->text());
     });
+    connect(m_searchCompleter,
+            QOverload<const QString &>::of(&QCompleter::activated),
+            this, [this](const QString &strText) {
+                m_searchEdit->setText(strText);
+                emit searchSuggestionActivated(strText);
+                emit searchAccepted(strText);
+            });
 
     updateStyleSheet();
     updateSearchGeometry();
@@ -275,6 +298,11 @@ QLineEdit *RibbonBar::searchLineEdit() const
     return m_searchEdit;
 }
 
+QCompleter *RibbonBar::searchCompleter() const
+{
+    return m_searchCompleter;
+}
+
 void RibbonBar::setSearchVisible(bool visible)
 {
     m_searchEdit->setVisible(visible);
@@ -299,6 +327,21 @@ QString RibbonBar::searchText() const
 void RibbonBar::setSearchText(const QString &strText)
 {
     m_searchEdit->setText(strText);
+}
+
+void RibbonBar::setSearchSuggestions(const QStringList &strList)
+{
+    m_searchSuggestionModel->setStringList(strList);
+}
+
+QStringList RibbonBar::searchSuggestions() const
+{
+    return m_searchSuggestionModel->stringList();
+}
+
+void RibbonBar::clearSearchSuggestions()
+{
+    m_searchSuggestionModel->setStringList(QStringList());
 }
 
 void RibbonBar::setCurrentPageIndex(int index)

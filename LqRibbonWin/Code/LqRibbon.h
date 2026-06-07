@@ -2,6 +2,7 @@
 #define LQRIBBON_H
 
 #include <QAction>
+#include <QCompleter>
 #include <QDebug>
 #include <QFrame>
 #include <QGridLayout>
@@ -13,6 +14,8 @@
 #include <QPointer>
 #include <QResizeEvent>
 #include <QStatusBar>
+#include <QStringList>
+#include <QStringListModel>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -79,11 +82,15 @@ public:
     RibbonPage *page(int index) const;
     RibbonPage *currentPage() const;
     QLineEdit *searchLineEdit() const;
+    QCompleter *searchCompleter() const;
     void setSearchVisible(bool visible);
     bool isSearchVisible() const;
     void setSearchPlaceholderText(const QString &strText);
     QString searchText() const;
     void setSearchText(const QString &strText);
+    void setSearchSuggestions(const QStringList &strList);
+    QStringList searchSuggestions() const;
+    void clearSearchSuggestions();
     void setCurrentPageIndex(int index);
     void setFrameThemeEnabled(bool enabled);
     bool isFrameThemeEnabled() const;
@@ -92,6 +99,7 @@ signals:
     void pageChanged(int index);
     void searchTextChanged(const QString &strText);
     void searchAccepted(const QString &strText);
+    void searchSuggestionActivated(const QString &strText);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -103,6 +111,8 @@ private:
 
 private:
     QLineEdit *m_searchEdit;
+    QStringListModel *m_searchSuggestionModel;
+    QCompleter *m_searchCompleter;
     bool m_frameThemeEnabled;
 };
 

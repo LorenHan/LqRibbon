@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QLabel>
 #include <QMessageBox>
+#include <QStringList>
 #include <QStyle>
 #include <QVBoxLayout>
 
@@ -62,6 +63,14 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->setFrameThemeEnabled(true);
     mainWindow.ribbonBar()->setSearchVisible(true);
     mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
+
+    QStringList strSuggestionList;
+    strSuggestionList << QObject::tr("Full Screen")
+                      << QObject::tr("Mdi Mode")
+                      << QObject::tr("Tab Mode")
+                      << QObject::tr("Settings")
+                      << QObject::tr("Connect");
+    mainWindow.ribbonBar()->setSearchSuggestions(strSuggestionList);
     QObject::connect(mainWindow.ribbonBar(), &LqRibbon::RibbonBar::searchAccepted,
                      [&mainWindow](const QString &strText) {
                          QMessageBox::information(&mainWindow,
