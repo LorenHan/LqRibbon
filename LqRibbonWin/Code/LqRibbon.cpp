@@ -875,6 +875,10 @@ bool RibbonMainWindow::nativeEvent(const QByteArray &eventType, void *message, l
         *result = nativeHitTestResult(QPoint(x, y));
         return true;
     }
+    case WM_GETMINMAXINFO:
+        updateNativeMinMaxInfo(reinterpret_cast<void *>(nativeMessage->lParam));
+        *result = 0;
+        return true;
     case WM_NCRBUTTONUP:
         if (nativeMessage->wParam == HTCAPTION) {
             const int x = static_cast<short>(LOWORD(nativeMessage->lParam));
@@ -1105,5 +1109,47 @@ QPoint RibbonMainWindow::nativeSystemMenuPoint() const
 #endif
 
     return mapToGlobal(QPoint(0, m_nativeCaptionHeight));
+}
+
+void RibbonMainWindow::updateNativeMinMaxInfo(void *minMaxInfo) const
+{
+#ifdef Q_OS_WIN
+    MINMAXINFO *info = reinterpret_cast<MINMAXINFO *>(minMaxInfo);
+    if (!info) {
+        return;
+    }
+
+    HWND windowHandle = reinterpret_cast<HWND>(winId());
+    HMONITOR monitorHandle = MonitorFromWindow(windowHandle, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO monitorInfo;
+    monitorInfo.cbSize = sizeof(MONITORINFO);
+
+    if (GetMonitorInfo(monitorHandle, &monitorInfo)) {
+        const RECT workRect = monitorInfo.rcWork;
+        const RECT monitorRect = monitorInfo.rcMonitor;
+        info->ptMaxPosition.x = workRect.left - monitorRect.left;
+        info->ptMaxPosition.y = workRect.top - monitorRect.top;
+        info->ptMaxSize.x = workRect.right - workRect.left;
+        info->ptMaxSize.y = workRect.bottom - workRect.top;
+    }
+
+    const QSize minSize = minimumSize();
+    if (minSize.width() > 0) {
+        info->ptMinTrackSize.x = minSize.width();
+    }
+    if (minSize.height() > 0) {
+        info->ptMinTrackSize.y = minSize.height();
+    }
+
+    const QSize maxSize = maximumSize();
+    if (maxSize.width() < QWIDGETSIZE_MAX) {
+        info->ptMaxTrackSize.x = maxSize.width();
+    }
+    if (maxSize.height() < QWIDGETSIZE_MAX) {
+        info->ptMaxTrackSize.y = maxSize.height();
+    }
+#else
+    Q_UNUSED(minMaxInfo)
+#endif
 }
 } // namespace LqRibbon

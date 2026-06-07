@@ -189,6 +189,7 @@ private:
     bool showNativeSystemMenu(const QPoint &globalPoint);
     void updateNativeSystemMenu(void *menuHandle) const;
     QPoint nativeSystemMenuPoint() const;
+    void updateNativeMinMaxInfo(void *minMaxInfo) const;
 
 private:
     QWidget *m_rootWidget;
