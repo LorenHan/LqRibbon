@@ -2,6 +2,7 @@
 #define LQRIBBON_H
 
 #include <QAction>
+#include <QDebug>
 #include <QFrame>
 #include <QGridLayout>
 #include <QIcon>
