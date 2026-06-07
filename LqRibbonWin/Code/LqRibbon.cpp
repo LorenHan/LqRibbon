@@ -864,14 +864,39 @@ bool RibbonMainWindow::nativeEvent(const QByteArray &eventType, void *message, l
     }
 
     MSG *nativeMessage = reinterpret_cast<MSG *>(message);
-    if (!nativeMessage || nativeMessage->message != WM_NCHITTEST) {
+    if (!nativeMessage) {
         return QMainWindow::nativeEvent(eventType, message, result);
     }
 
-    const int x = static_cast<short>(LOWORD(nativeMessage->lParam));
-    const int y = static_cast<short>(HIWORD(nativeMessage->lParam));
-    *result = nativeHitTestResult(QPoint(x, y));
-    return true;
+    switch (nativeMessage->message) {
+    case WM_NCHITTEST: {
+        const int x = static_cast<short>(LOWORD(nativeMessage->lParam));
+        const int y = static_cast<short>(HIWORD(nativeMessage->lParam));
+        *result = nativeHitTestResult(QPoint(x, y));
+        return true;
+    }
+    case WM_NCRBUTTONUP:
+        if (nativeMessage->wParam == HTCAPTION) {
+            const int x = static_cast<short>(LOWORD(nativeMessage->lParam));
+            const int y = static_cast<short>(HIWORD(nativeMessage->lParam));
+            showNativeSystemMenu(QPoint(x, y));
+            *result = 0;
+            return true;
+        }
+        break;
+    case WM_SYSKEYDOWN:
+        if (nativeMessage->wParam == VK_SPACE
+            && (HIWORD(nativeMessage->lParam) & KF_ALTDOWN)) {
+            showNativeSystemMenu(nativeSystemMenuPoint());
+            *result = 0;
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+
+    return QMainWindow::nativeEvent(eventType, message, result);
 #else
     Q_UNUSED(eventType)
     Q_UNUSED(message)
@@ -983,5 +1008,102 @@ int RibbonMainWindow::effectiveNativeResizeBorderWidth() const
 #else
     return m_nativeResizeBorderWidth;
 #endif
+}
+
+bool RibbonMainWindow::showNativeSystemMenu(const QPoint &globalPoint)
+{
+#ifdef Q_OS_WIN
+    HWND windowHandle = reinterpret_cast<HWND>(winId());
+    HMENU systemMenu = GetSystemMenu(windowHandle, FALSE);
+    if (!systemMenu) {
+        return false;
+    }
+
+    updateNativeSystemMenu(systemMenu);
+    SetForegroundWindow(windowHandle);
+
+    const UINT popupFlags = TPM_RETURNCMD
+        | TPM_RIGHTBUTTON
+        | TPM_LEFTALIGN
+        | TPM_TOPALIGN;
+    const UINT command = TrackPopupMenu(systemMenu,
+        popupFlags,
+        globalPoint.x(),
+        globalPoint.y(),
+        0,
+        windowHandle,
+        nullptr);
+
+    if (command != 0) {
+        PostMessage(windowHandle, WM_SYSCOMMAND, command, 0);
+    }
+
+    PostMessage(windowHandle, WM_NULL, 0, 0);
+    return true;
+#else
+    Q_UNUSED(globalPoint)
+    return false;
+#endif
+}
+
+void RibbonMainWindow::updateNativeSystemMenu(void *menuHandle) const
+{
+#ifdef Q_OS_WIN
+    HMENU systemMenu = reinterpret_cast<HMENU>(menuHandle);
+    if (!systemMenu) {
+        return;
+    }
+
+    HWND windowHandle = reinterpret_cast<HWND>(winId());
+    const bool isMaximized = IsZoomed(windowHandle);
+    const bool isMinimized = IsIconic(windowHandle);
+    const bool canResize = minimumSize() != maximumSize();
+    const Qt::WindowFlags flags = windowFlags();
+    const bool hasCustomButtons = flags.testFlag(Qt::CustomizeWindowHint);
+    const bool canMinimize = !hasCustomButtons
+        || flags.testFlag(Qt::WindowMinimizeButtonHint);
+    const bool canMaximize = (!hasCustomButtons
+        || flags.testFlag(Qt::WindowMaximizeButtonHint)) && canResize;
+    const bool canClose = !hasCustomButtons
+        || flags.testFlag(Qt::WindowCloseButtonHint);
+
+    const UINT enabled = MF_BYCOMMAND | MF_ENABLED;
+    const UINT disabled = MF_BYCOMMAND | MF_GRAYED;
+    EnableMenuItem(systemMenu,
+        SC_RESTORE,
+        (isMaximized || isMinimized) ? enabled : disabled);
+    EnableMenuItem(systemMenu,
+        SC_MOVE,
+        (!isMaximized && !isMinimized) ? enabled : disabled);
+    EnableMenuItem(systemMenu,
+        SC_SIZE,
+        (canResize && !isMaximized && !isMinimized) ? enabled : disabled);
+    EnableMenuItem(systemMenu,
+        SC_MINIMIZE,
+        (canMinimize && !isMinimized) ? enabled : disabled);
+    EnableMenuItem(systemMenu,
+        SC_MAXIMIZE,
+        (canMaximize && !isMaximized) ? enabled : disabled);
+    EnableMenuItem(systemMenu, SC_CLOSE, canClose ? enabled : disabled);
+#else
+    Q_UNUSED(menuHandle)
+#endif
+}
+
+QPoint RibbonMainWindow::nativeSystemMenuPoint() const
+{
+#ifdef Q_OS_WIN
+    HWND windowHandle = reinterpret_cast<HWND>(winId());
+    RECT windowRect;
+    if (GetWindowRect(windowHandle, &windowRect)) {
+        const int borderWidth = IsZoomed(windowHandle)
+            ? 0
+            : effectiveNativeResizeBorderWidth();
+        return QPoint(windowRect.left + borderWidth,
+            windowRect.top + borderWidth + m_nativeCaptionHeight);
+    }
+#endif
+
+    return mapToGlobal(QPoint(0, m_nativeCaptionHeight));
 }
 } // namespace LqRibbon

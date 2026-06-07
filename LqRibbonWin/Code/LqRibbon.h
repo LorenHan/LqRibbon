@@ -186,6 +186,9 @@ private:
     bool isNativeCaptionPoint(const QPoint &globalPoint) const;
     int nativeHitTestResult(const QPoint &globalPoint) const;
     int effectiveNativeResizeBorderWidth() const;
+    bool showNativeSystemMenu(const QPoint &globalPoint);
+    void updateNativeSystemMenu(void *menuHandle) const;
+    QPoint nativeSystemMenuPoint() const;
 
 private:
     QWidget *m_rootWidget;
