@@ -10,6 +10,3 @@ HEADERS += \
 SOURCES += \
     $$PWD/Code/LqRibbon.cpp \
     $$PWD/Code/DemoRibbonWindow.cpp
-
-RESOURCES += \
-    $$PWD/Code/LqRibbon.qrc
