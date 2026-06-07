@@ -49,6 +49,21 @@ const char ribbonStyleSheet[] =
     "    selection-background-color: #dcecff;"
     "    selection-color: #202020;"
     "}"
+    "QToolBar#lqRibbonQuickAccessBar {"
+    "    background: transparent;"
+    "    border: none;"
+    "    spacing: 1px;"
+    "}"
+    "QToolBar#lqRibbonQuickAccessBar QToolButton {"
+    "    border: 1px solid #6f9fd0;"
+    "    border-radius: 2px;"
+    "    padding: 2px;"
+    "    background: #2f63a3;"
+    "}"
+    "QToolBar#lqRibbonQuickAccessBar QToolButton:hover {"
+    "    background: #386caf;"
+    "    border-color: #b7cbe6;"
+    "}"
     "LqRibbon--RibbonGroup {"
     "    background: #ffffff;"
     "    border: 1px solid #c8d5e5;"
@@ -230,6 +245,7 @@ void RibbonPage::setTitle(const QString &strTitle)
 RibbonBar::RibbonBar(QWidget *parent)
     : QTabWidget(parent)
     , m_searchEdit(new QLineEdit(this))
+    , m_quickAccessBar(new QToolBar(this))
     , m_searchSuggestionModel(new QStringListModel(this))
     , m_searchCompleter(new QCompleter(m_searchSuggestionModel, this))
     , m_searchActionTriggerEnabled(true)
@@ -253,6 +269,13 @@ RibbonBar::RibbonBar(QWidget *parent)
         QStringLiteral("lqRibbonSearchSuggestionPopup"));
     m_searchEdit->setCompleter(m_searchCompleter);
 
+    m_quickAccessBar->setObjectName(QStringLiteral("lqRibbonQuickAccessBar"));
+    m_quickAccessBar->setMovable(false);
+    m_quickAccessBar->setFloatable(false);
+    m_quickAccessBar->setIconSize(QSize(16, 16));
+    m_quickAccessBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    m_quickAccessBar->hide();
+
     connect(this, &QTabWidget::currentChanged, this, &RibbonBar::pageChanged);
     connect(m_searchEdit, &QLineEdit::textChanged,
             this, &RibbonBar::searchTextChanged);
@@ -273,6 +296,7 @@ RibbonBar::RibbonBar(QWidget *parent)
             });
 
     updateStyleSheet();
+    updateQuickAccessGeometry();
     updateSearchGeometry();
 }
 
@@ -494,6 +518,41 @@ int RibbonBar::recentSearchLimit() const
     return m_recentSearchLimit;
 }
 
+QToolBar *RibbonBar::quickAccessBar() const
+{
+    return m_quickAccessBar;
+}
+
+QAction *RibbonBar::addQuickAccessAction(const QIcon &icon, const QString &strText)
+{
+    QAction *action = new QAction(icon, strText, this);
+    addQuickAccessAction(action);
+    return action;
+}
+
+void RibbonBar::addQuickAccessAction(QAction *action)
+{
+    if (!action) {
+        return;
+    }
+
+    if (!m_quickAccessBar->actions().contains(action)) {
+        m_quickAccessBar->addAction(action);
+    }
+
+    m_quickAccessBar->show();
+    updateQuickAccessGeometry();
+    updateStyleSheet();
+}
+
+void RibbonBar::clearQuickAccessActions()
+{
+    m_quickAccessBar->clear();
+    m_quickAccessBar->hide();
+    updateQuickAccessGeometry();
+    updateStyleSheet();
+}
+
 void RibbonBar::setCurrentPageIndex(int index)
 {
     setCurrentIndex(index);
@@ -529,7 +588,9 @@ void RibbonBar::paintEvent(QPaintEvent *event)
 void RibbonBar::resizeEvent(QResizeEvent *event)
 {
     QTabWidget::resizeEvent(event);
+    updateQuickAccessGeometry();
     updateSearchGeometry();
+    updateStyleSheet();
 }
 
 void RibbonBar::updateSearchGeometry()
@@ -542,6 +603,22 @@ void RibbonBar::updateSearchGeometry()
 
     m_searchEdit->setGeometry(x, topMargin, searchWidth, searchHeight);
     m_searchEdit->raise();
+}
+
+void RibbonBar::updateQuickAccessGeometry()
+{
+    const int topMargin = 3;
+    const int rightMargin = 10;
+    const int searchGap = 8;
+    const int searchWidth = m_searchEdit->isHidden() ? 0 : 240;
+    const int barHeight = 24;
+    const int maxWidth = qMax(0, width() / 3);
+    const int barWidth = qMin(m_quickAccessBar->sizeHint().width(), maxWidth);
+    const int rightReservedWidth = rightMargin + searchWidth + searchGap;
+    const int x = qMax(rightMargin, width() - rightReservedWidth - barWidth);
+
+    m_quickAccessBar->setGeometry(x, topMargin, barWidth, barHeight);
+    m_quickAccessBar->raise();
 }
 
 void RibbonBar::updateSearchSuggestions()

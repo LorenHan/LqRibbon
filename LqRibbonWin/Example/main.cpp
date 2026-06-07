@@ -84,6 +84,8 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(tabAction);
     mainWindow.ribbonBar()->registerSearchAction(settingsAction);
     mainWindow.ribbonBar()->registerSearchAction(connectAction);
+    mainWindow.ribbonBar()->addQuickAccessAction(fullScreenAction);
+    mainWindow.ribbonBar()->addQuickAccessAction(connectAction);
     QObject::connect(mainWindow.ribbonBar(), &LqRibbon::RibbonBar::searchAccepted,
                      [&mainWindow](const QString &strText) {
                          QMessageBox::information(&mainWindow,

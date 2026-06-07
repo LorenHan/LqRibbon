@@ -19,6 +19,7 @@
 #include <QStringList>
 #include <QStringListModel>
 #include <QTabWidget>
+#include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -105,6 +106,10 @@ public:
     void clearRecentSearchActions();
     void setRecentSearchLimit(int count);
     int recentSearchLimit() const;
+    QToolBar *quickAccessBar() const;
+    QAction *addQuickAccessAction(const QIcon &icon, const QString &strText);
+    void addQuickAccessAction(QAction *action);
+    void clearQuickAccessActions();
     void setCurrentPageIndex(int index);
     void setFrameThemeEnabled(bool enabled);
     bool isFrameThemeEnabled() const;
@@ -123,6 +128,7 @@ protected:
 
 private:
     void updateSearchGeometry();
+    void updateQuickAccessGeometry();
     void updateSearchSuggestions();
     void recordRecentSearchAction(QAction *action);
     void removeInvalidSearchActions();
@@ -142,6 +148,7 @@ private:
 
 private:
     QLineEdit *m_searchEdit;
+    QToolBar *m_quickAccessBar;
     QStringList m_searchSuggestionList;
     QList<SearchCommand> m_searchCommandList;
     QHash<QString, QPointer<QAction>> m_searchActionIndex;
