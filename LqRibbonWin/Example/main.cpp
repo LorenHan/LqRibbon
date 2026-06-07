@@ -1,7 +1,6 @@
 #include <QApplication>
 #include <QLabel>
 #include <QMessageBox>
-#include <QStringList>
 #include <QStyle>
 #include <QVBoxLayout>
 
@@ -47,11 +46,11 @@ int main(int argc, char *argv[])
 
     LqRibbon::RibbonPage *driverPage = mainWindow.ribbonBar()->addPage(QObject::tr("Driver"));
     LqRibbon::RibbonGroup *communicationGroup = driverPage->addGroup(QObject::tr("Communication"));
-    communicationGroup->addAction(
+    QAction *settingsAction = communicationGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_ComputerIcon),
         QObject::tr("Settings"),
         Qt::ToolButtonTextUnderIcon);
-    communicationGroup->addAction(
+    QAction *connectAction = communicationGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
         QObject::tr("Connect"),
         Qt::ToolButtonTextUnderIcon);
@@ -63,14 +62,11 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->setFrameThemeEnabled(true);
     mainWindow.ribbonBar()->setSearchVisible(true);
     mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
-
-    QStringList strSuggestionList;
-    strSuggestionList << QObject::tr("Full Screen")
-                      << QObject::tr("Mdi Mode")
-                      << QObject::tr("Tab Mode")
-                      << QObject::tr("Settings")
-                      << QObject::tr("Connect");
-    mainWindow.ribbonBar()->setSearchSuggestions(strSuggestionList);
+    mainWindow.ribbonBar()->registerSearchAction(fullScreenAction);
+    mainWindow.ribbonBar()->registerSearchAction(mdiAction);
+    mainWindow.ribbonBar()->registerSearchAction(tabAction);
+    mainWindow.ribbonBar()->registerSearchAction(settingsAction);
+    mainWindow.ribbonBar()->registerSearchAction(connectAction);
     QObject::connect(mainWindow.ribbonBar(), &LqRibbon::RibbonBar::searchAccepted,
                      [&mainWindow](const QString &strText) {
                          QMessageBox::information(&mainWindow,

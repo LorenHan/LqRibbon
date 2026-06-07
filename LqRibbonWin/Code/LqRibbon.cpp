@@ -331,7 +331,8 @@ void RibbonBar::setSearchText(const QString &strText)
 
 void RibbonBar::setSearchSuggestions(const QStringList &strList)
 {
-    m_searchSuggestionModel->setStringList(strList);
+    m_searchSuggestionList = strList;
+    updateSearchSuggestions();
 }
 
 QStringList RibbonBar::searchSuggestions() const
@@ -341,7 +342,68 @@ QStringList RibbonBar::searchSuggestions() const
 
 void RibbonBar::clearSearchSuggestions()
 {
-    m_searchSuggestionModel->setStringList(QStringList());
+    m_searchSuggestionList.clear();
+    updateSearchSuggestions();
+}
+
+void RibbonBar::registerSearchAction(QAction *action, const QStringList &strKeywords)
+{
+    if (!action) {
+        return;
+    }
+
+    unregisterSearchAction(action);
+
+    SearchCommand command;
+    command.action = action;
+    command.strText = searchActionText(action);
+    command.strKeywords = strKeywords;
+    m_searchCommandList.append(command);
+
+    connect(action, &QObject::destroyed,
+            this, &RibbonBar::removeInvalidSearchActions,
+            Qt::UniqueConnection);
+    connect(action, &QAction::changed,
+            this, &RibbonBar::updateChangedSearchAction,
+            Qt::UniqueConnection);
+
+    rebuildSearchActionIndex();
+    updateSearchSuggestions();
+}
+
+void RibbonBar::unregisterSearchAction(QAction *action)
+{
+    bool removed = false;
+    for (int index = m_searchCommandList.count() - 1; index >= 0; --index) {
+        if (m_searchCommandList.at(index).action.data() == action) {
+            m_searchCommandList.removeAt(index);
+            removed = true;
+        }
+    }
+
+    if (!removed) {
+        return;
+    }
+
+    rebuildSearchActionIndex();
+    updateSearchSuggestions();
+}
+
+QList<QAction *> RibbonBar::searchActions() const
+{
+    QList<QAction *> actionList;
+    for (const SearchCommand &command : m_searchCommandList) {
+        if (!command.action.isNull()) {
+            actionList.append(command.action.data());
+        }
+    }
+
+    return actionList;
+}
+
+QAction *RibbonBar::searchAction(const QString &strText) const
+{
+    return m_searchActionIndex.value(normalizedSearchText(strText)).data();
 }
 
 void RibbonBar::setCurrentPageIndex(int index)
@@ -392,6 +454,87 @@ void RibbonBar::updateSearchGeometry()
 
     m_searchEdit->setGeometry(x, topMargin, searchWidth, searchHeight);
     m_searchEdit->raise();
+}
+
+void RibbonBar::updateSearchSuggestions()
+{
+    QStringList strList = m_searchSuggestionList;
+    for (const SearchCommand &command : m_searchCommandList) {
+        if (command.action.isNull() || command.strText.isEmpty()) {
+            continue;
+        }
+
+        if (!strList.contains(command.strText)) {
+            strList.append(command.strText);
+        }
+    }
+
+    m_searchSuggestionModel->setStringList(strList);
+}
+
+void RibbonBar::removeInvalidSearchActions()
+{
+    for (int index = m_searchCommandList.count() - 1; index >= 0; --index) {
+        if (m_searchCommandList.at(index).action.isNull()) {
+            m_searchCommandList.removeAt(index);
+        }
+    }
+
+    rebuildSearchActionIndex();
+    updateSearchSuggestions();
+}
+
+void RibbonBar::updateChangedSearchAction()
+{
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (!action) {
+        return;
+    }
+
+    for (SearchCommand &command : m_searchCommandList) {
+        if (command.action.data() == action) {
+            command.strText = searchActionText(action);
+        }
+    }
+
+    rebuildSearchActionIndex();
+    updateSearchSuggestions();
+}
+
+void RibbonBar::rebuildSearchActionIndex()
+{
+    m_searchActionIndex.clear();
+    for (const SearchCommand &command : m_searchCommandList) {
+        if (command.action.isNull()) {
+            continue;
+        }
+
+        QStringList strKeyList = command.strKeywords;
+        strKeyList.prepend(command.strText);
+        for (const QString &strKey : strKeyList) {
+            const QString strNormalizedKey = normalizedSearchText(strKey);
+            if (strNormalizedKey.isEmpty()
+                || m_searchActionIndex.contains(strNormalizedKey)) {
+                continue;
+            }
+
+            m_searchActionIndex.insert(strNormalizedKey, command.action);
+        }
+    }
+}
+
+QString RibbonBar::normalizedSearchText(const QString &strText) const
+{
+    QString strNormalizedText = strText.trimmed().toCaseFolded();
+    strNormalizedText.remove(QLatin1Char('&'));
+    return strNormalizedText;
+}
+
+QString RibbonBar::searchActionText(QAction *action) const
+{
+    QString strText = action->text();
+    strText.remove(QLatin1Char('&'));
+    return strText.trimmed();
 }
 
 void RibbonBar::updateStyleSheet()

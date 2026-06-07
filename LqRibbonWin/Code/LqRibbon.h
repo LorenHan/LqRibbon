@@ -6,9 +6,11 @@
 #include <QDebug>
 #include <QFrame>
 #include <QGridLayout>
+#include <QHash>
 #include <QIcon>
 #include <QLabel>
 #include <QLineEdit>
+#include <QList>
 #include <QMainWindow>
 #include <QPaintEvent>
 #include <QPointer>
@@ -91,6 +93,11 @@ public:
     void setSearchSuggestions(const QStringList &strList);
     QStringList searchSuggestions() const;
     void clearSearchSuggestions();
+    void registerSearchAction(QAction *action,
+                              const QStringList &strKeywords = QStringList());
+    void unregisterSearchAction(QAction *action);
+    QList<QAction *> searchActions() const;
+    QAction *searchAction(const QString &strText) const;
     void setCurrentPageIndex(int index);
     void setFrameThemeEnabled(bool enabled);
     bool isFrameThemeEnabled() const;
@@ -107,10 +114,27 @@ protected:
 
 private:
     void updateSearchGeometry();
+    void updateSearchSuggestions();
+    void removeInvalidSearchActions();
+    void updateChangedSearchAction();
+    void rebuildSearchActionIndex();
+    QString normalizedSearchText(const QString &strText) const;
+    QString searchActionText(QAction *action) const;
     void updateStyleSheet();
 
 private:
+    struct SearchCommand
+    {
+        QPointer<QAction> action;
+        QString strText;
+        QStringList strKeywords;
+    };
+
+private:
     QLineEdit *m_searchEdit;
+    QStringList m_searchSuggestionList;
+    QList<SearchCommand> m_searchCommandList;
+    QHash<QString, QPointer<QAction>> m_searchActionIndex;
     QStringListModel *m_searchSuggestionModel;
     QCompleter *m_searchCompleter;
     bool m_frameThemeEnabled;
