@@ -7,9 +7,11 @@
 #include <QGridLayout>
 #include <QIcon>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMainWindow>
 #include <QPaintEvent>
 #include <QPointer>
+#include <QResizeEvent>
 #include <QStatusBar>
 #include <QTabWidget>
 #include <QToolButton>
@@ -76,20 +78,31 @@ public:
     RibbonPage *addPage(const QString &strTitle);
     RibbonPage *page(int index) const;
     RibbonPage *currentPage() const;
+    QLineEdit *searchLineEdit() const;
+    void setSearchVisible(bool visible);
+    bool isSearchVisible() const;
+    void setSearchPlaceholderText(const QString &strText);
+    QString searchText() const;
+    void setSearchText(const QString &strText);
     void setCurrentPageIndex(int index);
     void setFrameThemeEnabled(bool enabled);
     bool isFrameThemeEnabled() const;
 
 signals:
     void pageChanged(int index);
+    void searchTextChanged(const QString &strText);
+    void searchAccepted(const QString &strText);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
+    void updateSearchGeometry();
     void updateStyleSheet();
 
 private:
+    QLineEdit *m_searchEdit;
     bool m_frameThemeEnabled;
 };
 

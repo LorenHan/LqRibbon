@@ -31,6 +31,17 @@ const char ribbonStyleSheet[] =
     "    background: #386caf;"
     "    border-color: #b7cbe6;"
     "}"
+    "QLineEdit#lqRibbonSearchEdit {"
+    "    min-height: 22px;"
+    "    padding: 1px 8px;"
+    "    border: 1px solid #b7cbe6;"
+    "    border-radius: 2px;"
+    "    background: #ffffff;"
+    "    selection-background-color: #2b579a;"
+    "}"
+    "QLineEdit#lqRibbonSearchEdit:focus {"
+    "    border-color: #5f95d0;"
+    "}"
     "LqRibbon--RibbonGroup {"
     "    background: #ffffff;"
     "    border: 1px solid #c8d5e5;"
@@ -211,14 +222,28 @@ void RibbonPage::setTitle(const QString &strTitle)
 
 RibbonBar::RibbonBar(QWidget *parent)
     : QTabWidget(parent)
+    , m_searchEdit(new QLineEdit(this))
     , m_frameThemeEnabled(false)
 {
     setDocumentMode(false);
     setMovable(false);
     setTabPosition(QTabWidget::North);
     setFixedHeight(120);
+
+    m_searchEdit->setObjectName(QStringLiteral("lqRibbonSearchEdit"));
+    m_searchEdit->setPlaceholderText(tr("Search"));
+    m_searchEdit->setClearButtonEnabled(true);
+    m_searchEdit->hide();
+
     connect(this, &QTabWidget::currentChanged, this, &RibbonBar::pageChanged);
+    connect(m_searchEdit, &QLineEdit::textChanged,
+            this, &RibbonBar::searchTextChanged);
+    connect(m_searchEdit, &QLineEdit::returnPressed, this, [this]() {
+        emit searchAccepted(m_searchEdit->text());
+    });
+
     updateStyleSheet();
+    updateSearchGeometry();
 }
 
 RibbonPage *RibbonBar::addPage(const QString &strTitle)
@@ -243,6 +268,37 @@ RibbonPage *RibbonBar::page(int index) const
 RibbonPage *RibbonBar::currentPage() const
 {
     return page(currentIndex());
+}
+
+QLineEdit *RibbonBar::searchLineEdit() const
+{
+    return m_searchEdit;
+}
+
+void RibbonBar::setSearchVisible(bool visible)
+{
+    m_searchEdit->setVisible(visible);
+    updateSearchGeometry();
+}
+
+bool RibbonBar::isSearchVisible() const
+{
+    return m_searchEdit->isVisible();
+}
+
+void RibbonBar::setSearchPlaceholderText(const QString &strText)
+{
+    m_searchEdit->setPlaceholderText(strText);
+}
+
+QString RibbonBar::searchText() const
+{
+    return m_searchEdit->text();
+}
+
+void RibbonBar::setSearchText(const QString &strText)
+{
+    m_searchEdit->setText(strText);
 }
 
 void RibbonBar::setCurrentPageIndex(int index)
@@ -275,6 +331,24 @@ void RibbonBar::paintEvent(QPaintEvent *event)
 
     QPainter painter(this);
     painter.fillRect(0, 0, width(), 30, QColor(QStringLiteral("#2b579a")));
+}
+
+void RibbonBar::resizeEvent(QResizeEvent *event)
+{
+    QTabWidget::resizeEvent(event);
+    updateSearchGeometry();
+}
+
+void RibbonBar::updateSearchGeometry()
+{
+    const int searchWidth = 240;
+    const int searchHeight = 24;
+    const int rightMargin = 10;
+    const int topMargin = 3;
+    const int x = qMax(rightMargin, width() - searchWidth - rightMargin);
+
+    m_searchEdit->setGeometry(x, topMargin, searchWidth, searchHeight);
+    m_searchEdit->raise();
 }
 
 void RibbonBar::updateStyleSheet()

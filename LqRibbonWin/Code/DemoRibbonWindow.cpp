@@ -11,6 +11,7 @@ DemoRibbonWindow::DemoRibbonWindow(QWidget *parent)
 
 void DemoRibbonWindow::addSearchBar()
 {
+    ribbonBar()->setSearchVisible(true);
 }
 
 void DemoRibbonWindow::showHelp(const QString &strText)

@@ -60,6 +60,14 @@ int main(int argc, char *argv[])
     mainWindow.setCentralWidget(contentLabel);
     mainWindow.ribbonBar()->setCurrentPageIndex(1);
     mainWindow.ribbonBar()->setFrameThemeEnabled(true);
+    mainWindow.ribbonBar()->setSearchVisible(true);
+    mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
+    QObject::connect(mainWindow.ribbonBar(), &LqRibbon::RibbonBar::searchAccepted,
+                     [&mainWindow](const QString &strText) {
+                         QMessageBox::information(&mainWindow,
+                                                  QObject::tr("Search"),
+                                                  strText);
+                     });
 
     mainWindow.show();
     return application.exec();
