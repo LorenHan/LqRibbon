@@ -116,4 +116,9 @@ using LqRibbonMainWindow = RibbonMainWindow;
 
 } // namespace LqRibbon
 
+using RibbonBar = LqRibbon::RibbonBar;
+using RibbonPage = LqRibbon::RibbonPage;
+using RibbonGroup = LqRibbon::RibbonGroup;
+using RibbonMainWindow = LqRibbon::RibbonMainWindow;
+
 #endif // LQRIBBON_H
