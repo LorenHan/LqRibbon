@@ -13,4 +13,3 @@ SOURCES += \
 
 RESOURCES += \
     $$PWD/Code/LqRibbon.qrc
-

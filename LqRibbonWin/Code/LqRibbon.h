@@ -117,5 +117,3 @@ using LqRibbonMainWindow = RibbonMainWindow;
 } // namespace LqRibbon
 
 #endif // LQRIBBON_H
-
-

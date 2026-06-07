@@ -319,5 +319,3 @@ void RibbonMainWindow::setCentralWidget(QWidget *widget)
 }
 
 } // namespace LqRibbon
-
-

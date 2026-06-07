@@ -32,4 +32,3 @@ private:
 };
 
 #endif // LQRIBBON_DEMORIBBONWINDOW_H
-

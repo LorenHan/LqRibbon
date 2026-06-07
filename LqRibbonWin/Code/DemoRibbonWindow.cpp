@@ -43,4 +43,3 @@ void DemoRibbonWindow::minimizeActionTriggered()
 {
     ribbonBar()->setVisible(!m_minimizeAction->isChecked());
 }
-
