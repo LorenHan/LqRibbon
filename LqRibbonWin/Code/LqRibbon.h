@@ -10,6 +10,7 @@
 #include <QMainWindow>
 #include <QPaintEvent>
 #include <QPointer>
+#include <QStatusBar>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QVBoxLayout>
