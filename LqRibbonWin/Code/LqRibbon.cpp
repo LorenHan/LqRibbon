@@ -955,14 +955,22 @@ int RibbonMainWindow::nativeHitTestResult(const QPoint &globalPoint) const
 
     const bool isMaximized = IsZoomed(windowHandle);
     const int borderWidth = effectiveNativeResizeBorderWidth();
-    if (!isMaximized && borderWidth > 0) {
-        const bool onLeft = globalPoint.x() >= windowRect.left
+    const bool canResizeHorizontally = canNativeResizeHorizontally();
+    const bool canResizeVertically = canNativeResizeVertically();
+    if (!isMaximized
+        && borderWidth > 0
+        && (canResizeHorizontally || canResizeVertically)) {
+        const bool onLeft = canResizeHorizontally
+            && globalPoint.x() >= windowRect.left
             && globalPoint.x() < windowRect.left + borderWidth;
-        const bool onRight = globalPoint.x() <= windowRect.right
+        const bool onRight = canResizeHorizontally
+            && globalPoint.x() <= windowRect.right
             && globalPoint.x() > windowRect.right - borderWidth;
-        const bool onTop = globalPoint.y() >= windowRect.top
+        const bool onTop = canResizeVertically
+            && globalPoint.y() >= windowRect.top
             && globalPoint.y() < windowRect.top + borderWidth;
-        const bool onBottom = globalPoint.y() <= windowRect.bottom
+        const bool onBottom = canResizeVertically
+            && globalPoint.y() <= windowRect.bottom
             && globalPoint.y() > windowRect.bottom - borderWidth;
 
         if (onTop && onLeft) {
@@ -1061,7 +1069,8 @@ void RibbonMainWindow::updateNativeSystemMenu(void *menuHandle) const
     HWND windowHandle = reinterpret_cast<HWND>(winId());
     const bool isMaximized = IsZoomed(windowHandle);
     const bool isMinimized = IsIconic(windowHandle);
-    const bool canResize = minimumSize() != maximumSize();
+    const bool canResize = canNativeResizeHorizontally()
+        || canNativeResizeVertically();
     const Qt::WindowFlags flags = windowFlags();
     const bool hasCustomButtons = flags.testFlag(Qt::CustomizeWindowHint);
     const bool canMinimize = !hasCustomButtons
@@ -1151,5 +1160,15 @@ void RibbonMainWindow::updateNativeMinMaxInfo(void *minMaxInfo) const
 #else
     Q_UNUSED(minMaxInfo)
 #endif
+}
+
+bool RibbonMainWindow::canNativeResizeHorizontally() const
+{
+    return minimumWidth() < maximumWidth();
+}
+
+bool RibbonMainWindow::canNativeResizeVertically() const
+{
+    return minimumHeight() < maximumHeight();
 }
 } // namespace LqRibbon

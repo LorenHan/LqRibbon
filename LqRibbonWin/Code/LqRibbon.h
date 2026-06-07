@@ -190,6 +190,8 @@ private:
     void updateNativeSystemMenu(void *menuHandle) const;
     QPoint nativeSystemMenuPoint() const;
     void updateNativeMinMaxInfo(void *minMaxInfo) const;
+    bool canNativeResizeHorizontally() const;
+    bool canNativeResizeVertically() const;
 
 private:
     QWidget *m_rootWidget;
