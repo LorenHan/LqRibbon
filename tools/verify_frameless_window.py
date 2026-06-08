@@ -148,6 +148,20 @@ class FramelessVerifier:
         ctypes.windll.user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
         self.wait(70)
 
+    def click_maximize_button(self):
+        point = self.window.title_bar.max_button.mapToGlobal(self.window.title_bar.max_button.rect().center())
+        self.click_at(point)
+        if self.wait_until(self.window.isMaximized, timeout_ms=700):
+            return
+
+        self.window.raise_()
+        self.window.activateWindow()
+        ctypes.windll.user32.SetForegroundWindow(self.hwnd())
+        self.wait(120)
+        point = self.window.title_bar.max_button.mapToGlobal(self.window.title_bar.max_button.rect().center())
+        self.click_at(point)
+        self.wait_until(self.window.isMaximized, timeout_ms=700)
+
     def double_click_at(self, global_pos):
         self.click_at(global_pos)
         self.wait(60)
@@ -232,8 +246,7 @@ class FramelessVerifier:
 
     def check_maximize_button(self):
         self.ensure_normal_geometry()
-        self.click_at(self.window.title_bar.max_button.mapToGlobal(self.window.title_bar.max_button.rect().center()))
-        self.wait(700)
+        self.click_maximize_button()
         self.check("maximize button maximizes window", self.window.isMaximized(), str(self.window.geometry()))
         self.check("maximized title hit becomes HTCLIENT for Qt double-click restore", self.hit_at(self.title_center()) == HTCLIENT)
         max_button_hit = self.hit_at(self.window.title_bar.max_button.mapToGlobal(self.window.title_bar.max_button.rect().center()))
@@ -248,6 +261,7 @@ class FramelessVerifier:
         self.wait(700)
         self.check("real title double-click restores from maximized", not self.window.isMaximized(), str(self.window.geometry()))
         self.check("real double-click restore returns to saved normal size", self.geometry_close(self.window.geometry(), QRect(100, 100, 1200, 700)), str(self.window.geometry()))
+        self.check_geometry_remains_stable("real double-click restore geometry does not drift")
 
     def check_maximize_button_restore(self):
         self.ensure_normal_geometry()
@@ -257,6 +271,7 @@ class FramelessVerifier:
         self.wait(700)
         self.check("maximize button restores from maximized", not self.window.isMaximized(), str(self.window.geometry()))
         self.check("button restore returns to saved normal size", self.geometry_close(self.window.geometry(), QRect(100, 100, 1200, 700)), str(self.window.geometry()))
+        self.check_geometry_remains_stable("button restore geometry does not drift")
 
     def check_drag_down_restore(self):
         self.ensure_normal_geometry()
@@ -343,6 +358,7 @@ class FramelessVerifier:
                 self.geometry_close(self.window.geometry(), base_geometry),
                 str(self.window.geometry()),
             )
+            self.check_geometry_remains_stable(f"stress {index}: restored geometry does not drift", wait_ms=260)
 
             if index % 5 == 0:
                 self.click_at(self.window.title_bar.max_button.mapToGlobal(self.window.title_bar.max_button.rect().center()))
@@ -355,6 +371,7 @@ class FramelessVerifier:
                     self.geometry_close(self.window.geometry(), base_geometry),
                     str(self.window.geometry()),
                 )
+                self.check_geometry_remains_stable(f"stress {index}: button restore geometry does not drift", wait_ms=260)
 
             if index % 10 == 0:
                 available = self.window._available_geometry_for_window()
@@ -399,6 +416,7 @@ class FramelessVerifier:
         self.window._remember_normal_geometry(self.window.geometry())
         self.window.raise_()
         self.window.activateWindow()
+        ctypes.windll.user32.SetForegroundWindow(self.hwnd())
         self.wait(200)
 
     @staticmethod
@@ -408,6 +426,16 @@ class FramelessVerifier:
             and abs(actual.y() - expected.y()) <= tolerance
             and abs(actual.width() - expected.width()) <= tolerance
             and abs(actual.height() - expected.height()) <= tolerance
+        )
+
+    def check_geometry_remains_stable(self, name, wait_ms=360, tolerance=2):
+        before = QRect(self.window.geometry())
+        self.wait(wait_ms)
+        after = QRect(self.window.geometry())
+        self.check(
+            name,
+            self.geometry_close(after, before, tolerance),
+            f"before={before}, after={after}",
         )
 
 

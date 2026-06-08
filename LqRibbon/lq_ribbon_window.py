@@ -387,8 +387,9 @@ class LqTitleBar(QWidget):
 
         self._window._debug(f"drag restore target={target_geometry}")
         if IS_WINDOWS:
+            restore_token = self._window._begin_restore_request()
             self._window._restore_windows_window(target_geometry)
-            self._window._restore_to_target_later(target_geometry)
+            self._window._restore_to_target_later(target_geometry, restore_token)
         else:
             self._window.showNormal()
             self._window.setGeometry(target_geometry)
@@ -421,20 +422,33 @@ class LqRibbonWindow(QMainWindow):
         self._skip_caption_dblclk_until = 0.0
         self._frameless_debug = os.environ.get("LQRIBBON_FRAMELESS_DEBUG", "").lower() in {"1", "true", "yes", "on"}
         self._was_maximized = False
+        self._restore_generation = 0
         self.init_ui()
         self.apply_styles()
 
     def _debug(self, message):
         if not self._frameless_debug:
             return
+        window_state = self.windowState()
+        try:
+            state_value = int(window_state)
+        except TypeError:
+            state_value = int(window_state.value)
         print(
             "[LqFrameless] "
             f"{message} | maximized={self.isMaximized()} minimized={self.isMinimized()} "
-            f"fullscreen={self.isFullScreen()} state={int(self.windowState())} "
+            f"fullscreen={self.isFullScreen()} state={state_value} "
             f"geo={self.geometry()} frame={self.frameGeometry()} "
             f"normal={self.normalGeometry()} saved={self._last_normal_geometry}",
             flush=True,
         )
+
+    def _begin_restore_request(self):
+        self._restore_generation += 1
+        return self._restore_generation
+
+    def _cancel_restore_request(self):
+        self._restore_generation += 1
 
     def init_ui(self):
         """Initialize the UI components."""
@@ -547,12 +561,14 @@ class LqRibbonWindow(QMainWindow):
         self._debug("toggle_maximize after")
 
     def _minimize_window(self):
+        self._cancel_restore_request()
         self.showMinimized()
 
     def _maximize_window(self, animated=True):
         if self.isMaximized() or self.isFullScreen():
             return
 
+        self._cancel_restore_request()
         self._remember_normal_geometry(self.geometry())
         self._debug("maximize before")
         if IS_WINDOWS:
@@ -585,8 +601,9 @@ class LqRibbonWindow(QMainWindow):
         self._debug(f"restore target={target}")
 
         if IS_WINDOWS:
+            restore_token = self._begin_restore_request()
             self._restore_windows_window(target)
-            self._restore_to_target_later(target)
+            self._restore_to_target_later(target, restore_token)
             self._update_maximize_icon()
             self._debug("restore after win32 restore request")
             return
@@ -604,8 +621,15 @@ class LqRibbonWindow(QMainWindow):
         else:
             finish()
 
-    def _restore_to_target_later(self, target):
+    def _restore_to_target_later(self, target, restore_token=None):
+        if restore_token is None:
+            restore_token = self._begin_restore_request()
+        target = QRect(target)
+
         def apply_restore_geometry():
+            if restore_token != self._restore_generation:
+                self._debug("restore timer skipped stale request")
+                return
             self._debug(f"restore timer target={target}")
             hwnd = int(self.winId()) if IS_WINDOWS else 0
             if IS_WINDOWS and self._is_windows_hwnd_maximized(hwnd):
@@ -617,14 +641,15 @@ class LqRibbonWindow(QMainWindow):
                 self._debug("restore timer skipped because still maximized/fullscreen")
                 return
             fitted = self._fit_geometry_to_screen(target, self._available_geometry_for_geometry(target))
-            if self._geometry_matches_available_screen(self.geometry()) or self._geometry_differs(self.geometry(), fitted):
+            current = QRect(self.geometry())
+            if self._geometry_matches_available_screen(current) and self._geometry_differs(current, fitted):
                 self._debug(f"restore timer setGeometry fitted={fitted}")
                 self.setGeometry(fitted)
+                self._cancel_restore_request()
             self._update_maximize_icon()
 
-        QTimer.singleShot(0, apply_restore_geometry)
-        QTimer.singleShot(120, apply_restore_geometry)
-        QTimer.singleShot(320, apply_restore_geometry)
+        QTimer.singleShot(80, apply_restore_geometry)
+        QTimer.singleShot(220, apply_restore_geometry)
 
     def _animate_geometry_to(self, target, finished_callback=None):
         if self._window_animation:
@@ -669,7 +694,7 @@ class LqRibbonWindow(QMainWindow):
 
         maximize_action = QAction("Maximize", self)
         maximize_action.setEnabled(not self.isMaximized())
-        maximize_action.triggered.connect(self.showMaximized)
+        maximize_action.triggered.connect(lambda: self._maximize_window(animated=False))
         menu.addAction(maximize_action)
 
         menu.addSeparator()
@@ -694,9 +719,7 @@ class LqRibbonWindow(QMainWindow):
         at_bottom = abs(global_pos.y() - geometry.bottom()) <= threshold
 
         if at_top and not (at_left or at_right):
-            self._remember_normal_geometry(self.geometry())
-            self.showMaximized()
-            self._update_maximize_icon()
+            self._maximize_window(animated=False)
             return True
 
         if not (at_left or at_right):
@@ -711,6 +734,7 @@ class LqRibbonWindow(QMainWindow):
             height = geometry.height() // 2
             y = geometry.top() if at_top else geometry.top() + geometry.height() - height
 
+        self._cancel_restore_request()
         self.showNormal()
         self.setGeometry(self._fit_geometry_to_screen(QRect(x, y, width, height), geometry))
         self._update_maximize_icon()
@@ -855,8 +879,8 @@ class LqRibbonWindow(QMainWindow):
             return
         if not self._geometry_matches_available_screen(self.geometry()):
             return
-        if IS_WINDOWS and self._is_windows_hwnd_maximized(int(self.winId())):
-            self._debug("native state restore deferred because Win32 placement is still maximized")
+        if IS_WINDOWS:
+            self._debug("native state restore deferred to avoid duplicate geometry correction")
             self._restore_to_target_later(target)
             return
         fitted = self._fit_geometry_to_screen(target, self._available_geometry_for_geometry(target))
@@ -1104,17 +1128,42 @@ class LqRibbonWindow(QMainWindow):
         user32.ShowWindow.restype = wintypes.BOOL
 
         if user32.GetWindowPlacement(hwnd, ctypes.byref(placement)):
+            native_left, native_top, native_right, native_bottom = self._windows_native_rect_for_qt_geometry(target, hwnd)
             placement.showCmd = SW_SHOWNORMAL
-            placement.rcNormalPosition.left = target.left()
-            placement.rcNormalPosition.top = target.top()
-            placement.rcNormalPosition.right = target.right() + 1
-            placement.rcNormalPosition.bottom = target.bottom() + 1
+            placement.rcNormalPosition.left = native_left
+            placement.rcNormalPosition.top = native_top
+            placement.rcNormalPosition.right = native_right
+            placement.rcNormalPosition.bottom = native_bottom
             ok = bool(user32.SetWindowPlacement(hwnd, ctypes.byref(placement)))
-            self._debug(f"win32 SetWindowPlacement target={target} ok={ok}")
+            self._debug(
+                "win32 SetWindowPlacement "
+                f"target={target} native=({native_left}, {native_top}, {native_right}, {native_bottom}) ok={ok}"
+            )
 
         restored = bool(user32.ShowWindow(hwnd, SW_RESTORE))
         self._debug(f"win32 ShowWindow(SW_RESTORE) restored={restored}")
         return restored
+
+    def _windows_native_rect_for_qt_geometry(self, target, hwnd):
+        dpi = self._windows_dpi_for_window(hwnd)
+        scale = dpi / 96.0 if dpi else self.devicePixelRatioF()
+        if scale <= 0:
+            scale = 1.0
+
+        screen = self._screen_for_geometry(target)
+        screen_geometry = screen.geometry() if screen else QRect()
+        monitor_rect = self._windows_monitor_rect_for_window(hwnd)
+
+        if monitor_rect and screen_geometry.isValid():
+            left = monitor_rect.left + round((target.left() - screen_geometry.left()) * scale)
+            top = monitor_rect.top + round((target.top() - screen_geometry.top()) * scale)
+        else:
+            left = round(target.left() * scale)
+            top = round(target.top() * scale)
+
+        right = left + round(target.width() * scale)
+        bottom = top + round(target.height() * scale)
+        return left, top, right, bottom
 
     def _handle_windows_nc_calc_size(self, msg):
         rect = None
