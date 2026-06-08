@@ -47,6 +47,8 @@ public:
 
 private:
     QToolButton *createButton(QAction *action, Qt::ToolButtonStyle buttonStyle);
+    void addSmallButton(QWidget *widget);
+    void setupSmallButton(QToolButton *button);
     QGridLayout *smallButtonLayout();
 
 private:
@@ -180,6 +182,8 @@ public:
     int nativeCaptionHeight() const;
     void setNativeResizeBorderWidth(int width);
     int nativeResizeBorderWidth() const;
+    void setFrameThemeEnabled(bool enabled);
+    bool isFrameThemeEnabled() const;
 
 protected:
     bool eventFilter(QObject *object, QEvent *event) override;

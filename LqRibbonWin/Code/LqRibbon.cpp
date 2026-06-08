@@ -2,10 +2,13 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QFontMetrics>
 #include <QGridLayout>
+#include <QLayout>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QStyle>
 #include <QTabBar>
 #include <QWindow>
 
@@ -17,6 +20,15 @@
 #endif
 
 namespace {
+
+const int ribbonLargeButtonHeight = 66;
+const int ribbonLargeButtonMinimumWidth = 66;
+const int ribbonLargeButtonMaximumWidth = 96;
+const int ribbonSmallButtonHeight = 22;
+const int ribbonSmallButtonMinimumWidth = 96;
+const int ribbonSmallButtonMaximumWidth = 220;
+const QSize ribbonLargeIconSize(28, 28);
+const QSize ribbonSmallIconSize(16, 16);
 
 const char ribbonStyleSheet[] =
     "LqRibbon--RibbonBar {"
@@ -89,7 +101,7 @@ const char ribbonStyleSheet[] =
     "LqRibbon--RibbonGroup QToolButton {"
     "    border: 1px solid transparent;"
     "    border-radius: 2px;"
-    "    padding: 3px;"
+    "    padding: 2px 3px;"
     "    color: #202020;"
     "}"
     "LqRibbon--RibbonGroup QToolButton:hover {"
@@ -99,7 +111,63 @@ const char ribbonStyleSheet[] =
     "LqRibbon--RibbonGroup QToolButton:pressed {"
     "    background: #c5ddfa;"
     "    border-color: #5f95d0;"
+    "}"
+    "LqRibbon--RibbonGroup QToolButton::menu-button {"
+    "    border-left: 1px solid #d3e0ee;"
+    "    width: 16px;"
+    "}"
+    "LqRibbon--RibbonGroup QToolButton::menu-indicator {"
+    "    width: 10px;"
+    "    subcontrol-origin: padding;"
+    "    subcontrol-position: center right;"
+    "    right: 3px;"
     "}";
+
+QString cleanRibbonButtonText(const QString &strText)
+{
+    QString strCleanText = strText;
+    strCleanText.remove(QLatin1Char('&'));
+    return strCleanText.trimmed();
+}
+
+int ribbonButtonTextWidth(const QWidget *widget, const QString &strText)
+{
+    const QFontMetrics fontMetrics(widget->font());
+    const QStringList strLineList = strText.split(QLatin1Char('\n'));
+    int textWidth = 0;
+
+    for (const QString &strLine : strLineList) {
+        textWidth = qMax(textWidth, fontMetrics.horizontalAdvance(strLine));
+    }
+
+    return textWidth;
+}
+
+int ribbonLargeButtonWidth(const QToolButton *button)
+{
+    const QString strButtonText = cleanRibbonButtonText(button->text());
+    const int textWidth = ribbonButtonTextWidth(button, strButtonText);
+    return qBound(ribbonLargeButtonMinimumWidth,
+                  textWidth + 16,
+                  ribbonLargeButtonMaximumWidth);
+}
+
+int ribbonSmallButtonWidth(const QToolButton *button)
+{
+    const QString strButtonText = cleanRibbonButtonText(button->text());
+    const int textWidth = ribbonButtonTextWidth(button, strButtonText);
+    const int iconWidth = button->icon().isNull()
+        ? 0
+        : ribbonSmallIconSize.width() + 6;
+    const int menuIndicatorWidth = button->menu()
+        ? button->style()->pixelMetric(QStyle::PM_MenuButtonIndicator, nullptr, button)
+        : 0;
+    const int menuWidth = button->menu() ? qMax(12, menuIndicatorWidth) + 10 : 0;
+
+    return qBound(ribbonSmallButtonMinimumWidth,
+                  iconWidth + textWidth + menuWidth + 24,
+                  ribbonSmallButtonMaximumWidth);
+}
 
 } // namespace
 
@@ -123,7 +191,7 @@ RibbonGroup::RibbonGroup(const QString &strTitle, QWidget *parent)
     m_titleLabel->setAlignment(Qt::AlignCenter);
 
     m_contentLayout->setContentsMargins(5, 4, 5, 1);
-    m_contentLayout->setSpacing(2);
+    m_contentLayout->setSpacing(4);
     m_contentLayout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
@@ -150,12 +218,7 @@ void RibbonGroup::addAction(QAction *action, Qt::ToolButtonStyle buttonStyle)
 
     QToolButton *button = createButton(action, buttonStyle);
     if (buttonStyle == Qt::ToolButtonTextBesideIcon) {
-        smallButtonLayout()->addWidget(button, m_smallButtonRow, m_smallButtonColumn);
-        ++m_smallButtonRow;
-        if (m_smallButtonRow >= 3) {
-            m_smallButtonRow = 0;
-            ++m_smallButtonColumn;
-        }
+        addSmallButton(button);
         return;
     }
 
@@ -169,6 +232,14 @@ void RibbonGroup::addWidget(QWidget *widget)
     }
 
     widget->setParent(this);
+
+    QToolButton *button = qobject_cast<QToolButton *>(widget);
+    if (button) {
+        setupSmallButton(button);
+        addSmallButton(button);
+        return;
+    }
+
     m_contentLayout->addWidget(widget);
 }
 
@@ -189,17 +260,63 @@ QToolButton *RibbonGroup::createButton(QAction *action, Qt::ToolButtonStyle butt
     button->setAutoRaise(true);
     button->setToolButtonStyle(buttonStyle);
     button->setFocusPolicy(Qt::NoFocus);
-    button->setIconSize(buttonStyle == Qt::ToolButtonTextUnderIcon ? QSize(28, 28) : QSize(18, 18));
 
-    if (buttonStyle == Qt::ToolButtonTextUnderIcon) {
-        button->setMinimumSize(66, 62);
-        button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-    } else {
-        button->setMinimumSize(92, 24);
-        button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    if (action->menu()) {
+        button->setMenu(action->menu());
+        button->setPopupMode(QToolButton::MenuButtonPopup);
     }
 
+    if (buttonStyle != Qt::ToolButtonTextUnderIcon) {
+        setupSmallButton(button);
+        return button;
+    }
+
+    button->setIconSize(ribbonLargeIconSize);
+    button->setPopupMode(action->menu()
+                         ? QToolButton::MenuButtonPopup
+                         : QToolButton::DelayedPopup);
+    const int buttonWidth = ribbonLargeButtonWidth(button);
+    button->setMinimumSize(buttonWidth, ribbonLargeButtonHeight);
+    button->setMaximumSize(buttonWidth, ribbonLargeButtonHeight);
+    button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+
     return button;
+}
+
+void RibbonGroup::addSmallButton(QWidget *widget)
+{
+    if (!widget) {
+        return;
+    }
+
+    smallButtonLayout()->addWidget(widget, m_smallButtonRow, m_smallButtonColumn);
+    ++m_smallButtonRow;
+
+    if (m_smallButtonRow >= 3) {
+        m_smallButtonRow = 0;
+        ++m_smallButtonColumn;
+    }
+}
+
+void RibbonGroup::setupSmallButton(QToolButton *button)
+{
+    if (!button) {
+        return;
+    }
+
+    button->setAutoRaise(true);
+    button->setFocusPolicy(Qt::NoFocus);
+    button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    button->setIconSize(ribbonSmallIconSize);
+    button->setStyleSheet(QString());
+    button->setPopupMode(button->menu()
+                         ? QToolButton::MenuButtonPopup
+                         : QToolButton::DelayedPopup);
+
+    const int buttonWidth = ribbonSmallButtonWidth(button);
+    button->setMinimumSize(buttonWidth, ribbonSmallButtonHeight);
+    button->setMaximumSize(buttonWidth, ribbonSmallButtonHeight);
+    button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 }
 
 QGridLayout *RibbonGroup::smallButtonLayout()
@@ -209,10 +326,16 @@ QGridLayout *RibbonGroup::smallButtonLayout()
     }
 
     m_smallButtonWidget = new QWidget(this);
+    m_smallButtonWidget->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     m_smallButtonLayout = new QGridLayout(m_smallButtonWidget);
     m_smallButtonLayout->setContentsMargins(0, 0, 0, 0);
-    m_smallButtonLayout->setSpacing(1);
-    m_contentLayout->addWidget(m_smallButtonWidget);
+    m_smallButtonLayout->setHorizontalSpacing(6);
+    m_smallButtonLayout->setVerticalSpacing(0);
+    m_smallButtonLayout->setSizeConstraint(QLayout::SetFixedSize);
+    m_smallButtonLayout->setRowMinimumHeight(0, ribbonSmallButtonHeight);
+    m_smallButtonLayout->setRowMinimumHeight(1, ribbonSmallButtonHeight);
+    m_smallButtonLayout->setRowMinimumHeight(2, ribbonSmallButtonHeight);
+    m_contentLayout->addWidget(m_smallButtonWidget, 0, Qt::AlignTop);
     return m_smallButtonLayout;
 }
 
@@ -266,7 +389,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     setDocumentMode(false);
     setMovable(false);
     setTabPosition(QTabWidget::North);
-    setFixedHeight(120);
+    setFixedHeight(126);
 
     m_searchEdit->setObjectName(QStringLiteral("lqRibbonSearchEdit"));
     m_searchEdit->setPlaceholderText(tr("Search"));
@@ -584,6 +707,11 @@ void RibbonBar::setCurrentPageIndex(int index)
 
 void RibbonBar::setFrameThemeEnabled(bool enabled)
 {
+    RibbonMainWindow *mainWindow = qobject_cast<RibbonMainWindow *>(window());
+    if (mainWindow) {
+        mainWindow->setNativeFrameEnabled(enabled);
+    }
+
     if (m_frameThemeEnabled == enabled) {
         return;
     }
@@ -881,6 +1009,17 @@ void RibbonMainWindow::setNativeResizeBorderWidth(int width)
 int RibbonMainWindow::nativeResizeBorderWidth() const
 {
     return m_nativeResizeBorderWidth;
+}
+
+void RibbonMainWindow::setFrameThemeEnabled(bool enabled)
+{
+    m_ribbonBar->setFrameThemeEnabled(enabled);
+    setNativeFrameEnabled(enabled);
+}
+
+bool RibbonMainWindow::isFrameThemeEnabled() const
+{
+    return m_ribbonBar->isFrameThemeEnabled();
 }
 
 bool RibbonMainWindow::eventFilter(QObject *object, QEvent *event)

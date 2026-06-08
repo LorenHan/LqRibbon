@@ -1,7 +1,10 @@
 #include <QApplication>
 #include <QLabel>
+#include <QMenu>
 #include <QMessageBox>
 #include <QStyle>
+#include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include "LqRibbon.h"
@@ -9,11 +12,17 @@
 int main(int argc, char *argv[])
 {
     QApplication application(argc, argv);
+    const QStringList argumentList = application.arguments();
+    const int previewIndex = argumentList.indexOf(QStringLiteral("--grab-preview"));
+    const bool previewRequested = previewIndex >= 0
+        && previewIndex + 1 < argumentList.count();
+    const QString strPreviewPath = previewRequested
+        ? argumentList.at(previewIndex + 1)
+        : QString();
 
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
     mainWindow.resize(920, 560);
-    mainWindow.setNativeFrameEnabled(true);
 
     LqRibbon::RibbonPage *generalPage = mainWindow.ribbonBar()->addPage(QObject::tr("General"));
     LqRibbon::RibbonGroup *viewGroup = generalPage->addGroup(QObject::tr("View"));
@@ -43,6 +52,27 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
         QObject::tr("Connect"),
         Qt::ToolButtonTextUnderIcon);
+
+    LqRibbon::RibbonGroup *specialistGroup = driverPage->addGroup(QObject::tr("Specialist"));
+    QAction *basicAction = specialistGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogContentsView),
+        QObject::tr("Basic Operation"),
+        Qt::ToolButtonTextBesideIcon);
+    QAction *driverAction = specialistGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DriveHDIcon),
+        QObject::tr("Driver Configuration"),
+        Qt::ToolButtonTextBesideIcon);
+
+    QToolButton *toolButtonControl = new QToolButton(&mainWindow);
+    toolButtonControl->setText(QObject::tr("Control Modes"));
+    toolButtonControl->setIcon(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogListView));
+    toolButtonControl->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    toolButtonControl->setPopupMode(QToolButton::MenuButtonPopup);
+    toolButtonControl->setMenu(new QMenu(toolButtonControl));
+    toolButtonControl->menu()->addAction(QObject::tr("Pulse Mode"));
+    toolButtonControl->menu()->addAction(QObject::tr("Analog Velocity Mode"));
+    specialistGroup->addWidget(toolButtonControl);
 
     QObject::connect(fullScreenAction, &QAction::triggered, [&mainWindow]() {
         mainWindow.setWindowState(mainWindow.windowState() ^ Qt::WindowFullScreen);
@@ -76,7 +106,7 @@ int main(int argc, char *argv[])
     contentLabel->setAlignment(Qt::AlignCenter);
     mainWindow.setCentralWidget(contentLabel);
     mainWindow.ribbonBar()->setCurrentPageIndex(1);
-    mainWindow.ribbonBar()->setFrameThemeEnabled(true);
+    mainWindow.setFrameThemeEnabled(true);
     mainWindow.ribbonBar()->setSearchVisible(true);
     mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
     mainWindow.ribbonBar()->setRecentSearchLimit(5);
@@ -85,6 +115,8 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(tabAction);
     mainWindow.ribbonBar()->registerSearchAction(settingsAction);
     mainWindow.ribbonBar()->registerSearchAction(connectAction);
+    mainWindow.ribbonBar()->registerSearchAction(basicAction);
+    mainWindow.ribbonBar()->registerSearchAction(driverAction);
     mainWindow.ribbonBar()->addQuickAccessAction(fullScreenAction);
     mainWindow.ribbonBar()->addQuickAccessAction(connectAction);
     QObject::connect(mainWindow.ribbonBar(), &LqRibbon::RibbonBar::searchAccepted,
@@ -95,5 +127,13 @@ int main(int argc, char *argv[])
                      });
 
     mainWindow.show();
+
+    if (!strPreviewPath.isEmpty()) {
+        QTimer::singleShot(300, &mainWindow, [&mainWindow, strPreviewPath]() {
+            mainWindow.grab().save(strPreviewPath);
+            qApp->quit();
+        });
+    }
+
     return application.exec();
 }
