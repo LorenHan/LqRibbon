@@ -40,12 +40,38 @@ class MyWindow(LqRibbonWindow):
         settings_act.triggered.connect(self.on_settings)
 ```
 
+`LqRibbonWindow` uses a frameless window by default. If you need the native system frame,
+pass `frameless=False`:
+
+```python
+window = LqRibbonWindow(frameless=False)
+```
+
+The frameless implementation keeps the common native frame behaviors:
+
+- vector minimize, maximize/restore, and close buttons
+- title bar dragging, double-click maximize/restore, and right-click system menu
+- `Alt+Space` system menu shortcut
+- edge and corner resizing
+- drag-to-top maximize, drag-to-side half snap, and drag-to-corner quarter snap fallback
+- drag a maximized title bar downward to restore and keep dragging
+- Windows native maximize/restore animation and hit testing for resize, system buttons, Aero Snap, and high-DPI cursor mapping
+- short custom maximize/restore geometry animation on non-Windows platforms
+- multi-monitor aware screen selection, restore geometry clamping, and snap fallback
+- macOS-style left-side traffic-light controls when running on macOS
+
 ## Example Application
 
 Run the example application to see LqRibbon in action:
 
 ```bash
 python example/main.py
+```
+
+Run the frameless window regression checks on Windows:
+
+```bash
+python tools/verify_frameless_window.py
 ```
 
 ## Project Structure

@@ -71,9 +71,31 @@ class LqStyle:
             background-color: #F5F5F5;
         }
 
+        QWidget#lq_ribbon_root {
+            background-color: #F5F5F5;
+            border: none;
+        }
+
         /* Central Widget */
         QWidget {
             font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+        }
+
+        /* Frameless Title Bar */
+        QWidget#title_bar {
+            background-color: #2B579A;
+            border: none;
+        }
+
+        QWidget#title_bar[active="false"] {
+            background-color: #64748B;
+        }
+
+        QLabel#title_label {
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            padding-left: 2px;
         }
 
         /* Display Area */

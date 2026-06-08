@@ -11,7 +11,7 @@ class MainWindow(LqRibbonWindow):
     """Main window for the example application"""
 
     def __init__(self):
-        super().__init__()
+        super().__init__(frameless=True)
         self.setWindowTitle("LqRibbon Example Application")
         self.create_ribbon()
 
