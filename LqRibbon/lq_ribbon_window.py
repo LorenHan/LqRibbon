@@ -385,8 +385,13 @@ class LqTitleBar(QWidget):
         y = global_pos.y() - max(8, min(local_y, self.height() // 2))
         target_geometry = self._window._fit_geometry_to_screen(QRect(x, y, width, height), screen_geometry)
 
-        self._window.showNormal()
-        self._window.setGeometry(target_geometry)
+        self._window._debug(f"drag restore target={target_geometry}")
+        if IS_WINDOWS:
+            self._window._restore_windows_window(target_geometry)
+            self._window._restore_to_target_later(target_geometry)
+        else:
+            self._window.showNormal()
+            self._window.setGeometry(target_geometry)
         self._window._update_maximize_icon()
         self._drag_position = global_pos - self._window.frameGeometry().topLeft()
         self._system_move_started = self._try_start_system_move()
@@ -602,6 +607,12 @@ class LqRibbonWindow(QMainWindow):
     def _restore_to_target_later(self, target):
         def apply_restore_geometry():
             self._debug(f"restore timer target={target}")
+            hwnd = int(self.winId()) if IS_WINDOWS else 0
+            if IS_WINDOWS and self._is_windows_hwnd_maximized(hwnd):
+                self._debug("restore timer retry because Win32 placement is still maximized")
+                self._restore_windows_window(target)
+                self._update_maximize_icon()
+                return
             if self.isMaximized() or self.isFullScreen():
                 self._debug("restore timer skipped because still maximized/fullscreen")
                 return
@@ -649,7 +660,7 @@ class LqRibbonWindow(QMainWindow):
 
         restore_action = QAction("Restore", self)
         restore_action.setEnabled(self.isMaximized())
-        restore_action.triggered.connect(self.showNormal)
+        restore_action.triggered.connect(lambda: self._restore_window(animated=False))
         menu.addAction(restore_action)
 
         minimize_action = QAction("Minimize", self)
@@ -844,7 +855,13 @@ class LqRibbonWindow(QMainWindow):
             return
         if not self._geometry_matches_available_screen(self.geometry()):
             return
-        self.setGeometry(self._fit_geometry_to_screen(target, self._available_geometry_for_geometry(target)))
+        if IS_WINDOWS and self._is_windows_hwnd_maximized(int(self.winId())):
+            self._debug("native state restore deferred because Win32 placement is still maximized")
+            self._restore_to_target_later(target)
+            return
+        fitted = self._fit_geometry_to_screen(target, self._available_geometry_for_geometry(target))
+        self._debug(f"native state restore setGeometry fitted={fitted}")
+        self.setGeometry(fitted)
 
     def _geometry_matches_available_screen(self, geometry):
         available = self._available_geometry_for_geometry(geometry)
