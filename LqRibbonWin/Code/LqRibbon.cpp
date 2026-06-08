@@ -1,10 +1,13 @@
 #include "LqRibbon.h"
 
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QGridLayout>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QTabBar>
+#include <QWindow>
 
 #ifdef Q_OS_WIN
 #include <qt_windows.h>
@@ -306,6 +309,19 @@ RibbonBar::RibbonBar(QWidget *parent)
     updateStyleSheet();
     updateQuickAccessGeometry();
     updateSearchGeometry();
+}
+
+RibbonBar::~RibbonBar()
+{
+    for (const SearchCommand &command : m_searchCommandList) {
+        if (!command.action.isNull()) {
+            disconnect(command.action.data(), nullptr, this, nullptr);
+        }
+    }
+
+    m_searchCommandList.clear();
+    m_recentSearchActionList.clear();
+    m_searchActionIndex.clear();
 }
 
 RibbonPage *RibbonBar::addPage(const QString &strTitle)
@@ -774,14 +790,24 @@ RibbonMainWindow::RibbonMainWindow(QWidget *parent)
     , m_nativeCaptionHeight(30)
     , m_nativeResizeBorderWidth(0)
 {
+    setMouseTracking(true);
     m_rootLayout->setContentsMargins(0, 0, 0, 0);
     m_rootLayout->setSpacing(0);
     m_rootLayout->addWidget(m_ribbonBar);
     QMainWindow::setCentralWidget(m_rootWidget);
+    m_rootWidget->setMouseTracking(true);
+    m_ribbonBar->setMouseTracking(true);
+
+    if (QApplication::instance()) {
+        QApplication::instance()->installEventFilter(this);
+    }
 }
 
 RibbonMainWindow::~RibbonMainWindow()
 {
+    if (QApplication::instance()) {
+        QApplication::instance()->removeEventFilter(this);
+    }
 }
 
 RibbonBar *RibbonMainWindow::ribbonBar() const
@@ -802,6 +828,7 @@ void RibbonMainWindow::setCentralWidget(QWidget *widget)
 
     m_centralWidget = widget;
     widget->setParent(m_rootWidget);
+    widget->setMouseTracking(true);
     m_rootLayout->addWidget(widget, 1);
 }
 
@@ -823,9 +850,11 @@ void RibbonMainWindow::setNativeFrameEnabled(bool enabled)
 
     setWindowFlags(flags);
     setAttribute(Qt::WA_NativeWindow, enabled);
+    updateNativeWindowStyle();
 
     if (wasVisible) {
         show();
+        updateNativeWindowStyle();
     }
 }
 
@@ -854,6 +883,15 @@ int RibbonMainWindow::nativeResizeBorderWidth() const
     return m_nativeResizeBorderWidth;
 }
 
+bool RibbonMainWindow::eventFilter(QObject *object, QEvent *event)
+{
+    if (handleNativeFrameEvent(object, event)) {
+        return true;
+    }
+
+    return false;
+}
+
 bool RibbonMainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result)
 {
 #ifdef Q_OS_WIN
@@ -869,6 +907,9 @@ bool RibbonMainWindow::nativeEvent(const QByteArray &eventType, void *message, l
     }
 
     switch (nativeMessage->message) {
+    case WM_NCCALCSIZE:
+        *result = 0;
+        return true;
     case WM_NCHITTEST: {
         const int x = static_cast<short>(LOWORD(nativeMessage->lParam));
         const int y = static_cast<short>(HIWORD(nativeMessage->lParam));
@@ -909,6 +950,59 @@ bool RibbonMainWindow::nativeEvent(const QByteArray &eventType, void *message, l
 #endif
 }
 
+bool RibbonMainWindow::handleNativeFrameEvent(QObject *object, QEvent *event)
+{
+    if (!m_nativeFrameEnabled) {
+        return false;
+    }
+
+    QWidget *widget = qobject_cast<QWidget *>(object);
+    if (!widget || widget->window() != this) {
+        return false;
+    }
+
+    switch (event->type()) {
+    case QEvent::MouseMove: {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+        updateNativeFrameCursor(mouseEvent->globalPos());
+        return false;
+    }
+    case QEvent::Leave:
+        unsetCursor();
+        return false;
+    case QEvent::MouseButtonDblClick: {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::LeftButton
+            && isNativeCaptionPoint(mouseEvent->globalPos())
+            && canNativeMaximize()) {
+            isMaximized() ? showNormal() : showMaximized();
+            return true;
+        }
+        break;
+    }
+    case QEvent::MouseButtonPress: {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+        const QPoint globalPoint = mouseEvent->globalPos();
+        if (mouseEvent->button() == Qt::LeftButton) {
+            if (nativeResizeEdges(globalPoint) != Qt::Edges()) {
+                return startNativeSystemResize(globalPoint);
+            }
+            if (isNativeCaptionPoint(globalPoint)) {
+                return startNativeSystemMove(globalPoint);
+            }
+        } else if (mouseEvent->button() == Qt::RightButton
+                   && isNativeCaptionPoint(globalPoint)) {
+            return showNativeSystemMenu(globalPoint);
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    return false;
+}
+
 bool RibbonMainWindow::isNativeCaptionPoint(const QPoint &globalPoint) const
 {
     if (m_nativeCaptionHeight <= 0 || !m_ribbonBar->isVisible()) {
@@ -942,6 +1036,99 @@ bool RibbonMainWindow::isNativeCaptionPoint(const QPoint &globalPoint) const
     }
 
     return true;
+}
+
+bool RibbonMainWindow::startNativeSystemMove(const QPoint &globalPoint)
+{
+    Q_UNUSED(globalPoint)
+
+    QWindow *nativeWindow = windowHandle();
+    if (!nativeWindow) {
+        return false;
+    }
+
+    return nativeWindow->startSystemMove();
+}
+
+bool RibbonMainWindow::startNativeSystemResize(const QPoint &globalPoint)
+{
+    const Qt::Edges edges = nativeResizeEdges(globalPoint);
+    if (edges == Qt::Edges()) {
+        return false;
+    }
+
+    QWindow *nativeWindow = windowHandle();
+    if (!nativeWindow) {
+        return false;
+    }
+
+    return nativeWindow->startSystemResize(edges);
+}
+
+Qt::Edges RibbonMainWindow::nativeResizeEdges(const QPoint &globalPoint) const
+{
+    if (isMaximized() || isFullScreen()) {
+        return Qt::Edges();
+    }
+
+    const int borderWidth = effectiveNativeResizeBorderWidth();
+    if (borderWidth <= 0) {
+        return Qt::Edges();
+    }
+
+    const QRect windowRect = frameGeometry();
+    Qt::Edges edges;
+    if (canNativeResizeHorizontally()
+        && globalPoint.x() >= windowRect.left()
+        && globalPoint.x() < windowRect.left() + borderWidth) {
+        edges |= Qt::LeftEdge;
+    }
+    if (canNativeResizeHorizontally()
+        && globalPoint.x() <= windowRect.right()
+        && globalPoint.x() > windowRect.right() - borderWidth) {
+        edges |= Qt::RightEdge;
+    }
+    if (canNativeResizeVertically()
+        && globalPoint.y() >= windowRect.top()
+        && globalPoint.y() < windowRect.top() + borderWidth) {
+        edges |= Qt::TopEdge;
+    }
+    if (canNativeResizeVertically()
+        && globalPoint.y() <= windowRect.bottom()
+        && globalPoint.y() > windowRect.bottom() - borderWidth) {
+        edges |= Qt::BottomEdge;
+    }
+
+    return edges;
+}
+
+void RibbonMainWindow::updateNativeFrameCursor(const QPoint &globalPoint)
+{
+    const Qt::Edges edges = nativeResizeEdges(globalPoint);
+    if (edges == Qt::Edges()) {
+        unsetCursor();
+        return;
+    }
+
+    const bool isLeftTop = edges.testFlag(Qt::LeftEdge)
+        && edges.testFlag(Qt::TopEdge);
+    const bool isRightBottom = edges.testFlag(Qt::RightEdge)
+        && edges.testFlag(Qt::BottomEdge);
+    const bool isRightTop = edges.testFlag(Qt::RightEdge)
+        && edges.testFlag(Qt::TopEdge);
+    const bool isLeftBottom = edges.testFlag(Qt::LeftEdge)
+        && edges.testFlag(Qt::BottomEdge);
+
+    if (isLeftTop || isRightBottom) {
+        setCursor(Qt::SizeFDiagCursor);
+    } else if (isRightTop || isLeftBottom) {
+        setCursor(Qt::SizeBDiagCursor);
+    } else if (edges.testFlag(Qt::LeftEdge)
+               || edges.testFlag(Qt::RightEdge)) {
+        setCursor(Qt::SizeHorCursor);
+    } else {
+        setCursor(Qt::SizeVerCursor);
+    }
 }
 
 int RibbonMainWindow::nativeHitTestResult(const QPoint &globalPoint) const
@@ -1002,9 +1189,12 @@ int RibbonMainWindow::nativeHitTestResult(const QPoint &globalPoint) const
     if (isNativeCaptionPoint(globalPoint)) {
         return HTCAPTION;
     }
-#endif
 
     return HTCLIENT;
+#else
+    Q_UNUSED(globalPoint)
+    return 0;
+#endif
 }
 
 int RibbonMainWindow::effectiveNativeResizeBorderWidth() const
@@ -1018,7 +1208,7 @@ int RibbonMainWindow::effectiveNativeResizeBorderWidth() const
     const int paddedWidth = GetSystemMetrics(SM_CXPADDEDBORDER);
     return qMax(4, frameWidth + paddedWidth);
 #else
-    return m_nativeResizeBorderWidth;
+    return m_nativeResizeBorderWidth > 0 ? m_nativeResizeBorderWidth : 6;
 #endif
 }
 
@@ -1075,8 +1265,6 @@ void RibbonMainWindow::updateNativeSystemMenu(void *menuHandle) const
     const bool hasCustomButtons = flags.testFlag(Qt::CustomizeWindowHint);
     const bool canMinimize = !hasCustomButtons
         || flags.testFlag(Qt::WindowMinimizeButtonHint);
-    const bool canMaximize = (!hasCustomButtons
-        || flags.testFlag(Qt::WindowMaximizeButtonHint)) && canResize;
     const bool canClose = !hasCustomButtons
         || flags.testFlag(Qt::WindowCloseButtonHint);
 
@@ -1096,7 +1284,7 @@ void RibbonMainWindow::updateNativeSystemMenu(void *menuHandle) const
         (canMinimize && !isMinimized) ? enabled : disabled);
     EnableMenuItem(systemMenu,
         SC_MAXIMIZE,
-        (canMaximize && !isMaximized) ? enabled : disabled);
+        (canNativeMaximize() && !isMaximized) ? enabled : disabled);
     EnableMenuItem(systemMenu, SC_CLOSE, canClose ? enabled : disabled);
 #else
     Q_UNUSED(menuHandle)
@@ -1170,5 +1358,53 @@ bool RibbonMainWindow::canNativeResizeHorizontally() const
 bool RibbonMainWindow::canNativeResizeVertically() const
 {
     return minimumHeight() < maximumHeight();
+}
+
+bool RibbonMainWindow::canNativeMaximize() const
+{
+    const Qt::WindowFlags flags = windowFlags();
+    const bool hasCustomButtons = flags.testFlag(Qt::CustomizeWindowHint);
+    const bool hasMaximizeButton = !hasCustomButtons
+        || flags.testFlag(Qt::WindowMaximizeButtonHint);
+    return hasMaximizeButton
+        && canNativeResizeHorizontally()
+        && canNativeResizeVertically();
+}
+
+void RibbonMainWindow::updateNativeWindowStyle()
+{
+#ifdef Q_OS_WIN
+    if (!m_nativeFrameEnabled) {
+        return;
+    }
+
+    HWND windowHandle = reinterpret_cast<HWND>(winId());
+    LONG_PTR style = GetWindowLongPtr(windowHandle, GWL_STYLE);
+    style |= WS_CAPTION | WS_SYSMENU | WS_THICKFRAME;
+
+    const Qt::WindowFlags flags = windowFlags();
+    const bool hasCustomButtons = flags.testFlag(Qt::CustomizeWindowHint);
+    if (!hasCustomButtons || flags.testFlag(Qt::WindowMinimizeButtonHint)) {
+        style |= WS_MINIMIZEBOX;
+    } else {
+        style &= ~WS_MINIMIZEBOX;
+    }
+
+    if (canNativeMaximize()) {
+        style |= WS_MAXIMIZEBOX;
+    } else {
+        style &= ~WS_MAXIMIZEBOX;
+    }
+
+    SetWindowLongPtr(windowHandle, GWL_STYLE, style);
+    SetWindowPos(windowHandle,
+                 nullptr,
+                 0,
+                 0,
+                 0,
+                 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
+                     | SWP_FRAMECHANGED);
+#endif
 }
 } // namespace LqRibbon

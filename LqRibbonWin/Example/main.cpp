@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
     mainWindow.resize(920, 560);
+    mainWindow.setNativeFrameEnabled(true);
 
     LqRibbon::RibbonPage *generalPage = mainWindow.ribbonBar()->addPage(QObject::tr("General"));
     LqRibbon::RibbonGroup *viewGroup = generalPage->addGroup(QObject::tr("View"));

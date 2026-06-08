@@ -5,6 +5,7 @@
 #include <QByteArray>
 #include <QCompleter>
 #include <QDebug>
+#include <QEvent>
 #include <QFrame>
 #include <QGridLayout>
 #include <QHash>
@@ -82,6 +83,7 @@ class RibbonBar : public QTabWidget
 
 public:
     explicit RibbonBar(QWidget *parent = nullptr);
+    ~RibbonBar() override;
 
     RibbonPage *addPage(const QString &strTitle);
     RibbonPage *page(int index) const;
@@ -180,10 +182,16 @@ public:
     int nativeResizeBorderWidth() const;
 
 protected:
+    bool eventFilter(QObject *object, QEvent *event) override;
     bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
 
 private:
+    bool handleNativeFrameEvent(QObject *object, QEvent *event);
     bool isNativeCaptionPoint(const QPoint &globalPoint) const;
+    bool startNativeSystemMove(const QPoint &globalPoint);
+    bool startNativeSystemResize(const QPoint &globalPoint);
+    Qt::Edges nativeResizeEdges(const QPoint &globalPoint) const;
+    void updateNativeFrameCursor(const QPoint &globalPoint);
     int nativeHitTestResult(const QPoint &globalPoint) const;
     int effectiveNativeResizeBorderWidth() const;
     bool showNativeSystemMenu(const QPoint &globalPoint);
@@ -192,6 +200,8 @@ private:
     void updateNativeMinMaxInfo(void *minMaxInfo) const;
     bool canNativeResizeHorizontally() const;
     bool canNativeResizeVertically() const;
+    bool canNativeMaximize() const;
+    void updateNativeWindowStyle();
 
 private:
     QWidget *m_rootWidget;
