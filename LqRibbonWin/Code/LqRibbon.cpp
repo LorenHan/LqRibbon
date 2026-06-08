@@ -27,8 +27,98 @@ const int ribbonLargeButtonMaximumWidth = 96;
 const int ribbonSmallButtonHeight = 22;
 const int ribbonSmallButtonMinimumWidth = 96;
 const int ribbonSmallButtonMaximumWidth = 220;
+const int ribbonWindowButtonWidth = 46;
+const int ribbonWindowButtonHeight = 30;
 const QSize ribbonLargeIconSize(28, 28);
 const QSize ribbonSmallIconSize(16, 16);
+
+class RibbonWindowButton : public QToolButton
+{
+public:
+    enum ButtonKind
+    {
+        MinimizeButton,
+        MaximizeButton,
+        CloseButton
+    };
+
+public:
+    explicit RibbonWindowButton(ButtonKind buttonKind, QWidget *parent = nullptr);
+
+    void setRestoreMode(bool restoreMode);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+
+private:
+    ButtonKind m_buttonKind;
+    bool m_restoreMode;
+};
+
+RibbonWindowButton::RibbonWindowButton(ButtonKind buttonKind, QWidget *parent)
+    : QToolButton(parent)
+    , m_buttonKind(buttonKind)
+    , m_restoreMode(false)
+{
+    setAutoRaise(true);
+    setCursor(Qt::ArrowCursor);
+    setFixedSize(ribbonWindowButtonWidth, ribbonWindowButtonHeight);
+    setFocusPolicy(Qt::NoFocus);
+}
+
+void RibbonWindowButton::setRestoreMode(bool restoreMode)
+{
+    if (m_restoreMode == restoreMode) {
+        return;
+    }
+
+    m_restoreMode = restoreMode;
+    update();
+}
+
+void RibbonWindowButton::paintEvent(QPaintEvent *event)
+{
+    Q_UNUSED(event)
+
+    QPainter painter(this);
+    if (isDown()) {
+        painter.fillRect(rect(),
+                         m_buttonKind == CloseButton
+                             ? QColor(QStringLiteral("#8f1f15"))
+                             : QColor(QStringLiteral("#244d80")));
+    } else if (underMouse()) {
+        painter.fillRect(rect(),
+                         m_buttonKind == CloseButton
+                             ? QColor(QStringLiteral("#c42b1c"))
+                             : QColor(QStringLiteral("#386caf")));
+    }
+
+    QPen pen(Qt::white);
+    pen.setWidthF(1.3);
+    painter.setPen(pen);
+    painter.setRenderHint(QPainter::Antialiasing, false);
+
+    const int centerX = width() / 2;
+    const int centerY = height() / 2;
+
+    switch (m_buttonKind) {
+    case MinimizeButton:
+        painter.drawLine(centerX - 6, centerY + 5, centerX + 6, centerY + 5);
+        break;
+    case MaximizeButton:
+        if (m_restoreMode) {
+            painter.drawRect(QRect(centerX - 2, centerY - 7, 10, 10));
+            painter.drawRect(QRect(centerX - 6, centerY - 3, 10, 10));
+        } else {
+            painter.drawRect(QRect(centerX - 6, centerY - 6, 12, 12));
+        }
+        break;
+    case CloseButton:
+        painter.drawLine(centerX - 5, centerY - 5, centerX + 5, centerY + 5);
+        painter.drawLine(centerX + 5, centerY - 5, centerX - 5, centerY + 5);
+        break;
+    }
+}
 
 const char ribbonStyleSheet[] =
     "LqRibbon--RibbonBar {"
@@ -380,6 +470,12 @@ RibbonBar::RibbonBar(QWidget *parent)
     : QTabWidget(parent)
     , m_searchEdit(new QLineEdit(this))
     , m_quickAccessBar(new QToolBar(this))
+    , m_minimizeButton(new RibbonWindowButton(
+                           RibbonWindowButton::MinimizeButton, this))
+    , m_maximizeButton(new RibbonWindowButton(
+                           RibbonWindowButton::MaximizeButton, this))
+    , m_closeButton(new RibbonWindowButton(
+                        RibbonWindowButton::CloseButton, this))
     , m_searchSuggestionModel(new QStringListModel(this))
     , m_searchCompleter(new QCompleter(m_searchSuggestionModel, this))
     , m_searchActionTriggerEnabled(true)
@@ -410,9 +506,41 @@ RibbonBar::RibbonBar(QWidget *parent)
     m_quickAccessBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     m_quickAccessBar->hide();
 
+    setupWindowControlButton(m_minimizeButton);
+    setupWindowControlButton(m_maximizeButton);
+    setupWindowControlButton(m_closeButton);
+    m_minimizeButton->setToolTip(tr("Minimize"));
+    m_maximizeButton->setToolTip(tr("Maximize"));
+    m_closeButton->setToolTip(tr("Close"));
+    updateWindowControlVisibility();
+
     connect(this, &QTabWidget::currentChanged, this, &RibbonBar::pageChanged);
     connect(m_searchEdit, &QLineEdit::textChanged,
             this, &RibbonBar::searchTextChanged);
+    connect(m_minimizeButton, &QToolButton::clicked, this, [this]() {
+        if (QWidget *topLevelWidget = window()) {
+            topLevelWidget->showMinimized();
+        }
+    });
+    connect(m_maximizeButton, &QToolButton::clicked, this, [this]() {
+        QWidget *topLevelWidget = window();
+        if (!topLevelWidget) {
+            return;
+        }
+
+        if (topLevelWidget->isMaximized()) {
+            topLevelWidget->showNormal();
+        } else {
+            topLevelWidget->showMaximized();
+        }
+
+        updateWindowControlState();
+    });
+    connect(m_closeButton, &QToolButton::clicked, this, [this]() {
+        if (QWidget *topLevelWidget = window()) {
+            topLevelWidget->close();
+        }
+    });
     connect(m_searchEdit, &QLineEdit::returnPressed, this, [this]() {
         const QString strText = m_searchEdit->text();
         if (!triggerSearchAction(strText)) {
@@ -430,6 +558,7 @@ RibbonBar::RibbonBar(QWidget *parent)
             });
 
     updateStyleSheet();
+    updateWindowControlGeometry();
     updateQuickAccessGeometry();
     updateSearchGeometry();
 }
@@ -717,6 +846,10 @@ void RibbonBar::setFrameThemeEnabled(bool enabled)
     }
 
     m_frameThemeEnabled = enabled;
+    updateWindowControlVisibility();
+    updateWindowControlGeometry();
+    updateSearchGeometry();
+    updateQuickAccessGeometry();
     updateStyleSheet();
 }
 
@@ -740,16 +873,32 @@ void RibbonBar::paintEvent(QPaintEvent *event)
 void RibbonBar::resizeEvent(QResizeEvent *event)
 {
     QTabWidget::resizeEvent(event);
+    updateWindowControlState();
+    updateWindowControlGeometry();
     updateQuickAccessGeometry();
     updateSearchGeometry();
     updateStyleSheet();
+}
+
+bool RibbonBar::isWindowControlPoint(const QPoint &point) const
+{
+    if (!m_frameThemeEnabled) {
+        return false;
+    }
+
+    return (m_minimizeButton->isVisible()
+            && m_minimizeButton->geometry().contains(point))
+        || (m_maximizeButton->isVisible()
+            && m_maximizeButton->geometry().contains(point))
+        || (m_closeButton->isVisible()
+            && m_closeButton->geometry().contains(point));
 }
 
 void RibbonBar::updateSearchGeometry()
 {
     const int searchWidth = 240;
     const int searchHeight = 24;
-    const int rightMargin = 10;
+    const int rightMargin = windowControlWidth() + 10;
     const int topMargin = 3;
     const int x = qMax(rightMargin, width() - searchWidth - rightMargin);
 
@@ -763,14 +912,75 @@ void RibbonBar::updateQuickAccessGeometry()
     const int rightMargin = 10;
     const int searchGap = 8;
     const int searchWidth = m_searchEdit->isHidden() ? 0 : 240;
+    const int controlWidth = windowControlWidth();
     const int barHeight = 24;
     const int maxWidth = qMax(0, width() / 3);
     const int barWidth = qMin(m_quickAccessBar->sizeHint().width(), maxWidth);
-    const int rightReservedWidth = rightMargin + searchWidth + searchGap;
+    const int rightReservedWidth = controlWidth + rightMargin + searchWidth + searchGap;
     const int x = qMax(rightMargin, width() - rightReservedWidth - barWidth);
 
     m_quickAccessBar->setGeometry(x, topMargin, barWidth, barHeight);
     m_quickAccessBar->raise();
+}
+
+void RibbonBar::setupWindowControlButton(QToolButton *button)
+{
+    if (!button) {
+        return;
+    }
+
+    button->hide();
+    button->raise();
+}
+
+void RibbonBar::updateWindowControlGeometry()
+{
+    const int buttonWidth = ribbonWindowButtonWidth;
+    const int buttonHeight = ribbonWindowButtonHeight;
+    const int top = 0;
+    int x = width() - (buttonWidth * 3);
+
+    m_minimizeButton->setGeometry(x, top, buttonWidth, buttonHeight);
+    x += buttonWidth;
+    m_maximizeButton->setGeometry(x, top, buttonWidth, buttonHeight);
+    x += buttonWidth;
+    m_closeButton->setGeometry(x, top, buttonWidth, buttonHeight);
+
+    m_minimizeButton->raise();
+    m_maximizeButton->raise();
+    m_closeButton->raise();
+}
+
+void RibbonBar::updateWindowControlState()
+{
+    QWidget *topLevelWidget = window();
+    const bool isMaximized = topLevelWidget && topLevelWidget->isMaximized();
+    RibbonWindowButton *button =
+        static_cast<RibbonWindowButton *>(m_maximizeButton);
+    button->setRestoreMode(isMaximized);
+    m_maximizeButton->setToolTip(isMaximized ? tr("Restore") : tr("Maximize"));
+
+    const bool canMaximize = topLevelWidget
+        && topLevelWidget->minimumWidth() < topLevelWidget->maximumWidth()
+        && topLevelWidget->minimumHeight() < topLevelWidget->maximumHeight();
+    m_maximizeButton->setEnabled(canMaximize);
+}
+
+void RibbonBar::updateWindowControlVisibility()
+{
+    m_minimizeButton->setVisible(m_frameThemeEnabled);
+    m_maximizeButton->setVisible(m_frameThemeEnabled);
+    m_closeButton->setVisible(m_frameThemeEnabled);
+    updateWindowControlState();
+}
+
+int RibbonBar::windowControlWidth() const
+{
+    if (!m_frameThemeEnabled) {
+        return 0;
+    }
+
+    return ribbonWindowButtonWidth * 3;
 }
 
 void RibbonBar::updateSearchSuggestions()
@@ -1161,6 +1371,10 @@ bool RibbonMainWindow::isNativeCaptionPoint(const QPoint &globalPoint) const
 
     if (m_ribbonBar->quickAccessBar()->isVisible()
         && m_ribbonBar->quickAccessBar()->geometry().contains(ribbonPoint)) {
+        return false;
+    }
+
+    if (m_ribbonBar->isWindowControlPoint(ribbonPoint)) {
         return false;
     }
 

@@ -119,6 +119,7 @@ public:
     void setCurrentPageIndex(int index);
     void setFrameThemeEnabled(bool enabled);
     bool isFrameThemeEnabled() const;
+    bool isWindowControlPoint(const QPoint &point) const;
 
 signals:
     void pageChanged(int index);
@@ -135,6 +136,11 @@ protected:
 private:
     void updateSearchGeometry();
     void updateQuickAccessGeometry();
+    void setupWindowControlButton(QToolButton *button);
+    void updateWindowControlGeometry();
+    void updateWindowControlState();
+    void updateWindowControlVisibility();
+    int windowControlWidth() const;
     void updateSearchSuggestions();
     void recordRecentSearchAction(QAction *action);
     void removeInvalidSearchActions();
@@ -155,6 +161,9 @@ private:
 private:
     QLineEdit *m_searchEdit;
     QToolBar *m_quickAccessBar;
+    QToolButton *m_minimizeButton;
+    QToolButton *m_maximizeButton;
+    QToolButton *m_closeButton;
     QStringList m_searchSuggestionList;
     QList<SearchCommand> m_searchCommandList;
     QHash<QString, QPointer<QAction>> m_searchActionIndex;
