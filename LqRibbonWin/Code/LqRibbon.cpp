@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QStackedWidget>
 #include <QStyle>
 #include <QTabBar>
 #include <QWindow>
@@ -21,15 +22,18 @@
 
 namespace {
 
-const int ribbonLargeButtonHeight = 66;
-const int ribbonLargeButtonMinimumWidth = 66;
-const int ribbonLargeButtonMaximumWidth = 96;
+const int ribbonLargeButtonHeight = 70;
+const int ribbonLargeButtonMinimumWidth = 40;
+const int ribbonLargeButtonMaximumWidth = 82;
 const int ribbonSmallButtonHeight = 22;
-const int ribbonSmallButtonMinimumWidth = 96;
-const int ribbonSmallButtonMaximumWidth = 220;
+const int ribbonSmallButtonMinimumWidth = 82;
+const int ribbonSmallButtonMaximumWidth = 180;
+const int ribbonCaptionHeight = 30;
+const int ribbonTabHeight = 24;
+const int ribbonBarHeight = 154;
 const int ribbonWindowButtonWidth = 46;
 const int ribbonWindowButtonHeight = 30;
-const QSize ribbonLargeIconSize(28, 28);
+const QSize ribbonLargeIconSize(32, 32);
 const QSize ribbonSmallIconSize(16, 16);
 
 class RibbonWindowButton : public QToolButton
@@ -122,34 +126,38 @@ void RibbonWindowButton::paintEvent(QPaintEvent *event)
 
 const char ribbonStyleSheet[] =
     "LqRibbon--RibbonBar {"
-    "    background: #f5f7fb;"
+    "    background: #f3f3f3;"
     "}"
     "QTabWidget::pane {"
-    "    border-top: 1px solid #9eb6d8;"
-    "    background: #f5f7fb;"
+    "    border: none;"
+    "    background: #f3f3f3;"
+    "}"
+    "QTabBar {"
+    "    background: transparent;"
     "}"
     "QTabBar::tab {"
-    "    min-width: 76px;"
-    "    min-height: 24px;"
-    "    padding: 3px 12px;"
+    "    min-width: 46px;"
+    "    min-height: 21px;"
+    "    padding: 2px 10px 1px 10px;"
     "    color: #ffffff;"
-    "    border: 1px solid transparent;"
-    "    border-bottom: none;"
+    "    background: transparent;"
+    "    border: none;"
     "}"
     "QTabBar::tab:selected {"
     "    background: #ffffff;"
     "    color: #1f1f1f;"
-    "    border-color: #9eb6d8;"
+    "    border-left: 1px solid #c8c8c8;"
+    "    border-right: 1px solid #c8c8c8;"
+    "    border-top: 1px solid #c8c8c8;"
     "}"
     "QTabBar::tab:hover:!selected {"
     "    background: #386caf;"
-    "    border-color: #b7cbe6;"
     "}"
     "QLineEdit#lqRibbonSearchEdit {"
     "    min-height: 22px;"
-    "    padding: 1px 8px;"
+    "    padding: 1px 22px 1px 6px;"
     "    border: 1px solid #b7cbe6;"
-    "    border-radius: 2px;"
+    "    border-radius: 1px;"
     "    background: #ffffff;"
     "    selection-background-color: #2b579a;"
     "}"
@@ -178,21 +186,23 @@ const char ribbonStyleSheet[] =
     "    border-color: #b7cbe6;"
     "}"
     "LqRibbon--RibbonGroup {"
-    "    background: #ffffff;"
-    "    border: 1px solid #c8d5e5;"
-    "    border-radius: 2px;"
-    "    margin: 4px 2px 3px 2px;"
+    "    background: transparent;"
+    "    border: none;"
+    "    border-right: 1px solid #d6d6d6;"
+    "    border-radius: 0px;"
+    "    margin: 0px;"
     "}"
     "LqRibbon--RibbonGroup QLabel#lqRibbonGroupTitle {"
-    "    color: #4b4b4b;"
+    "    color: #676767;"
     "    font-size: 11px;"
-    "    padding: 1px 4px 3px 4px;"
+    "    padding: 0px 4px 3px 4px;"
     "}"
     "LqRibbon--RibbonGroup QToolButton {"
     "    border: 1px solid transparent;"
-    "    border-radius: 2px;"
-    "    padding: 2px 3px;"
+    "    border-radius: 1px;"
+    "    padding: 1px 2px;"
     "    color: #202020;"
+    "    background: transparent;"
     "}"
     "LqRibbon--RibbonGroup QToolButton:hover {"
     "    background: #dcecff;"
@@ -203,8 +213,8 @@ const char ribbonStyleSheet[] =
     "    border-color: #5f95d0;"
     "}"
     "LqRibbon--RibbonGroup QToolButton::menu-button {"
-    "    border-left: 1px solid #d3e0ee;"
-    "    width: 16px;"
+    "    border: none;"
+    "    width: 14px;"
     "}"
     "LqRibbon--RibbonGroup QToolButton::menu-indicator {"
     "    width: 10px;"
@@ -238,7 +248,7 @@ int ribbonLargeButtonWidth(const QToolButton *button)
     const QString strButtonText = cleanRibbonButtonText(button->text());
     const int textWidth = ribbonButtonTextWidth(button, strButtonText);
     return qBound(ribbonLargeButtonMinimumWidth,
-                  textWidth + 16,
+                  textWidth + 12,
                   ribbonLargeButtonMaximumWidth);
 }
 
@@ -255,7 +265,7 @@ int ribbonSmallButtonWidth(const QToolButton *button)
     const int menuWidth = button->menu() ? qMax(12, menuIndicatorWidth) + 10 : 0;
 
     return qBound(ribbonSmallButtonMinimumWidth,
-                  iconWidth + textWidth + menuWidth + 24,
+                  iconWidth + textWidth + menuWidth + 18,
                   ribbonSmallButtonMaximumWidth);
 }
 
@@ -274,14 +284,14 @@ RibbonGroup::RibbonGroup(const QString &strTitle, QWidget *parent)
 {
     setObjectName(QStringLiteral("lqRibbonGroup"));
     setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Preferred);
-    setMinimumHeight(92);
-    setMinimumWidth(80);
+    setMinimumHeight(96);
+    setMinimumWidth(44);
 
     m_titleLabel->setObjectName(QStringLiteral("lqRibbonGroupTitle"));
     m_titleLabel->setAlignment(Qt::AlignCenter);
 
-    m_contentLayout->setContentsMargins(5, 4, 5, 1);
-    m_contentLayout->setSpacing(4);
+    m_contentLayout->setContentsMargins(4, 4, 5, 0);
+    m_contentLayout->setSpacing(2);
     m_contentLayout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
@@ -419,7 +429,7 @@ QGridLayout *RibbonGroup::smallButtonLayout()
     m_smallButtonWidget->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     m_smallButtonLayout = new QGridLayout(m_smallButtonWidget);
     m_smallButtonLayout->setContentsMargins(0, 0, 0, 0);
-    m_smallButtonLayout->setHorizontalSpacing(6);
+    m_smallButtonLayout->setHorizontalSpacing(4);
     m_smallButtonLayout->setVerticalSpacing(0);
     m_smallButtonLayout->setSizeConstraint(QLayout::SetFixedSize);
     m_smallButtonLayout->setRowMinimumHeight(0, ribbonSmallButtonHeight);
@@ -434,8 +444,8 @@ RibbonPage::RibbonPage(const QString &strTitle, QWidget *parent)
     , m_strTitle(strTitle)
     , m_groupLayout(new QHBoxLayout)
 {
-    m_groupLayout->setContentsMargins(3, 2, 3, 2);
-    m_groupLayout->setSpacing(1);
+    m_groupLayout->setContentsMargins(0, 0, 0, 0);
+    m_groupLayout->setSpacing(0);
     m_groupLayout->addStretch(1);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
@@ -485,7 +495,9 @@ RibbonBar::RibbonBar(QWidget *parent)
     setDocumentMode(false);
     setMovable(false);
     setTabPosition(QTabWidget::North);
-    setFixedHeight(126);
+    setFixedHeight(ribbonBarHeight);
+    tabBar()->setExpanding(false);
+    tabBar()->setUsesScrollButtons(true);
 
     m_searchEdit->setObjectName(QStringLiteral("lqRibbonSearchEdit"));
     m_searchEdit->setPlaceholderText(tr("Search"));
@@ -558,9 +570,10 @@ RibbonBar::RibbonBar(QWidget *parent)
             });
 
     updateStyleSheet();
+    updateRibbonTabGeometry();
     updateWindowControlGeometry();
-    updateQuickAccessGeometry();
     updateSearchGeometry();
+    updateQuickAccessGeometry();
 }
 
 RibbonBar::~RibbonBar()
@@ -587,6 +600,7 @@ RibbonPage *RibbonBar::addPage(const QString &strTitle)
         }
     });
     setCurrentIndex(index);
+    updateRibbonTabGeometry();
     return newPage;
 }
 
@@ -614,6 +628,7 @@ void RibbonBar::setSearchVisible(bool visible)
 {
     m_searchEdit->setVisible(visible);
     updateSearchGeometry();
+    updateQuickAccessGeometry();
 }
 
 bool RibbonBar::isSearchVisible() const
@@ -847,6 +862,7 @@ void RibbonBar::setFrameThemeEnabled(bool enabled)
 
     m_frameThemeEnabled = enabled;
     updateWindowControlVisibility();
+    updateRibbonTabGeometry();
     updateWindowControlGeometry();
     updateSearchGeometry();
     updateQuickAccessGeometry();
@@ -858,8 +874,30 @@ bool RibbonBar::isFrameThemeEnabled() const
     return m_frameThemeEnabled;
 }
 
+bool RibbonBar::event(QEvent *event)
+{
+    const bool handled = QTabWidget::event(event);
+
+    switch (event->type()) {
+    case QEvent::LayoutRequest:
+    case QEvent::PolishRequest:
+    case QEvent::Show:
+    case QEvent::StyleChange:
+        updateRibbonTabGeometry();
+        updateWindowControlGeometry();
+        updateSearchGeometry();
+        updateQuickAccessGeometry();
+        break;
+    default:
+        break;
+    }
+
+    return handled;
+}
+
 void RibbonBar::paintEvent(QPaintEvent *event)
 {
+    updateRibbonTabGeometry();
     QTabWidget::paintEvent(event);
 
     if (!m_frameThemeEnabled) {
@@ -867,16 +905,37 @@ void RibbonBar::paintEvent(QPaintEvent *event)
     }
 
     QPainter painter(this);
-    painter.fillRect(0, 0, width(), 30, QColor(QStringLiteral("#2b579a")));
+    const int titleHeight = ribbonCaptionHeight + ribbonTabHeight;
+    painter.fillRect(0,
+                     0,
+                     width(),
+                     titleHeight,
+                     QColor(QStringLiteral("#2b579a")));
+
+    QWidget *topLevelWidget = window();
+    if (!topLevelWidget) {
+        return;
+    }
+
+    const QIcon windowIcon = topLevelWidget->windowIcon();
+    if (!windowIcon.isNull()) {
+        windowIcon.paint(&painter, QRect(4, 7, 16, 16));
+    }
+
+    painter.setPen(Qt::white);
+    painter.drawText(QRect(26, 0, 320, ribbonCaptionHeight),
+                     Qt::AlignLeft | Qt::AlignVCenter,
+                     topLevelWidget->windowTitle());
 }
 
 void RibbonBar::resizeEvent(QResizeEvent *event)
 {
     QTabWidget::resizeEvent(event);
     updateWindowControlState();
+    updateRibbonTabGeometry();
     updateWindowControlGeometry();
-    updateQuickAccessGeometry();
     updateSearchGeometry();
+    updateQuickAccessGeometry();
     updateStyleSheet();
 }
 
@@ -894,13 +953,52 @@ bool RibbonBar::isWindowControlPoint(const QPoint &point) const
             && m_closeButton->geometry().contains(point));
 }
 
+void RibbonBar::updateRibbonTabGeometry()
+{
+    QTabBar *ribbonTabBar = tabBar();
+    if (!ribbonTabBar) {
+        return;
+    }
+
+    const int titleHeight = m_frameThemeEnabled
+        ? ribbonCaptionHeight
+        : 0;
+    const int tabHeight = m_frameThemeEnabled
+        ? ribbonTabHeight
+        : ribbonTabBar->sizeHint().height();
+    const int stackTop = titleHeight + tabHeight;
+    const int tabWidth = qMin(width(), ribbonTabBar->sizeHint().width());
+    ribbonTabBar->setGeometry(0, titleHeight, tabWidth, tabHeight);
+    ribbonTabBar->raise();
+
+    QStackedWidget *stackedWidget = findChild<QStackedWidget *>();
+    if (!stackedWidget) {
+        return;
+    }
+
+    const int stackHeight = qMax(0, height() - stackTop);
+    stackedWidget->setGeometry(0, stackTop, width(), stackHeight);
+}
+
 void RibbonBar::updateSearchGeometry()
 {
-    const int searchWidth = 240;
+    const int preferredSearchWidth = 428;
     const int searchHeight = 24;
-    const int rightMargin = windowControlWidth() + 10;
     const int topMargin = 3;
-    const int x = qMax(rightMargin, width() - searchWidth - rightMargin);
+    const int controlWidth = windowControlWidth();
+    const int availableWidth = qMax(0, width() - controlWidth - 48);
+    const int searchWidth = qMin(preferredSearchWidth,
+                                 qMax(160, availableWidth));
+    const int controlLeft = width() - controlWidth;
+    int x = controlWidth > 0
+        ? (controlLeft - searchWidth) / 2
+        : (width() - searchWidth) / 2;
+
+    if (controlWidth > 0) {
+        x = qMin(x, controlLeft - searchWidth - 10);
+    }
+
+    x = qMax(220, x);
 
     m_searchEdit->setGeometry(x, topMargin, searchWidth, searchHeight);
     m_searchEdit->raise();
@@ -909,17 +1007,18 @@ void RibbonBar::updateSearchGeometry()
 void RibbonBar::updateQuickAccessGeometry()
 {
     const int topMargin = 3;
-    const int rightMargin = 10;
+    const int leftMargin = 340;
+    const int rightMargin = 12;
     const int searchGap = 8;
-    const int searchWidth = m_searchEdit->isHidden() ? 0 : 240;
     const int controlWidth = windowControlWidth();
     const int barHeight = 24;
-    const int maxWidth = qMax(0, width() / 3);
+    const int rightLimit = m_searchEdit->isVisible()
+        ? m_searchEdit->x() - searchGap
+        : width() - controlWidth - rightMargin;
+    const int maxWidth = qMax(0, rightLimit - leftMargin);
     const int barWidth = qMin(m_quickAccessBar->sizeHint().width(), maxWidth);
-    const int rightReservedWidth = controlWidth + rightMargin + searchWidth + searchGap;
-    const int x = qMax(rightMargin, width() - rightReservedWidth - barWidth);
 
-    m_quickAccessBar->setGeometry(x, topMargin, barWidth, barHeight);
+    m_quickAccessBar->setGeometry(leftMargin, topMargin, barWidth, barHeight);
     m_quickAccessBar->raise();
 }
 
@@ -1125,7 +1224,7 @@ RibbonMainWindow::RibbonMainWindow(QWidget *parent)
     , m_rootLayout(new QVBoxLayout(m_rootWidget))
     , m_ribbonBar(new RibbonBar(m_rootWidget))
     , m_nativeFrameEnabled(false)
-    , m_nativeCaptionHeight(30)
+    , m_nativeCaptionHeight(ribbonCaptionHeight)
     , m_nativeResizeBorderWidth(0)
 {
     setMouseTracking(true);
