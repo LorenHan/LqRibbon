@@ -2,12 +2,14 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QComboBox>
 #include <QFontMetrics>
 #include <QGridLayout>
 #include <QLayout>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QSpinBox>
 #include <QStackedWidget>
 #include <QStyle>
 #include <QTabBar>
@@ -22,19 +24,21 @@
 
 namespace {
 
-const int ribbonLargeButtonHeight = 70;
 const int ribbonLargeButtonMinimumWidth = 40;
 const int ribbonLargeButtonMaximumWidth = 82;
-const int ribbonSmallButtonHeight = 22;
-const int ribbonSmallButtonMinimumWidth = 82;
-const int ribbonSmallButtonMaximumWidth = 180;
+const int ribbonSmallButtonMinimumWidth = 56;
+const int ribbonSmallButtonMaximumWidth = 240;
+const int ribbonRowItemCount = 3;
+const int ribbonGroupTopMargin = 4;
+const int ribbonGroupRightMargin = 5;
+const int ribbonGroupBottomMargin = 0;
+const int ribbonGroupLeftMargin = 4;
+const int ribbonSmallButtonColumnSpacing = 4;
 const int ribbonCaptionHeight = 30;
 const int ribbonTabHeight = 24;
-const int ribbonBarHeight = 154;
+const int ribbonDefaultBarHeight = 154;
 const int ribbonWindowButtonWidth = 46;
 const int ribbonWindowButtonHeight = 30;
-const QSize ribbonLargeIconSize(32, 32);
-const QSize ribbonSmallIconSize(16, 16);
 
 class RibbonWindowButton : public QToolButton
 {
@@ -223,6 +227,83 @@ const char ribbonStyleSheet[] =
     "    right: 3px;"
     "}";
 
+void prepareMetricWidget(QWidget *widget, const QFont &font)
+{
+    widget->setAttribute(Qt::WA_MacSmallSize);
+    widget->setFont(font);
+    widget->ensurePolished();
+}
+
+QSize ribbonStyleIconSize(const QWidget *widget, QStyle::PixelMetric pixelMetric)
+{
+    const int iconSize = widget->style()->pixelMetric(pixelMetric, nullptr, widget);
+    return QSize(iconSize, iconSize);
+}
+
+QSize ribbonLargeIconSize(const QWidget *widget)
+{
+    return ribbonStyleIconSize(widget, QStyle::PM_LargeIconSize);
+}
+
+QSize ribbonSmallIconSize(const QWidget *widget)
+{
+    return ribbonStyleIconSize(widget, QStyle::PM_SmallIconSize);
+}
+
+int ribbonRowItemHeight(const QWidget *widget)
+{
+    const QFont widgetFont = widget->font();
+    const QFontMetrics fontMetrics(widgetFont);
+    int rowItemHeight = fontMetrics.height();
+
+    QLineEdit lineEdit;
+    prepareMetricWidget(&lineEdit, widgetFont);
+    rowItemHeight = qMax(rowItemHeight, lineEdit.sizeHint().height());
+
+    QComboBox comboBox;
+    prepareMetricWidget(&comboBox, widgetFont);
+    rowItemHeight = qMax(rowItemHeight, comboBox.sizeHint().height());
+
+    QComboBox editableComboBox;
+    editableComboBox.setEditable(true);
+    prepareMetricWidget(&editableComboBox, widgetFont);
+    rowItemHeight = qMax(rowItemHeight, editableComboBox.sizeHint().height());
+
+    QSpinBox spinBox;
+    prepareMetricWidget(&spinBox, widgetFont);
+    rowItemHeight = qMax(rowItemHeight, spinBox.sizeHint().height());
+
+    return rowItemHeight + (fontMetrics.height() / 4);
+}
+
+int ribbonLargeButtonHeight(const QWidget *widget)
+{
+    return ribbonRowItemHeight(widget) * ribbonRowItemCount;
+}
+
+int ribbonGroupTitleHeight(const QWidget *widget)
+{
+    const QFontMetrics fontMetrics(widget->font());
+    return qRound(fontMetrics.height() * 1.2);
+}
+
+int ribbonGroupHeight(const QWidget *widget)
+{
+    return ribbonLargeButtonHeight(widget)
+        + ribbonGroupTopMargin
+        + ribbonGroupBottomMargin
+        + ribbonGroupTitleHeight(widget);
+}
+
+int ribbonBarHeight(const QWidget *widget)
+{
+    const int calculatedHeight = ribbonCaptionHeight
+        + ribbonTabHeight
+        + ribbonGroupHeight(widget);
+
+    return qMax(ribbonDefaultBarHeight, calculatedHeight);
+}
+
 QString cleanRibbonButtonText(const QString &strText)
 {
     QString strCleanText = strText;
@@ -247,8 +328,17 @@ int ribbonLargeButtonWidth(const QToolButton *button)
 {
     const QString strButtonText = cleanRibbonButtonText(button->text());
     const int textWidth = ribbonButtonTextWidth(button, strButtonText);
+    const int styleWidth = button->sizeHint().width();
+    const int iconWidth = button->icon().isNull()
+        ? 0
+        : ribbonLargeIconSize(button).width() + 4;
+    const int menuIndicatorWidth = button->menu()
+        ? button->style()->pixelMetric(QStyle::PM_MenuButtonIndicator, nullptr, button)
+        : 0;
+    const int menuWidth = button->menu() ? menuIndicatorWidth : 0;
+
     return qBound(ribbonLargeButtonMinimumWidth,
-                  textWidth + 12,
+                  qMax(qMax(textWidth + menuWidth + 12, iconWidth), styleWidth),
                   ribbonLargeButtonMaximumWidth);
 }
 
@@ -256,16 +346,18 @@ int ribbonSmallButtonWidth(const QToolButton *button)
 {
     const QString strButtonText = cleanRibbonButtonText(button->text());
     const int textWidth = ribbonButtonTextWidth(button, strButtonText);
-    const int iconWidth = button->icon().isNull()
+    const int styleWidth = button->sizeHint().width();
+    const int rowItemHeight = ribbonRowItemHeight(button);
+    const int iconTextWidth = button->icon().isNull()
         ? 0
-        : ribbonSmallIconSize.width() + 6;
+        : rowItemHeight;
     const int menuIndicatorWidth = button->menu()
         ? button->style()->pixelMetric(QStyle::PM_MenuButtonIndicator, nullptr, button)
         : 0;
-    const int menuWidth = button->menu() ? qMax(12, menuIndicatorWidth) + 10 : 0;
+    const int menuWidth = button->menu() ? menuIndicatorWidth : 0;
 
     return qBound(ribbonSmallButtonMinimumWidth,
-                  iconWidth + textWidth + menuWidth + 18,
+                  qMax(iconTextWidth + textWidth + menuWidth + 10, styleWidth),
                   ribbonSmallButtonMaximumWidth);
 }
 
@@ -284,13 +376,15 @@ RibbonGroup::RibbonGroup(const QString &strTitle, QWidget *parent)
 {
     setObjectName(QStringLiteral("lqRibbonGroup"));
     setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Preferred);
-    setMinimumHeight(96);
     setMinimumWidth(44);
 
     m_titleLabel->setObjectName(QStringLiteral("lqRibbonGroupTitle"));
     m_titleLabel->setAlignment(Qt::AlignCenter);
 
-    m_contentLayout->setContentsMargins(4, 4, 5, 0);
+    m_contentLayout->setContentsMargins(ribbonGroupLeftMargin,
+                                        ribbonGroupTopMargin,
+                                        ribbonGroupRightMargin,
+                                        ribbonGroupBottomMargin);
     m_contentLayout->setSpacing(2);
     m_contentLayout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
 
@@ -299,6 +393,7 @@ RibbonGroup::RibbonGroup(const QString &strTitle, QWidget *parent)
     mainLayout->setSpacing(0);
     mainLayout->addLayout(m_contentLayout, 1);
     mainLayout->addWidget(m_titleLabel);
+    updateMetrics();
 }
 
 QAction *RibbonGroup::addAction(const QIcon &icon,
@@ -353,6 +448,23 @@ void RibbonGroup::setTitle(const QString &strTitle)
     m_titleLabel->setText(strTitle);
 }
 
+bool RibbonGroup::event(QEvent *event)
+{
+    const bool handled = QFrame::event(event);
+
+    switch (event->type()) {
+    case QEvent::FontChange:
+    case QEvent::PolishRequest:
+    case QEvent::StyleChange:
+        updateMetrics();
+        break;
+    default:
+        break;
+    }
+
+    return handled;
+}
+
 QToolButton *RibbonGroup::createButton(QAction *action, Qt::ToolButtonStyle buttonStyle)
 {
     QToolButton *button = new QToolButton(this);
@@ -371,13 +483,14 @@ QToolButton *RibbonGroup::createButton(QAction *action, Qt::ToolButtonStyle butt
         return button;
     }
 
-    button->setIconSize(ribbonLargeIconSize);
+    button->setIconSize(ribbonLargeIconSize(button));
     button->setPopupMode(action->menu()
                          ? QToolButton::MenuButtonPopup
                          : QToolButton::DelayedPopup);
     const int buttonWidth = ribbonLargeButtonWidth(button);
-    button->setMinimumSize(buttonWidth, ribbonLargeButtonHeight);
-    button->setMaximumSize(buttonWidth, ribbonLargeButtonHeight);
+    const int buttonHeight = ribbonLargeButtonHeight(button);
+    button->setMinimumSize(buttonWidth, buttonHeight);
+    button->setMaximumSize(buttonWidth, buttonHeight);
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     return button;
@@ -392,7 +505,7 @@ void RibbonGroup::addSmallButton(QWidget *widget)
     smallButtonLayout()->addWidget(widget, m_smallButtonRow, m_smallButtonColumn);
     ++m_smallButtonRow;
 
-    if (m_smallButtonRow >= 3) {
+    if (m_smallButtonRow >= ribbonRowItemCount) {
         m_smallButtonRow = 0;
         ++m_smallButtonColumn;
     }
@@ -407,15 +520,16 @@ void RibbonGroup::setupSmallButton(QToolButton *button)
     button->setAutoRaise(true);
     button->setFocusPolicy(Qt::NoFocus);
     button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    button->setIconSize(ribbonSmallIconSize);
+    button->setIconSize(ribbonSmallIconSize(button));
     button->setStyleSheet(QString());
     button->setPopupMode(button->menu()
                          ? QToolButton::MenuButtonPopup
                          : QToolButton::DelayedPopup);
 
     const int buttonWidth = ribbonSmallButtonWidth(button);
-    button->setMinimumSize(buttonWidth, ribbonSmallButtonHeight);
-    button->setMaximumSize(buttonWidth, ribbonSmallButtonHeight);
+    const int buttonHeight = ribbonRowItemHeight(button);
+    button->setMinimumSize(buttonWidth, buttonHeight);
+    button->setMaximumSize(buttonWidth, buttonHeight);
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 }
 
@@ -429,14 +543,42 @@ QGridLayout *RibbonGroup::smallButtonLayout()
     m_smallButtonWidget->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     m_smallButtonLayout = new QGridLayout(m_smallButtonWidget);
     m_smallButtonLayout->setContentsMargins(0, 0, 0, 0);
-    m_smallButtonLayout->setHorizontalSpacing(4);
+    m_smallButtonLayout->setHorizontalSpacing(ribbonSmallButtonColumnSpacing);
     m_smallButtonLayout->setVerticalSpacing(0);
     m_smallButtonLayout->setSizeConstraint(QLayout::SetFixedSize);
-    m_smallButtonLayout->setRowMinimumHeight(0, ribbonSmallButtonHeight);
-    m_smallButtonLayout->setRowMinimumHeight(1, ribbonSmallButtonHeight);
-    m_smallButtonLayout->setRowMinimumHeight(2, ribbonSmallButtonHeight);
+    const int rowItemHeight = ribbonRowItemHeight(this);
+    for (int row = 0; row < ribbonRowItemCount; ++row) {
+        m_smallButtonLayout->setRowMinimumHeight(row, rowItemHeight);
+    }
+
     m_contentLayout->addWidget(m_smallButtonWidget, 0, Qt::AlignTop);
     return m_smallButtonLayout;
+}
+
+void RibbonGroup::updateMetrics()
+{
+    setMinimumHeight(ribbonGroupHeight(this));
+    m_titleLabel->setFixedHeight(ribbonGroupTitleHeight(this));
+
+    if (m_smallButtonLayout) {
+        const int rowItemHeight = ribbonRowItemHeight(this);
+        for (int row = 0; row < ribbonRowItemCount; ++row) {
+            m_smallButtonLayout->setRowMinimumHeight(row, rowItemHeight);
+        }
+    }
+
+    const QList<QToolButton *> buttonList = findChildren<QToolButton *>();
+    for (QToolButton *button : buttonList) {
+        if (button->toolButtonStyle() == Qt::ToolButtonTextUnderIcon) {
+            button->setIconSize(ribbonLargeIconSize(button));
+            const int buttonWidth = ribbonLargeButtonWidth(button);
+            const int buttonHeight = ribbonLargeButtonHeight(button);
+            button->setMinimumSize(buttonWidth, buttonHeight);
+            button->setMaximumSize(buttonWidth, buttonHeight);
+        } else {
+            setupSmallButton(button);
+        }
+    }
 }
 
 RibbonPage::RibbonPage(const QString &strTitle, QWidget *parent)
@@ -495,7 +637,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     setDocumentMode(false);
     setMovable(false);
     setTabPosition(QTabWidget::North);
-    setFixedHeight(ribbonBarHeight);
+    updateRibbonMetrics();
     tabBar()->setExpanding(false);
     tabBar()->setUsesScrollButtons(true);
 
@@ -514,7 +656,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     m_quickAccessBar->setObjectName(QStringLiteral("lqRibbonQuickAccessBar"));
     m_quickAccessBar->setMovable(false);
     m_quickAccessBar->setFloatable(false);
-    m_quickAccessBar->setIconSize(QSize(16, 16));
+    m_quickAccessBar->setIconSize(ribbonSmallIconSize(m_quickAccessBar));
     m_quickAccessBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     m_quickAccessBar->hide();
 
@@ -879,10 +1021,17 @@ bool RibbonBar::event(QEvent *event)
     const bool handled = QTabWidget::event(event);
 
     switch (event->type()) {
+    case QEvent::FontChange:
+    case QEvent::StyleChange:
+        updateRibbonMetrics();
+        updateRibbonTabGeometry();
+        updateWindowControlGeometry();
+        updateSearchGeometry();
+        updateQuickAccessGeometry();
+        break;
     case QEvent::LayoutRequest:
     case QEvent::PolishRequest:
     case QEvent::Show:
-    case QEvent::StyleChange:
         updateRibbonTabGeometry();
         updateWindowControlGeometry();
         updateSearchGeometry();
@@ -932,6 +1081,7 @@ void RibbonBar::resizeEvent(QResizeEvent *event)
 {
     QTabWidget::resizeEvent(event);
     updateWindowControlState();
+    updateRibbonMetrics();
     updateRibbonTabGeometry();
     updateWindowControlGeometry();
     updateSearchGeometry();
@@ -1020,6 +1170,14 @@ void RibbonBar::updateQuickAccessGeometry()
 
     m_quickAccessBar->setGeometry(leftMargin, topMargin, barWidth, barHeight);
     m_quickAccessBar->raise();
+}
+
+void RibbonBar::updateRibbonMetrics()
+{
+    const int barHeight = ribbonBarHeight(this);
+    if (height() != barHeight || minimumHeight() != barHeight) {
+        setFixedHeight(barHeight);
+    }
 }
 
 void RibbonBar::setupWindowControlButton(QToolButton *button)

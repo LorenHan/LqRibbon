@@ -45,11 +45,15 @@ public:
     QString title() const;
     void setTitle(const QString &strTitle);
 
+protected:
+    bool event(QEvent *event) override;
+
 private:
     QToolButton *createButton(QAction *action, Qt::ToolButtonStyle buttonStyle);
     void addSmallButton(QWidget *widget);
     void setupSmallButton(QToolButton *button);
     QGridLayout *smallButtonLayout();
+    void updateMetrics();
 
 private:
     QLabel *m_titleLabel;
@@ -138,6 +142,7 @@ private:
     void updateRibbonTabGeometry();
     void updateSearchGeometry();
     void updateQuickAccessGeometry();
+    void updateRibbonMetrics();
     void setupWindowControlButton(QToolButton *button);
     void updateWindowControlGeometry();
     void updateWindowControlState();
