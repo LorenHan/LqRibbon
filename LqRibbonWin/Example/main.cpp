@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QActionGroup>
 #include <QLabel>
 #include <QMdiArea>
 #include <QMdiSubWindow>
@@ -138,6 +139,52 @@ int main(int argc, char *argv[])
         contentLabel->setAlignment(Qt::AlignCenter);
         mainWindow.setCentralWidget(contentLabel);
     }
+
+    LqRibbon::RibbonStatusBar *ribbonStatusBar =
+        new LqRibbon::RibbonStatusBar(&mainWindow);
+    ribbonStatusBar->addAction(QObject::tr("Ready"));
+    ribbonStatusBar->addSeparator();
+    ribbonStatusBar->addAction(QObject::tr("Online"));
+
+    LqRibbon::RibbonStatusBarSwitchGroup *switchGroup =
+        new LqRibbon::RibbonStatusBarSwitchGroup(ribbonStatusBar);
+    QActionGroup *viewActionGroup = new QActionGroup(switchGroup);
+    viewActionGroup->setExclusive(true);
+    QAction *normalViewAction = viewActionGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogDetailedView),
+        QObject::tr("Normal View"));
+    QAction *compactViewAction = viewActionGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogListView),
+        QObject::tr("Compact View"));
+    normalViewAction->setCheckable(true);
+    compactViewAction->setCheckable(true);
+    normalViewAction->setChecked(true);
+    switchGroup->addAction(normalViewAction);
+    switchGroup->addAction(compactViewAction);
+
+    LqRibbon::RibbonSliderPane *zoomSlider =
+        new LqRibbon::RibbonSliderPane(ribbonStatusBar);
+    zoomSlider->setRange(10, 200);
+    zoomSlider->setSingleStep(10);
+    zoomSlider->setValue(100);
+
+    LqRibbon::RibbonProgressBar *progressBar =
+        new LqRibbon::RibbonProgressBar(ribbonStatusBar);
+    progressBar->setValue(42);
+
+    QAction *syncAction = new QAction(
+        mainWindow.style()->standardIcon(QStyle::SP_BrowserReload),
+        QObject::tr("Sync"),
+        ribbonStatusBar);
+    ribbonStatusBar->addPermanentAction(syncAction);
+    ribbonStatusBar->addPermanentWidget(switchGroup);
+    ribbonStatusBar->addPermanentWidget(zoomSlider);
+    ribbonStatusBar->addPermanentWidget(progressBar);
+    mainWindow.setStatusBar(ribbonStatusBar);
+
+    QObject::connect(zoomSlider, &LqRibbon::RibbonSliderPane::valueChanged,
+                     progressBar, &LqRibbon::RibbonProgressBar::setValueSafe);
+
     mainWindow.ribbonBar()->setCurrentPageIndex(1);
     mainWindow.setFrameThemeEnabled(true);
     mainWindow.ribbonBar()->setSearchVisible(true);

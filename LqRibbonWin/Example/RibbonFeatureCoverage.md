@@ -18,7 +18,7 @@ not copied implementation.
 | Backstage | File page, backstage buttons, pages, separators, close behavior | Missing | Planned backstage example |
 | System menu | File button menu, recent files, page popup | Missing | Planned system-menu example |
 | Search | Search box, suggestions, actions, recent commands | Partial | `--grab-search-preview` |
-| Status bar | Permanent area, switch group, sliders, progress | Missing | Planned status example |
+| Status bar | Permanent area, switch group, sliders, progress | Complete | `--grab-preview` status area |
 | Workspace | Scroll area, MDI-aware workspace, tab/subwindow polish | Partial | `--grab-mdi-preview`, `--grab-tab-preview` |
 | Customization | Customize manager/page/dialog, save and restore layout | Missing | Planned customization example |
 | Style | Office-like metrics, colors, theme hooks, high-DPI behavior | Partial | screenshot comparison checklist |
@@ -60,9 +60,9 @@ Status rules:
 | `QtnRibbonSystemMenu.h` | File/system button, menu, recent files, page popup | No system menu module yet | Missing |
 | `QtnRibbonQuickAccessBar.h` | Quick access toolbar, visibility per action, customize menu | LqRibbon has quick access actions; missing standalone class, per-action visibility, visible count, customize signal | Partial |
 | `QtnRibbonSearchBar.h` | Search field, compact mode, help, suggested actions, popup | LqRibbon has search field, suggestions, action matching, recent actions; missing standalone class, compact/help APIs, animation hooks | Partial |
-| `QtnRibbonStatusBar.h` | Status bar, permanent action area, switch group | No committed and verified status bar module yet | Planned |
-| `QtnRibbonSliderPane.h` | Compact slider with scroll buttons and value signals | No committed and verified slider pane yet | Planned |
-| `QtnRibbonProgressBar.h` | Compact progress bar and threaded operation helper | No committed and verified progress helper yet | Planned |
+| `QtnRibbonStatusBar.h` | Status bar, permanent action area, switch group | `RibbonStatusBar` and `RibbonStatusBarSwitchGroup` cover public usage; example status bar is verified by preview | Complete |
+| `QtnRibbonSliderPane.h` | Compact slider with scroll buttons and value signals | `RibbonSliderPane` covers range, buttons, value, position, and signals; example status bar is verified by preview | Complete |
+| `QtnRibbonProgressBar.h` | Compact progress bar and threaded operation helper | `RibbonProgressBar`, `RibbonProgressData`, and `RibbonProgressOperation` cover public usage; progress bar is verified by preview | Complete |
 | `QtnRibbonWorkspace.h` | Ribbon scroll area, workspace, MDI area | LqRibbon polishes standard `QMdiArea`; standalone scroll/workspace/MDI classes are missing | Partial |
 | `QtnRibbonCustomizeManager.h` | Runtime customization model and persistence | No customization manager yet | Missing |
 | `QtnRibbonCustomizeDialog.h` | Customization dialog | No customization dialog yet | Missing |

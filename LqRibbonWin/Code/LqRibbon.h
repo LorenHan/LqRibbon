@@ -29,6 +29,8 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include "LqRibbonStatusBar.h"
+
 QT_BEGIN_NAMESPACE
 class QMdiArea;
 class QMdiSubWindow;
@@ -165,6 +167,11 @@ private:
     QHBoxLayout *m_groupLayout;
 };
 
+///
+/// \brief The RibbonStatusBarSwitchGroup class displays compact switch actions.
+///
+/// The group converts added actions into flat, checkable buttons suitable for
+/// view switches in a status bar.
 ///
 /// \brief The RibbonBar class implements the tabbed Ribbon command surface.
 ///
@@ -641,6 +648,11 @@ using LqRibbonGroup = RibbonGroup;
 using LqRibbonPage = RibbonPage;
 using LqRibbonBar = RibbonBar;
 using LqRibbonMainWindow = RibbonMainWindow;
+using LqRibbonStatusBarSwitchGroup = RibbonStatusBarSwitchGroup;
+using LqRibbonSliderPane = RibbonSliderPane;
+using LqRibbonProgressBar = RibbonProgressBar;
+using LqRibbonProgressOperation = RibbonProgressOperation;
+using LqRibbonStatusBar = RibbonStatusBar;
 
 } // namespace LqRibbon
 
@@ -648,5 +660,11 @@ using RibbonBar = LqRibbon::RibbonBar;
 using RibbonPage = LqRibbon::RibbonPage;
 using RibbonGroup = LqRibbon::RibbonGroup;
 using RibbonMainWindow = LqRibbon::RibbonMainWindow;
+using RibbonStatusBarSwitchGroup = LqRibbon::RibbonStatusBarSwitchGroup;
+using RibbonSliderPane = LqRibbon::RibbonSliderPane;
+using RibbonProgressBar = LqRibbon::RibbonProgressBar;
+using RibbonProgressData = LqRibbon::RibbonProgressData;
+using RibbonProgressOperation = LqRibbon::RibbonProgressOperation;
+using RibbonStatusBar = LqRibbon::RibbonStatusBar;
 
 #endif // LQRIBBON_H
