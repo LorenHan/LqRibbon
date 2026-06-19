@@ -135,6 +135,12 @@ private:
     bool m_dragging;
 };
 
+///
+/// \brief RibbonWindowButton::RibbonWindowButton
+/// Creates a title-bar button used by the themed Ribbon frame.
+/// \param buttonKind Button role to paint and activate.
+/// \param parent Parent widget that owns the button.
+///
 RibbonWindowButton::RibbonWindowButton(ButtonKind buttonKind, QWidget *parent)
     : QToolButton(parent)
     , m_buttonKind(buttonKind)
@@ -146,6 +152,11 @@ RibbonWindowButton::RibbonWindowButton(ButtonKind buttonKind, QWidget *parent)
     setFocusPolicy(Qt::NoFocus);
 }
 
+///
+/// \brief RibbonWindowButton::setRestoreMode
+/// Selects whether the maximize button paints the restore glyph.
+/// \param restoreMode true to paint restore, false to paint maximize.
+///
 void RibbonWindowButton::setRestoreMode(bool restoreMode)
 {
     if (m_restoreMode == restoreMode) {
@@ -156,6 +167,14 @@ void RibbonWindowButton::setRestoreMode(bool restoreMode)
     update();
 }
 
+///
+/// \brief paintRibbonWindowButton
+/// Paints the glyph for a themed minimize, maximize, restore, or close button.
+/// \param painter Painter used to draw the glyph.
+/// \param buttonRect Button rectangle in painter coordinates.
+/// \param buttonKind Button role to draw.
+/// \param restoreMode true to draw the restore glyph for maximize buttons.
+///
 void paintRibbonWindowButton(QPainter *painter,
                              const QRect &buttonRect,
                              RibbonWindowButton::ButtonKind buttonKind,
@@ -192,6 +211,12 @@ void paintRibbonWindowButton(QPainter *painter,
     painter->restore();
 }
 
+///
+/// \brief visibleWidgetRight
+/// Calculates the visible right edge of a widget on its current screen.
+/// \param widget Widget to inspect.
+/// \return Right edge in widget coordinates, clipped to the available screen.
+///
 int visibleWidgetRight(const QWidget *widget)
 {
     if (!widget) {
@@ -210,6 +235,11 @@ int visibleWidgetRight(const QWidget *widget)
     return qMin(right, screenRight.x() + 1);
 }
 
+///
+/// \brief RibbonWindowButton::paintEvent
+/// Paints the hover, pressed, and glyph states for a frame button.
+/// \param event Paint event supplied by Qt.
+///
 void RibbonWindowButton::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event)
@@ -230,6 +260,12 @@ void RibbonWindowButton::paintEvent(QPaintEvent *event)
     paintRibbonWindowButton(&painter, rect(), m_buttonKind, m_restoreMode);
 }
 
+///
+/// \brief RibbonMdiButton::RibbonMdiButton
+/// Creates a flat MDI child-window caption button.
+/// \param buttonKind Button role to paint and activate.
+/// \param parent Parent widget that owns the button.
+///
 RibbonMdiButton::RibbonMdiButton(ButtonKind buttonKind, QWidget *parent)
     : QToolButton(parent)
     , m_buttonKind(buttonKind)
@@ -241,6 +277,11 @@ RibbonMdiButton::RibbonMdiButton(ButtonKind buttonKind, QWidget *parent)
     setFocusPolicy(Qt::NoFocus);
 }
 
+///
+/// \brief RibbonMdiButton::setRestoreMode
+/// Selects whether the MDI maximize button paints the restore glyph.
+/// \param restoreMode true to paint restore, false to paint maximize.
+///
 void RibbonMdiButton::setRestoreMode(bool restoreMode)
 {
     if (m_restoreMode == restoreMode) {
@@ -251,6 +292,11 @@ void RibbonMdiButton::setRestoreMode(bool restoreMode)
     update();
 }
 
+///
+/// \brief RibbonMdiButton::paintEvent
+/// Paints a flat caption button for styled MDI subwindows.
+/// \param event Paint event supplied by Qt.
+///
 void RibbonMdiButton::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event)
@@ -295,6 +341,11 @@ void RibbonMdiButton::paintEvent(QPaintEvent *event)
     }
 }
 
+///
+/// \brief RibbonMdiTitleBar::RibbonMdiTitleBar
+/// Creates a flat title bar for a QMdiSubWindow.
+/// \param subWindow MDI subwindow controlled by this title bar.
+///
 RibbonMdiTitleBar::RibbonMdiTitleBar(QMdiSubWindow *subWindow)
     : QWidget(subWindow)
     , m_subWindow(subWindow)
@@ -320,6 +371,10 @@ RibbonMdiTitleBar::RibbonMdiTitleBar(QMdiSubWindow *subWindow)
     });
 }
 
+///
+/// \brief RibbonMdiTitleBar::syncWithSubWindow
+/// Synchronizes geometry, button state, and stacking with the subwindow.
+///
 void RibbonMdiTitleBar::syncWithSubWindow()
 {
     if (!m_subWindow) {
@@ -336,6 +391,11 @@ void RibbonMdiTitleBar::syncWithSubWindow()
     update();
 }
 
+///
+/// \brief RibbonMdiTitleBar::mouseDoubleClickEvent
+/// Toggles the MDI subwindow maximized state on double click.
+/// \param event Mouse event supplied by Qt.
+///
 void RibbonMdiTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
@@ -346,6 +406,11 @@ void RibbonMdiTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
     QWidget::mouseDoubleClickEvent(event);
 }
 
+///
+/// \brief RibbonMdiTitleBar::mouseMoveEvent
+/// Moves the MDI subwindow while the title bar is being dragged.
+/// \param event Mouse event supplied by Qt.
+///
 void RibbonMdiTitleBar::mouseMoveEvent(QMouseEvent *event)
 {
     if (!m_dragging || !m_subWindow || m_subWindow->isMaximized()) {
@@ -357,6 +422,11 @@ void RibbonMdiTitleBar::mouseMoveEvent(QMouseEvent *event)
     m_subWindow->move(m_dragWindowPos + delta);
 }
 
+///
+/// \brief RibbonMdiTitleBar::mousePressEvent
+/// Starts an MDI title-bar drag operation.
+/// \param event Mouse event supplied by Qt.
+///
 void RibbonMdiTitleBar::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton && m_subWindow) {
@@ -372,6 +442,11 @@ void RibbonMdiTitleBar::mousePressEvent(QMouseEvent *event)
     QWidget::mousePressEvent(event);
 }
 
+///
+/// \brief RibbonMdiTitleBar::mouseReleaseEvent
+/// Ends an MDI title-bar drag operation.
+/// \param event Mouse event supplied by Qt.
+///
 void RibbonMdiTitleBar::mouseReleaseEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
@@ -381,6 +456,11 @@ void RibbonMdiTitleBar::mouseReleaseEvent(QMouseEvent *event)
     QWidget::mouseReleaseEvent(event);
 }
 
+///
+/// \brief RibbonMdiTitleBar::paintEvent
+/// Paints the flat MDI title background, icon, and title text.
+/// \param event Paint event supplied by Qt.
+///
 void RibbonMdiTitleBar::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event)
@@ -407,6 +487,10 @@ void RibbonMdiTitleBar::paintEvent(QPaintEvent *event)
                      m_subWindow->windowTitle());
 }
 
+///
+/// \brief RibbonMdiTitleBar::toggleMaximized
+/// Switches the controlled MDI subwindow between normal and maximized states.
+///
 void RibbonMdiTitleBar::toggleMaximized()
 {
     if (!m_subWindow) {
@@ -422,6 +506,10 @@ void RibbonMdiTitleBar::toggleMaximized()
     syncWithSubWindow();
 }
 
+///
+/// \brief RibbonMdiTitleBar::updateButtonGeometry
+/// Places minimize, maximize, and close buttons at the right edge.
+///
 void RibbonMdiTitleBar::updateButtonGeometry()
 {
     int x = width() - (ribbonMdiButtonWidth * 3);
@@ -594,6 +682,12 @@ const char ribbonMdiAreaStyleSheet[] =
     "    background: #e8f2ff;"
     "}";
 
+///
+/// \brief prepareMetricWidget
+/// Applies the font and style polish needed for size-hint measurements.
+/// \param widget Temporary widget used only for metric calculation.
+/// \param font Font that should be measured.
+///
 void prepareMetricWidget(QWidget *widget, const QFont &font)
 {
     widget->setAttribute(Qt::WA_MacSmallSize);
@@ -601,22 +695,47 @@ void prepareMetricWidget(QWidget *widget, const QFont &font)
     widget->ensurePolished();
 }
 
+///
+/// \brief ribbonStyleIconSize
+/// Reads a square icon size from the current Qt style.
+/// \param widget Widget whose style should provide the metric.
+/// \param pixelMetric Style pixel metric to read.
+/// \return Square icon size in logical pixels.
+///
 QSize ribbonStyleIconSize(const QWidget *widget, QStyle::PixelMetric pixelMetric)
 {
     const int iconSize = widget->style()->pixelMetric(pixelMetric, nullptr, widget);
     return QSize(iconSize, iconSize);
 }
 
+///
+/// \brief ribbonLargeIconSize
+/// Returns the style large-icon size used by major Ribbon commands.
+/// \param widget Widget whose style should provide the metric.
+/// \return Large icon size in logical pixels.
+///
 QSize ribbonLargeIconSize(const QWidget *widget)
 {
     return ribbonStyleIconSize(widget, QStyle::PM_LargeIconSize);
 }
 
+///
+/// \brief ribbonSmallIconSize
+/// Returns the style small-icon size used by compact Ribbon commands.
+/// \param widget Widget whose style should provide the metric.
+/// \return Small icon size in logical pixels.
+///
 QSize ribbonSmallIconSize(const QWidget *widget)
 {
     return ribbonStyleIconSize(widget, QStyle::PM_SmallIconSize);
 }
 
+///
+/// \brief ribbonRowItemHeight
+/// Calculates the height for one compact Ribbon row.
+/// \param widget Widget whose font and style should be measured.
+/// \return Row height in logical pixels.
+///
 int ribbonRowItemHeight(const QWidget *widget)
 {
     const QFont widgetFont = widget->font();
@@ -643,17 +762,35 @@ int ribbonRowItemHeight(const QWidget *widget)
     return rowItemHeight + (fontMetrics.height() / 4);
 }
 
+///
+/// \brief ribbonLargeButtonHeight
+/// Calculates the height for a large Ribbon command button.
+/// \param widget Widget whose font and style should be measured.
+/// \return Large button height in logical pixels.
+///
 int ribbonLargeButtonHeight(const QWidget *widget)
 {
     return ribbonRowItemHeight(widget) * ribbonRowItemCount;
 }
 
+///
+/// \brief ribbonGroupTitleHeight
+/// Calculates the height reserved for a group title label.
+/// \param widget Widget whose font should be measured.
+/// \return Group title height in logical pixels.
+///
 int ribbonGroupTitleHeight(const QWidget *widget)
 {
     const QFontMetrics fontMetrics(widget->font());
     return qRound(fontMetrics.height() * 1.2);
 }
 
+///
+/// \brief ribbonGroupHeight
+/// Calculates the content height of a Ribbon group.
+/// \param widget Widget whose font and style should be measured.
+/// \return Group height in logical pixels.
+///
 int ribbonGroupHeight(const QWidget *widget)
 {
     return ribbonLargeButtonHeight(widget)
@@ -662,6 +799,12 @@ int ribbonGroupHeight(const QWidget *widget)
         + ribbonGroupTitleHeight(widget);
 }
 
+///
+/// \brief ribbonBarHeight
+/// Calculates the full Ribbon bar height including caption and tabs.
+/// \param widget Widget whose font and style should be measured.
+/// \return Ribbon bar height in logical pixels.
+///
 int ribbonBarHeight(const QWidget *widget)
 {
     const int calculatedHeight = ribbonCaptionHeight
@@ -671,6 +814,12 @@ int ribbonBarHeight(const QWidget *widget)
     return qMax(ribbonDefaultBarHeight, calculatedHeight);
 }
 
+///
+/// \brief cleanRibbonButtonText
+/// Removes Qt mnemonic markers and trims command text.
+/// \param strText Original action or button text.
+/// \return Text suitable for painting and search matching.
+///
 QString cleanRibbonButtonText(const QString &strText)
 {
     QString strCleanText = strText;
@@ -678,6 +827,13 @@ QString cleanRibbonButtonText(const QString &strText)
     return strCleanText.trimmed();
 }
 
+///
+/// \brief ribbonButtonTextWidth
+/// Measures the widest line of a Ribbon button text.
+/// \param widget Widget whose font should be measured.
+/// \param strText Text that may contain line breaks.
+/// \return Maximum text width in logical pixels.
+///
 int ribbonButtonTextWidth(const QWidget *widget, const QString &strText)
 {
     const QFontMetrics fontMetrics(widget->font());
@@ -691,6 +847,12 @@ int ribbonButtonTextWidth(const QWidget *widget, const QString &strText)
     return textWidth;
 }
 
+///
+/// \brief ribbonLargeButtonWidth
+/// Calculates a Qtitan-like width for a large Ribbon command button.
+/// \param button Button whose text, icon, menu, and style are measured.
+/// \return Bounded large button width in logical pixels.
+///
 int ribbonLargeButtonWidth(const QToolButton *button)
 {
     const QString strButtonText = cleanRibbonButtonText(button->text());
@@ -709,6 +871,12 @@ int ribbonLargeButtonWidth(const QToolButton *button)
                   ribbonLargeButtonMaximumWidth);
 }
 
+///
+/// \brief ribbonSmallButtonWidth
+/// Calculates a Qtitan-like width for a compact Ribbon command button.
+/// \param button Button whose text, icon, menu, and style are measured.
+/// \return Bounded compact button width in logical pixels.
+///
 int ribbonSmallButtonWidth(const QToolButton *button)
 {
     const QString strButtonText = cleanRibbonButtonText(button->text());
@@ -728,6 +896,12 @@ int ribbonSmallButtonWidth(const QToolButton *button)
                   ribbonSmallButtonMaximumWidth);
 }
 
+///
+/// \brief createSearchHeaderItem
+/// Creates a non-selectable section header for the search popup.
+/// \param strText Header text.
+/// \return New model item owned by the caller after insertion.
+///
 QStandardItem *createSearchHeaderItem(const QString &strText)
 {
     QStandardItem *item = new QStandardItem(strText);
@@ -741,6 +915,12 @@ QStandardItem *createSearchHeaderItem(const QString &strText)
     return item;
 }
 
+///
+/// \brief createSearchActionItem
+/// Creates a selectable search result row for an action.
+/// \param action Action represented by the row.
+/// \return New model item owned by the caller after insertion.
+///
 QStandardItem *createSearchActionItem(QAction *action)
 {
     QStandardItem *item = new QStandardItem(action->icon(),
@@ -752,6 +932,13 @@ QStandardItem *createSearchActionItem(QAction *action)
     return item;
 }
 
+///
+/// \brief createSearchHelpItem
+/// Creates a selectable helper row shown when no action matches.
+/// \param strText Help text displayed in the popup.
+/// \param icon Icon displayed before the help text.
+/// \return New model item owned by the caller after insertion.
+///
 QStandardItem *createSearchHelpItem(const QString &strText, const QIcon &icon)
 {
     QStandardItem *item = new QStandardItem(icon, strText);
@@ -764,6 +951,12 @@ QStandardItem *createSearchHelpItem(const QString &strText, const QIcon &icon)
 
 namespace LqRibbon {
 
+///
+/// \brief RibbonGroup::RibbonGroup
+/// Builds a titled Ribbon group and initializes its content layout.
+/// \param strTitle Title displayed at the bottom of the group.
+/// \param parent Parent widget that owns the group.
+///
 RibbonGroup::RibbonGroup(const QString &strTitle, QWidget *parent)
     : QFrame(parent)
     , m_titleLabel(new QLabel(strTitle, this))
@@ -795,6 +988,14 @@ RibbonGroup::RibbonGroup(const QString &strTitle, QWidget *parent)
     updateMetrics();
 }
 
+///
+/// \brief RibbonGroup::addAction
+/// Creates an action and adds a matching command button to the group.
+/// \param icon Icon displayed by the command button.
+/// \param strText Text displayed by the command button.
+/// \param buttonStyle Button style used by the created command button.
+/// \return Newly created action owned by the group.
+///
 QAction *RibbonGroup::addAction(const QIcon &icon,
                                 const QString &strText,
                                 Qt::ToolButtonStyle buttonStyle)
@@ -804,6 +1005,12 @@ QAction *RibbonGroup::addAction(const QIcon &icon,
     return action;
 }
 
+///
+/// \brief RibbonGroup::addAction
+/// Adds an existing action as a Ribbon command button.
+/// \param action Existing action to expose in the group.
+/// \param buttonStyle Button style used by the created command button.
+///
 void RibbonGroup::addAction(QAction *action, Qt::ToolButtonStyle buttonStyle)
 {
     if (!action) {
@@ -819,6 +1026,11 @@ void RibbonGroup::addAction(QAction *action, Qt::ToolButtonStyle buttonStyle)
     m_contentLayout->addWidget(button);
 }
 
+///
+/// \brief RibbonGroup::addWidget
+/// Adds a custom widget into the group content area.
+/// \param widget Widget inserted into the group layout.
+///
 void RibbonGroup::addWidget(QWidget *widget)
 {
     if (!widget) {
@@ -837,16 +1049,32 @@ void RibbonGroup::addWidget(QWidget *widget)
     m_contentLayout->addWidget(widget);
 }
 
+///
+/// \brief RibbonGroup::title
+/// Returns the group title text.
+/// \return Current group title.
+///
 QString RibbonGroup::title() const
 {
     return m_titleLabel->text();
 }
 
+///
+/// \brief RibbonGroup::setTitle
+/// Updates the group title text.
+/// \param strTitle New group title.
+///
 void RibbonGroup::setTitle(const QString &strTitle)
 {
     m_titleLabel->setText(strTitle);
 }
 
+///
+/// \brief RibbonGroup::event
+/// Refreshes metrics when the group receives style or font changes.
+/// \param event Qt event delivered to the group.
+/// \return true when the event is handled.
+///
 bool RibbonGroup::event(QEvent *event)
 {
     const bool handled = QFrame::event(event);
@@ -864,6 +1092,13 @@ bool RibbonGroup::event(QEvent *event)
     return handled;
 }
 
+///
+/// \brief RibbonGroup::createButton
+/// Creates and configures a tool button for a Ribbon action.
+/// \param action Action assigned to the button.
+/// \param buttonStyle Qt tool button style used by the button.
+/// \return Newly created button owned by the group.
+///
 QToolButton *RibbonGroup::createButton(QAction *action, Qt::ToolButtonStyle buttonStyle)
 {
     QToolButton *button = new QToolButton(this);
@@ -895,6 +1130,11 @@ QToolButton *RibbonGroup::createButton(QAction *action, Qt::ToolButtonStyle butt
     return button;
 }
 
+///
+/// \brief RibbonGroup::addSmallButton
+/// Adds a compact command widget to the three-row small-button grid.
+/// \param widget Widget inserted into the compact command grid.
+///
 void RibbonGroup::addSmallButton(QWidget *widget)
 {
     if (!widget) {
@@ -910,6 +1150,11 @@ void RibbonGroup::addSmallButton(QWidget *widget)
     }
 }
 
+///
+/// \brief RibbonGroup::setupSmallButton
+/// Applies compact icon and geometry metrics to a small command button.
+/// \param button Button to configure.
+///
 void RibbonGroup::setupSmallButton(QToolButton *button)
 {
     if (!button) {
@@ -932,6 +1177,11 @@ void RibbonGroup::setupSmallButton(QToolButton *button)
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 }
 
+///
+/// \brief RibbonGroup::smallButtonLayout
+/// Lazily creates and returns the compact command grid layout.
+/// \return Small-button grid layout owned by the group.
+///
 QGridLayout *RibbonGroup::smallButtonLayout()
 {
     if (m_smallButtonLayout) {
@@ -954,6 +1204,10 @@ QGridLayout *RibbonGroup::smallButtonLayout()
     return m_smallButtonLayout;
 }
 
+///
+/// \brief RibbonGroup::updateMetrics
+/// Recalculates group and title geometry from the current style.
+///
 void RibbonGroup::updateMetrics()
 {
     setMinimumHeight(ribbonGroupHeight(this));
@@ -980,6 +1234,12 @@ void RibbonGroup::updateMetrics()
     }
 }
 
+///
+/// \brief RibbonPage::RibbonPage
+/// Builds a Ribbon page that owns a horizontal group layout.
+/// \param strTitle Title shown by the corresponding Ribbon tab.
+/// \param parent Parent widget.
+///
 RibbonPage::RibbonPage(const QString &strTitle, QWidget *parent)
     : QWidget(parent)
     , m_strTitle(strTitle)
@@ -994,6 +1254,12 @@ RibbonPage::RibbonPage(const QString &strTitle, QWidget *parent)
     mainLayout->addLayout(m_groupLayout);
 }
 
+///
+/// \brief RibbonPage::addGroup
+/// Creates and appends a titled group to the page.
+/// \param strTitle Title displayed by the new group.
+/// \return Newly created group owned by the page.
+///
 RibbonGroup *RibbonPage::addGroup(const QString &strTitle)
 {
     RibbonGroup *group = new RibbonGroup(strTitle, this);
@@ -1002,11 +1268,21 @@ RibbonGroup *RibbonPage::addGroup(const QString &strTitle)
     return group;
 }
 
+///
+/// \brief RibbonPage::title
+/// Returns the title mirrored to the Ribbon tab.
+/// \return Current page title.
+///
 QString RibbonPage::title() const
 {
     return m_strTitle;
 }
 
+///
+/// \brief RibbonPage::setTitle
+/// Updates the page title and emits titleChanged when needed.
+/// \param strTitle New page title.
+///
 void RibbonPage::setTitle(const QString &strTitle)
 {
     if (m_strTitle == strTitle) {
@@ -1017,6 +1293,11 @@ void RibbonPage::setTitle(const QString &strTitle)
     emit titleChanged(strTitle);
 }
 
+///
+/// \brief RibbonBar::RibbonBar
+/// Creates the Ribbon bar, search box, quick access bar, and frame buttons.
+/// \param parent Parent widget.
+///
 RibbonBar::RibbonBar(QWidget *parent)
     : QTabWidget(parent)
     , m_searchEdit(new QLineEdit(this))
@@ -1141,6 +1422,10 @@ RibbonBar::RibbonBar(QWidget *parent)
     updateQuickAccessGeometry();
 }
 
+///
+/// \brief RibbonBar::~RibbonBar
+/// Hides transient search UI before Qt destroys the owned child widgets.
+///
 RibbonBar::~RibbonBar()
 {
     for (const SearchCommand &command : m_searchCommandList) {
@@ -1154,6 +1439,12 @@ RibbonBar::~RibbonBar()
     m_searchActionIndex.clear();
 }
 
+///
+/// \brief RibbonBar::addPage
+/// Creates a Ribbon page and connects its title to the matching tab text.
+/// \param strTitle Text displayed by the new tab.
+/// \return Newly created page owned by the Ribbon bar.
+///
 RibbonPage *RibbonBar::addPage(const QString &strTitle)
 {
     RibbonPage *newPage = new RibbonPage(strTitle, this);
@@ -1169,26 +1460,52 @@ RibbonPage *RibbonBar::addPage(const QString &strTitle)
     return newPage;
 }
 
+///
+/// \brief RibbonBar::page
+/// Returns the page at the requested index.
+/// \param index Zero-based page index.
+/// \return Page pointer or nullptr when the index is invalid.
+///
 RibbonPage *RibbonBar::page(int index) const
 {
     return qobject_cast<RibbonPage *>(widget(index));
 }
 
+///
+/// \brief RibbonBar::currentPage
+/// Returns the currently selected Ribbon page.
+/// \return Current page pointer or nullptr when no page exists.
+///
 RibbonPage *RibbonBar::currentPage() const
 {
     return page(currentIndex());
 }
 
+///
+/// \brief RibbonBar::searchLineEdit
+/// Returns the title-bar search edit widget.
+/// \return Search line edit owned by the Ribbon bar.
+///
 QLineEdit *RibbonBar::searchLineEdit() const
 {
     return m_searchEdit;
 }
 
+///
+/// \brief RibbonBar::searchCompleter
+/// Returns the completer attached to the search edit.
+/// \return Search completer owned by the Ribbon bar.
+///
 QCompleter *RibbonBar::searchCompleter() const
 {
     return m_searchCompleter;
 }
 
+///
+/// \brief RibbonBar::setSearchVisible
+/// Shows or hides the title-bar search edit.
+/// \param visible true to show search, false to hide it.
+///
 void RibbonBar::setSearchVisible(bool visible)
 {
     m_searchVisibleExplicitlySet = true;
@@ -1201,27 +1518,52 @@ void RibbonBar::setSearchVisible(bool visible)
     updateQuickAccessGeometry();
 }
 
+///
+/// \brief RibbonBar::isSearchVisible
+/// Checks whether the search edit is visible.
+/// \return true when search is visible.
+///
 bool RibbonBar::isSearchVisible() const
 {
     return m_searchEdit->isVisible();
 }
 
+///
+/// \brief RibbonBar::setSearchPlaceholderText
+/// Sets the placeholder text shown in the search edit.
+/// \param strText Placeholder text.
+///
 void RibbonBar::setSearchPlaceholderText(const QString &strText)
 {
     m_searchEdit->setPlaceholderText(strText);
 }
 
+///
+/// \brief RibbonBar::searchText
+/// Returns the current search edit text.
+/// \return Current search text.
+///
 QString RibbonBar::searchText() const
 {
     return m_searchEdit->text();
 }
 
+///
+/// \brief RibbonBar::setSearchText
+/// Replaces the current search edit text.
+/// \param strText New search text.
+///
 void RibbonBar::setSearchText(const QString &strText)
 {
     m_searchEdit->setText(strText);
     updateSearchPopup();
 }
 
+///
+/// \brief RibbonBar::setSearchSuggestions
+/// Replaces the plain text suggestion list used by search completion.
+/// \param strList Suggestion strings.
+///
 void RibbonBar::setSearchSuggestions(const QStringList &strList)
 {
     m_searchSuggestionList = strList;
@@ -1229,11 +1571,20 @@ void RibbonBar::setSearchSuggestions(const QStringList &strList)
     updateSearchPopup();
 }
 
+///
+/// \brief RibbonBar::searchSuggestions
+/// Returns the configured plain text suggestions.
+/// \return Suggestion strings.
+///
 QStringList RibbonBar::searchSuggestions() const
 {
     return m_searchSuggestionModel->stringList();
 }
 
+///
+/// \brief RibbonBar::clearSearchSuggestions
+/// Clears all plain text search suggestions.
+///
 void RibbonBar::clearSearchSuggestions()
 {
     m_searchSuggestionList.clear();
@@ -1241,6 +1592,12 @@ void RibbonBar::clearSearchSuggestions()
     updateSearchPopup();
 }
 
+///
+/// \brief RibbonBar::registerSearchAction
+/// Adds an action to the searchable command index.
+/// \param action Action that can be found and triggered by search.
+/// \param strKeywords Extra keywords matched in addition to action text.
+///
 void RibbonBar::registerSearchAction(QAction *action, const QStringList &strKeywords)
 {
     if (!action) {
@@ -1267,6 +1624,11 @@ void RibbonBar::registerSearchAction(QAction *action, const QStringList &strKeyw
     updateSearchPopup();
 }
 
+///
+/// \brief RibbonBar::unregisterSearchAction
+/// Removes an action from the searchable command index.
+/// \param action Action to remove.
+///
 void RibbonBar::unregisterSearchAction(QAction *action)
 {
     bool removed = false;
@@ -1298,6 +1660,11 @@ void RibbonBar::unregisterSearchAction(QAction *action)
     updateSearchPopup();
 }
 
+///
+/// \brief RibbonBar::searchActions
+/// Returns all valid actions registered for search.
+/// \return Searchable action list.
+///
 QList<QAction *> RibbonBar::searchActions() const
 {
     QList<QAction *> actionList;
@@ -1310,11 +1677,23 @@ QList<QAction *> RibbonBar::searchActions() const
     return actionList;
 }
 
+///
+/// \brief RibbonBar::searchAction
+/// Finds the best matching registered action.
+/// \param strText Search text to normalize and match.
+/// \return Matching action or nullptr when no action matches.
+///
 QAction *RibbonBar::searchAction(const QString &strText) const
 {
     return m_searchActionIndex.value(normalizedSearchText(strText)).data();
 }
 
+///
+/// \brief RibbonBar::triggerSearchAction
+/// Finds and triggers the action that matches the search text.
+/// \param strText Search text accepted by the user.
+/// \return true when an action was found and triggered.
+///
 bool RibbonBar::triggerSearchAction(const QString &strText)
 {
     if (!m_searchActionTriggerEnabled) {
@@ -1335,16 +1714,31 @@ bool RibbonBar::triggerSearchAction(const QString &strText)
     return true;
 }
 
+///
+/// \brief RibbonBar::setSearchActionTriggerEnabled
+/// Enables or disables automatic action triggering from accepted search text.
+/// \param enabled true to allow search to trigger actions.
+///
 void RibbonBar::setSearchActionTriggerEnabled(bool enabled)
 {
     m_searchActionTriggerEnabled = enabled;
 }
 
+///
+/// \brief RibbonBar::isSearchActionTriggerEnabled
+/// Returns whether accepted search text can trigger actions.
+/// \return true when triggering is enabled.
+///
 bool RibbonBar::isSearchActionTriggerEnabled() const
 {
     return m_searchActionTriggerEnabled;
 }
 
+///
+/// \brief RibbonBar::recentSearchActions
+/// Returns the valid recent actions triggered from search.
+/// \return Recent action list in newest-first order.
+///
 QList<QAction *> RibbonBar::recentSearchActions() const
 {
     QList<QAction *> actionList;
@@ -1357,6 +1751,10 @@ QList<QAction *> RibbonBar::recentSearchActions() const
     return actionList;
 }
 
+///
+/// \brief RibbonBar::clearRecentSearchActions
+/// Clears the search action history and notifies listeners.
+///
 void RibbonBar::clearRecentSearchActions()
 {
     if (m_recentSearchActionList.isEmpty()) {
@@ -1369,6 +1767,11 @@ void RibbonBar::clearRecentSearchActions()
     updateSearchPopup();
 }
 
+///
+/// \brief RibbonBar::setRecentSearchLimit
+/// Sets the maximum number of recent search actions to keep.
+/// \param count Maximum history length.
+///
 void RibbonBar::setRecentSearchLimit(int count)
 {
     m_recentSearchLimit = qMax(0, count);
@@ -1381,16 +1784,33 @@ void RibbonBar::setRecentSearchLimit(int count)
     updateSearchPopup();
 }
 
+///
+/// \brief RibbonBar::recentSearchLimit
+/// Returns the maximum search history length.
+/// \return Recent search action limit.
+///
 int RibbonBar::recentSearchLimit() const
 {
     return m_recentSearchLimit;
 }
 
+///
+/// \brief RibbonBar::quickAccessBar
+/// Returns the quick access toolbar placed in the caption area.
+/// \return Quick access toolbar owned by the Ribbon bar.
+///
 QToolBar *RibbonBar::quickAccessBar() const
 {
     return m_quickAccessBar;
 }
 
+///
+/// \brief RibbonBar::addQuickAccessAction
+/// Creates and adds an action to the quick access toolbar.
+/// \param icon Icon shown by the toolbar action.
+/// \param strText Text and tooltip source for the action.
+/// \return Newly created action owned by the quick access toolbar.
+///
 QAction *RibbonBar::addQuickAccessAction(const QIcon &icon, const QString &strText)
 {
     QAction *action = new QAction(icon, strText, this);
@@ -1398,6 +1818,11 @@ QAction *RibbonBar::addQuickAccessAction(const QIcon &icon, const QString &strTe
     return action;
 }
 
+///
+/// \brief RibbonBar::addQuickAccessAction
+/// Adds an existing action to the quick access toolbar.
+/// \param action Action to add.
+///
 void RibbonBar::addQuickAccessAction(QAction *action)
 {
     if (!action) {
@@ -1413,6 +1838,10 @@ void RibbonBar::addQuickAccessAction(QAction *action)
     updateStyleSheet();
 }
 
+///
+/// \brief RibbonBar::clearQuickAccessActions
+/// Removes all actions from the quick access toolbar.
+///
 void RibbonBar::clearQuickAccessActions()
 {
     m_quickAccessBar->clear();
@@ -1421,11 +1850,21 @@ void RibbonBar::clearQuickAccessActions()
     updateStyleSheet();
 }
 
+///
+/// \brief RibbonBar::setCurrentPageIndex
+/// Selects the active Ribbon page by index.
+/// \param index Zero-based tab index.
+///
 void RibbonBar::setCurrentPageIndex(int index)
 {
     setCurrentIndex(index);
 }
 
+///
+/// \brief RibbonBar::setFrameThemeEnabled
+/// Enables or disables Qtitan-style frame painting and controls.
+/// \param enabled true to paint the Ribbon caption and buttons.
+///
 void RibbonBar::setFrameThemeEnabled(bool enabled)
 {
     RibbonMainWindow *mainWindow = qobject_cast<RibbonMainWindow *>(window());
@@ -1450,11 +1889,22 @@ void RibbonBar::setFrameThemeEnabled(bool enabled)
     updateStyleSheet();
 }
 
+///
+/// \brief RibbonBar::isFrameThemeEnabled
+/// Returns whether themed frame painting is active.
+/// \return true when themed frame painting is enabled.
+///
 bool RibbonBar::isFrameThemeEnabled() const
 {
     return m_frameThemeEnabled;
 }
 
+///
+/// \brief RibbonBar::event
+/// Updates Ribbon metrics when font, style, or palette information changes.
+/// \param event Qt event delivered to the Ribbon bar.
+/// \return true when the event is handled.
+///
 bool RibbonBar::event(QEvent *event)
 {
     const bool handled = QTabWidget::event(event);
@@ -1483,6 +1933,13 @@ bool RibbonBar::event(QEvent *event)
     return handled;
 }
 
+///
+/// \brief RibbonBar::eventFilter
+/// Handles search keyboard navigation, action tracking, and popup events.
+/// \param object Object that generated the filtered event.
+/// \param event Event to filter.
+/// \return true when the event is consumed.
+///
 bool RibbonBar::eventFilter(QObject *object, QEvent *event)
 {
     if (object == m_searchEdit && event->type() == QEvent::KeyPress) {
@@ -1519,6 +1976,11 @@ bool RibbonBar::eventFilter(QObject *object, QEvent *event)
     return QTabWidget::eventFilter(object, event);
 }
 
+///
+/// \brief RibbonBar::paintEvent
+/// Paints the tab widget and Qtitan-style caption area when enabled.
+/// \param event Paint event supplied by Qt.
+///
 void RibbonBar::paintEvent(QPaintEvent *event)
 {
     if (m_frameThemeEnabled) {
@@ -1584,6 +2046,11 @@ void RibbonBar::paintEvent(QPaintEvent *event)
                             false);
 }
 
+///
+/// \brief RibbonBar::resizeEvent
+/// Repositions tabs, search, quick access actions, and window controls.
+/// \param event Resize event supplied by Qt.
+///
 void RibbonBar::resizeEvent(QResizeEvent *event)
 {
     QTabWidget::resizeEvent(event);
@@ -1596,6 +2063,12 @@ void RibbonBar::resizeEvent(QResizeEvent *event)
     updateStyleSheet();
 }
 
+///
+/// \brief RibbonBar::isWindowControlPoint
+/// Checks whether a point hits the themed minimize, maximize, or close area.
+/// \param point Point in RibbonBar coordinates.
+/// \return true when the point is inside the window-control rectangle.
+///
 bool RibbonBar::isWindowControlPoint(const QPoint &point) const
 {
     if (!m_frameThemeEnabled) {
@@ -1629,6 +2102,10 @@ bool RibbonBar::isWindowControlPoint(const QPoint &point) const
     return buttonRect.contains(point);
 }
 
+///
+/// \brief RibbonBar::updateRibbonTabGeometry
+/// Places the tab bar below the caption area and sizes the page stack.
+///
 void RibbonBar::updateRibbonTabGeometry()
 {
     QTabBar *ribbonTabBar = tabBar();
@@ -1656,6 +2133,10 @@ void RibbonBar::updateRibbonTabGeometry()
     stackedWidget->setGeometry(0, stackTop, width(), stackHeight);
 }
 
+///
+/// \brief RibbonBar::updateSearchGeometry
+/// Centers the title-bar search box while avoiding the frame buttons.
+///
 void RibbonBar::updateSearchGeometry()
 {
     const int preferredSearchWidth = 416;
@@ -1683,6 +2164,10 @@ void RibbonBar::updateSearchGeometry()
     }
 }
 
+///
+/// \brief RibbonBar::updateQuickAccessGeometry
+/// Places quick access commands between the title and search box.
+///
 void RibbonBar::updateQuickAccessGeometry()
 {
     const int topMargin = 12;
@@ -1701,6 +2186,10 @@ void RibbonBar::updateQuickAccessGeometry()
     m_quickAccessBar->raise();
 }
 
+///
+/// \brief RibbonBar::updateRibbonMetrics
+/// Applies the calculated fixed Ribbon height.
+///
 void RibbonBar::updateRibbonMetrics()
 {
     const int barHeight = ribbonBarHeight(this);
@@ -1709,6 +2198,11 @@ void RibbonBar::updateRibbonMetrics()
     }
 }
 
+///
+/// \brief RibbonBar::setupWindowControlButton
+/// Initializes a frame-control button before it is reparented to the window.
+/// \param button Button to initialize.
+///
 void RibbonBar::setupWindowControlButton(QToolButton *button)
 {
     if (!button) {
@@ -1719,6 +2213,10 @@ void RibbonBar::setupWindowControlButton(QToolButton *button)
     button->raise();
 }
 
+///
+/// \brief RibbonBar::updateWindowControlGeometry
+/// Positions the themed window-control widgets over the caption area.
+///
 void RibbonBar::updateWindowControlGeometry()
 {
     const int buttonWidth = ribbonWindowButtonWidth;
@@ -1764,6 +2262,10 @@ void RibbonBar::updateWindowControlGeometry()
     m_closeButton->raise();
 }
 
+///
+/// \brief RibbonBar::updateWindowControlState
+/// Synchronizes maximize button glyph and enabled state with the top window.
+///
 void RibbonBar::updateWindowControlState()
 {
     QWidget *topLevelWidget = window();
@@ -1779,6 +2281,10 @@ void RibbonBar::updateWindowControlState()
     m_maximizeButton->setEnabled(canMaximize);
 }
 
+///
+/// \brief RibbonBar::updateWindowControlVisibility
+/// Shows or hides themed frame buttons according to frame-theme state.
+///
 void RibbonBar::updateWindowControlVisibility()
 {
     m_minimizeButton->setVisible(m_frameThemeEnabled);
@@ -1787,6 +2293,11 @@ void RibbonBar::updateWindowControlVisibility()
     updateWindowControlState();
 }
 
+///
+/// \brief RibbonBar::windowControlWidth
+/// Returns the total width reserved for themed frame buttons.
+/// \return Combined minimize, maximize, and close button width.
+///
 int RibbonBar::windowControlWidth() const
 {
     if (!m_frameThemeEnabled) {
@@ -1796,6 +2307,10 @@ int RibbonBar::windowControlWidth() const
     return ribbonWindowButtonWidth * 3;
 }
 
+///
+/// \brief RibbonBar::updateSearchPopup
+/// Rebuilds and positions the search suggestion popup.
+///
 void RibbonBar::updateSearchPopup()
 {
     if (!m_searchEdit->isVisible()) {
@@ -1855,11 +2370,20 @@ void RibbonBar::updateSearchPopup()
     }
 }
 
+///
+/// \brief RibbonBar::hideSearchPopup
+/// Hides the transient search popup.
+///
 void RibbonBar::hideSearchPopup()
 {
     m_searchPopupView->hide();
 }
 
+///
+/// \brief RibbonBar::activateSearchPopupIndex
+/// Activates the command or helper row selected in the search popup.
+/// \param index Popup model index to activate.
+///
 void RibbonBar::activateSearchPopupIndex(const QModelIndex &index)
 {
     if (!index.isValid()) {
@@ -1893,6 +2417,12 @@ void RibbonBar::activateSearchPopupIndex(const QModelIndex &index)
     }
 }
 
+///
+/// \brief RibbonBar::matchedSearchActions
+/// Finds all registered actions whose text or keywords match the search text.
+/// \param strText Search text entered by the user.
+/// \return Matching actions sorted by registration order.
+///
 QList<QAction *> RibbonBar::matchedSearchActions(const QString &strText) const
 {
     QList<QAction *> actionList;
@@ -1951,6 +2481,10 @@ QList<QAction *> RibbonBar::matchedSearchActions(const QString &strText) const
     return actionList;
 }
 
+///
+/// \brief RibbonBar::updateSearchSuggestions
+/// Rebuilds the completer string list from suggestions and actions.
+///
 void RibbonBar::updateSearchSuggestions()
 {
     QStringList strList;
@@ -1984,6 +2518,11 @@ void RibbonBar::updateSearchSuggestions()
     m_searchSuggestionModel->setStringList(strList);
 }
 
+///
+/// \brief RibbonBar::recordRecentSearchAction
+/// Adds an action to the recent-search list and enforces the history limit.
+/// \param action Action that was triggered from search.
+///
 void RibbonBar::recordRecentSearchAction(QAction *action)
 {
     if (!action || m_recentSearchLimit <= 0) {
@@ -2005,6 +2544,10 @@ void RibbonBar::recordRecentSearchAction(QAction *action)
     emit recentSearchActionsChanged();
 }
 
+///
+/// \brief RibbonBar::removeInvalidSearchActions
+/// Removes deleted actions from search registration and history containers.
+///
 void RibbonBar::removeInvalidSearchActions()
 {
     bool recentRemoved = false;
@@ -2029,6 +2572,10 @@ void RibbonBar::removeInvalidSearchActions()
     updateSearchSuggestions();
 }
 
+///
+/// \brief RibbonBar::updateChangedSearchAction
+/// Refreshes search indexes when a registered action changes text or icon.
+///
 void RibbonBar::updateChangedSearchAction()
 {
     QAction *action = qobject_cast<QAction *>(sender());
@@ -2047,6 +2594,10 @@ void RibbonBar::updateChangedSearchAction()
     updateSearchPopup();
 }
 
+///
+/// \brief RibbonBar::rebuildSearchActionIndex
+/// Rebuilds normalized text and keyword lookup entries for search actions.
+///
 void RibbonBar::rebuildSearchActionIndex()
 {
     m_searchActionIndex.clear();
@@ -2069,6 +2620,12 @@ void RibbonBar::rebuildSearchActionIndex()
     }
 }
 
+///
+/// \brief RibbonBar::normalizedSearchText
+/// Normalizes search text for case-insensitive matching.
+/// \param strText Text to normalize.
+/// \return Trimmed lower-case search key.
+///
 QString RibbonBar::normalizedSearchText(const QString &strText) const
 {
     QString strNormalizedText = strText.trimmed().toCaseFolded();
@@ -2076,6 +2633,12 @@ QString RibbonBar::normalizedSearchText(const QString &strText) const
     return strNormalizedText;
 }
 
+///
+/// \brief RibbonBar::searchActionText
+/// Returns clean display text for a searchable action.
+/// \param action Action whose text should be cleaned.
+/// \return Text without mnemonic markers.
+///
 QString RibbonBar::searchActionText(QAction *action) const
 {
     QString strText = action->text();
@@ -2083,11 +2646,20 @@ QString RibbonBar::searchActionText(QAction *action) const
     return strText.trimmed();
 }
 
+///
+/// \brief RibbonBar::updateStyleSheet
+/// Applies the Ribbon stylesheet that matches the current frame mode.
+///
 void RibbonBar::updateStyleSheet()
 {
     setStyleSheet(QString::fromLatin1(ribbonStyleSheet));
 }
 
+///
+/// \brief RibbonMainWindow::RibbonMainWindow
+/// Creates a main window with a top Ribbon bar and central content area.
+/// \param parent Parent widget.
+///
 RibbonMainWindow::RibbonMainWindow(QWidget *parent)
     : QMainWindow(parent)
     , m_rootWidget(new QWidget(this))
@@ -2110,6 +2682,10 @@ RibbonMainWindow::RibbonMainWindow(QWidget *parent)
     }
 }
 
+///
+/// \brief RibbonMainWindow::~RibbonMainWindow
+/// Removes the event filter before Qt destroys child widgets.
+///
 RibbonMainWindow::~RibbonMainWindow()
 {
     if (QApplication::instance()) {
@@ -2117,11 +2693,21 @@ RibbonMainWindow::~RibbonMainWindow()
     }
 }
 
+///
+/// \brief RibbonMainWindow::ribbonBar
+/// Returns the embedded Ribbon bar.
+/// \return Ribbon bar owned by this main window.
+///
 RibbonBar *RibbonMainWindow::ribbonBar() const
 {
     return m_ribbonBar;
 }
 
+///
+/// \brief RibbonMainWindow::setCentralWidget
+/// Places a widget under the Ribbon bar and installs frame event filtering.
+/// \param widget Widget to use as the main content area.
+///
 void RibbonMainWindow::setCentralWidget(QWidget *widget)
 {
     if (!widget || widget == m_centralWidget) {
@@ -2140,6 +2726,11 @@ void RibbonMainWindow::setCentralWidget(QWidget *widget)
     polishMdiObject(widget);
 }
 
+///
+/// \brief RibbonMainWindow::setNativeFrameEnabled
+/// Enables native move, resize, hit-test, and system-menu handling.
+/// \param enabled true to let LqRibbon handle native frame gestures.
+///
 void RibbonMainWindow::setNativeFrameEnabled(bool enabled)
 {
     if (m_nativeFrameEnabled == enabled) {
@@ -2166,42 +2757,84 @@ void RibbonMainWindow::setNativeFrameEnabled(bool enabled)
     }
 }
 
+///
+/// \brief RibbonMainWindow::isNativeFrameEnabled
+/// Returns whether native frame handling is active.
+/// \return true when LqRibbon handles native frame gestures.
+///
 bool RibbonMainWindow::isNativeFrameEnabled() const
 {
     return m_nativeFrameEnabled;
 }
 
+///
+/// \brief RibbonMainWindow::setNativeCaptionHeight
+/// Sets the height of the draggable caption region.
+/// \param height Caption height in logical pixels.
+///
 void RibbonMainWindow::setNativeCaptionHeight(int height)
 {
     m_nativeCaptionHeight = qMax(0, height);
 }
 
+///
+/// \brief RibbonMainWindow::nativeCaptionHeight
+/// Returns the draggable caption height.
+/// \return Caption height in logical pixels.
+///
 int RibbonMainWindow::nativeCaptionHeight() const
 {
     return m_nativeCaptionHeight;
 }
 
+///
+/// \brief RibbonMainWindow::setNativeResizeBorderWidth
+/// Sets the fallback resize hit-test border width.
+/// \param width Border width in logical pixels.
+///
 void RibbonMainWindow::setNativeResizeBorderWidth(int width)
 {
     m_nativeResizeBorderWidth = qMax(0, width);
 }
 
+///
+/// \brief RibbonMainWindow::nativeResizeBorderWidth
+/// Returns the fallback resize hit-test border width.
+/// \return Border width in logical pixels.
+///
 int RibbonMainWindow::nativeResizeBorderWidth() const
 {
     return m_nativeResizeBorderWidth;
 }
 
+///
+/// \brief RibbonMainWindow::setFrameThemeEnabled
+/// Enables Qtitan-style Ribbon frame painting on the embedded Ribbon bar.
+/// \param enabled true to enable themed frame painting.
+///
 void RibbonMainWindow::setFrameThemeEnabled(bool enabled)
 {
     m_ribbonBar->setFrameThemeEnabled(enabled);
     setNativeFrameEnabled(enabled);
 }
 
+///
+/// \brief RibbonMainWindow::isFrameThemeEnabled
+/// Returns whether themed frame painting is enabled.
+/// \return true when frame painting is active.
+///
 bool RibbonMainWindow::isFrameThemeEnabled() const
 {
     return m_ribbonBar->isFrameThemeEnabled();
 }
 
+///
+/// \brief RibbonMainWindow::eventFilter
+/// Routes native-frame and MDI polish events from child widgets.
+/// \param object Object that generated the filtered event.
+/// \param event Event to filter.
+/// \return true when the event is consumed.
+///
 bool RibbonMainWindow::eventFilter(QObject *object, QEvent *event)
 {
     if (handleNativeFrameEvent(object, event)) {
@@ -2226,6 +2859,11 @@ bool RibbonMainWindow::eventFilter(QObject *object, QEvent *event)
     return false;
 }
 
+///
+/// \brief RibbonMainWindow::polishMdiObject
+/// Applies flat Ribbon-compatible styling to MDI-related objects.
+/// \param object Object that may be a QMdiArea or QMdiSubWindow.
+///
 void RibbonMainWindow::polishMdiObject(QObject *object)
 {
     if (!object) {
@@ -2261,6 +2899,11 @@ void RibbonMainWindow::polishMdiObject(QObject *object)
     }
 }
 
+///
+/// \brief RibbonMainWindow::polishMdiArea
+/// Applies Qtitan-like styling and event filtering to an MDI area.
+/// \param mdiArea MDI area to polish.
+///
 void RibbonMainWindow::polishMdiArea(QMdiArea *mdiArea)
 {
     if (!mdiArea) {
@@ -2284,6 +2927,11 @@ void RibbonMainWindow::polishMdiArea(QMdiArea *mdiArea)
     }
 }
 
+///
+/// \brief RibbonMainWindow::polishMdiSubWindow
+/// Replaces native-looking MDI chrome with a flat Ribbon title bar.
+/// \param subWindow MDI subwindow to polish.
+///
 void RibbonMainWindow::polishMdiSubWindow(QMdiSubWindow *subWindow)
 {
     if (!subWindow) {
@@ -2315,6 +2963,11 @@ void RibbonMainWindow::polishMdiSubWindow(QMdiSubWindow *subWindow)
     titleBar->syncWithSubWindow();
 }
 
+///
+/// \brief RibbonMainWindow::updateMdiTabBars
+/// Applies flat close-button and tab metrics to tabbed MDI views.
+/// \param mdiArea MDI area whose tab bars should be updated.
+///
 void RibbonMainWindow::updateMdiTabBars(QMdiArea *mdiArea)
 {
     if (!mdiArea) {
@@ -2330,6 +2983,14 @@ void RibbonMainWindow::updateMdiTabBars(QMdiArea *mdiArea)
     }
 }
 
+///
+/// \brief RibbonMainWindow::nativeEvent
+/// Handles platform-native messages for frameless window behavior.
+/// \param eventType Native event type passed by Qt.
+/// \param message Platform message pointer.
+/// \param result Native result value returned to Qt.
+/// \return true when the native message is fully handled.
+///
 bool RibbonMainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result)
 {
 #ifdef Q_OS_WIN
@@ -2388,6 +3049,13 @@ bool RibbonMainWindow::nativeEvent(const QByteArray &eventType, void *message, l
 #endif
 }
 
+///
+/// \brief RibbonMainWindow::handleNativeFrameEvent
+/// Converts Qt mouse events into native move, resize, and caption actions.
+/// \param object Object that generated the event.
+/// \param event Event to inspect.
+/// \return true when the event is consumed.
+///
 bool RibbonMainWindow::handleNativeFrameEvent(QObject *object, QEvent *event)
 {
     if (!m_nativeFrameEnabled) {
@@ -2467,6 +3135,12 @@ bool RibbonMainWindow::handleNativeFrameEvent(QObject *object, QEvent *event)
     return false;
 }
 
+///
+/// \brief RibbonMainWindow::isNativeCaptionPoint
+/// Checks whether a global point is inside the draggable caption area.
+/// \param globalPoint Global screen point.
+/// \return true when the point can start a window move or caption double-click.
+///
 bool RibbonMainWindow::isNativeCaptionPoint(const QPoint &globalPoint) const
 {
     if (m_nativeCaptionHeight <= 0 || !m_ribbonBar->isVisible()) {
@@ -2506,6 +3180,12 @@ bool RibbonMainWindow::isNativeCaptionPoint(const QPoint &globalPoint) const
     return true;
 }
 
+///
+/// \brief RibbonMainWindow::startNativeSystemMove
+/// Starts a platform-native system move operation.
+/// \param globalPoint Global point where dragging started.
+/// \return true when the platform accepted the move operation.
+///
 bool RibbonMainWindow::startNativeSystemMove(const QPoint &globalPoint)
 {
     Q_UNUSED(globalPoint)
@@ -2518,6 +3198,12 @@ bool RibbonMainWindow::startNativeSystemMove(const QPoint &globalPoint)
     return nativeWindow->startSystemMove();
 }
 
+///
+/// \brief RibbonMainWindow::startNativeSystemResize
+/// Starts a platform-native system resize operation.
+/// \param globalPoint Global point where resizing started.
+/// \return true when the platform accepted the resize operation.
+///
 bool RibbonMainWindow::startNativeSystemResize(const QPoint &globalPoint)
 {
     const Qt::Edges edges = nativeResizeEdges(globalPoint);
@@ -2533,6 +3219,12 @@ bool RibbonMainWindow::startNativeSystemResize(const QPoint &globalPoint)
     return nativeWindow->startSystemResize(edges);
 }
 
+///
+/// \brief RibbonMainWindow::nativeResizeEdges
+/// Determines which window edges should resize for a global point.
+/// \param globalPoint Global screen point.
+/// \return Resize edges under the point.
+///
 Qt::Edges RibbonMainWindow::nativeResizeEdges(const QPoint &globalPoint) const
 {
     if (isMaximized() || isFullScreen()) {
@@ -2570,6 +3262,11 @@ Qt::Edges RibbonMainWindow::nativeResizeEdges(const QPoint &globalPoint) const
     return edges;
 }
 
+///
+/// \brief RibbonMainWindow::updateNativeFrameCursor
+/// Updates the cursor shape for native resize hit-test zones.
+/// \param globalPoint Global screen point under the cursor.
+///
 void RibbonMainWindow::updateNativeFrameCursor(const QPoint &globalPoint)
 {
     const Qt::Edges edges = nativeResizeEdges(globalPoint);
@@ -2599,6 +3296,12 @@ void RibbonMainWindow::updateNativeFrameCursor(const QPoint &globalPoint)
     }
 }
 
+///
+/// \brief RibbonMainWindow::nativeHitTestResult
+/// Maps a global point to a Windows non-client hit-test result.
+/// \param globalPoint Global screen point.
+/// \return Windows hit-test code, or HTCLIENT outside native zones.
+///
 int RibbonMainWindow::nativeHitTestResult(const QPoint &globalPoint) const
 {
 #ifdef Q_OS_WIN
@@ -2665,6 +3368,11 @@ int RibbonMainWindow::nativeHitTestResult(const QPoint &globalPoint) const
 #endif
 }
 
+///
+/// \brief RibbonMainWindow::effectiveNativeResizeBorderWidth
+/// Returns the configured or platform-default resize border width.
+/// \return Resize border width in logical pixels.
+///
 int RibbonMainWindow::effectiveNativeResizeBorderWidth() const
 {
 #ifdef Q_OS_WIN
@@ -2680,6 +3388,12 @@ int RibbonMainWindow::effectiveNativeResizeBorderWidth() const
 #endif
 }
 
+///
+/// \brief RibbonMainWindow::showNativeSystemMenu
+/// Displays the platform system menu at the requested point.
+/// \param globalPoint Global point where the menu should appear.
+/// \return true when the menu was shown.
+///
 bool RibbonMainWindow::showNativeSystemMenu(const QPoint &globalPoint)
 {
 #ifdef Q_OS_WIN
@@ -2716,6 +3430,11 @@ bool RibbonMainWindow::showNativeSystemMenu(const QPoint &globalPoint)
 #endif
 }
 
+///
+/// \brief RibbonMainWindow::updateNativeSystemMenu
+/// Enables or disables native system menu commands for the current state.
+/// \param menuHandle Platform system menu handle.
+///
 void RibbonMainWindow::updateNativeSystemMenu(void *menuHandle) const
 {
 #ifdef Q_OS_WIN
@@ -2759,6 +3478,11 @@ void RibbonMainWindow::updateNativeSystemMenu(void *menuHandle) const
 #endif
 }
 
+///
+/// \brief RibbonMainWindow::nativeSystemMenuPoint
+/// Calculates the default point for Alt+Space system-menu display.
+/// \return Global point where the system menu should open.
+///
 QPoint RibbonMainWindow::nativeSystemMenuPoint() const
 {
 #ifdef Q_OS_WIN
@@ -2776,6 +3500,11 @@ QPoint RibbonMainWindow::nativeSystemMenuPoint() const
     return mapToGlobal(QPoint(0, m_nativeCaptionHeight));
 }
 
+///
+/// \brief RibbonMainWindow::updateNativeMinMaxInfo
+/// Writes Qt minimum and maximum sizes into native min/max tracking data.
+/// \param minMaxInfo Platform min/max structure pointer.
+///
 void RibbonMainWindow::updateNativeMinMaxInfo(void *minMaxInfo) const
 {
 #ifdef Q_OS_WIN
@@ -2818,16 +3547,31 @@ void RibbonMainWindow::updateNativeMinMaxInfo(void *minMaxInfo) const
 #endif
 }
 
+///
+/// \brief RibbonMainWindow::canNativeResizeHorizontally
+/// Checks whether the window can be resized horizontally.
+/// \return true when minimum and maximum widths allow horizontal resize.
+///
 bool RibbonMainWindow::canNativeResizeHorizontally() const
 {
     return minimumWidth() < maximumWidth();
 }
 
+///
+/// \brief RibbonMainWindow::canNativeResizeVertically
+/// Checks whether the window can be resized vertically.
+/// \return true when minimum and maximum heights allow vertical resize.
+///
 bool RibbonMainWindow::canNativeResizeVertically() const
 {
     return minimumHeight() < maximumHeight();
 }
 
+///
+/// \brief RibbonMainWindow::canNativeMaximize
+/// Checks whether native maximize should be available.
+/// \return true when maximize is allowed by flags and resize constraints.
+///
 bool RibbonMainWindow::canNativeMaximize() const
 {
     const Qt::WindowFlags flags = windowFlags();
@@ -2839,6 +3583,10 @@ bool RibbonMainWindow::canNativeMaximize() const
         && canNativeResizeVertically();
 }
 
+///
+/// \brief RibbonMainWindow::updateNativeWindowStyle
+/// Synchronizes Windows style bits with Qt window flags and resize rules.
+///
 void RibbonMainWindow::updateNativeWindowStyle()
 {
 #ifdef Q_OS_WIN
