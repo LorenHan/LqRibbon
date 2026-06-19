@@ -24,6 +24,8 @@ int main(int argc, char *argv[])
         : QString();
     const bool searchPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-search-preview"));
+    const bool collapsedPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
     const bool mdiPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-mdi-preview"));
     const bool tabPreviewRequested =
@@ -170,6 +172,12 @@ int main(int argc, char *argv[])
         QTimer::singleShot(120, &mainWindow, [&mainWindow]() {
             mainWindow.ribbonBar()->searchLineEdit()->setFocus();
             mainWindow.ribbonBar()->setSearchText(QStringLiteral("ba"));
+        });
+    }
+
+    if (collapsedPreviewRequested) {
+        QTimer::singleShot(120, &mainWindow, [&mainWindow]() {
+            mainWindow.ribbonBar()->setRibbonMinimized(true);
         });
     }
 

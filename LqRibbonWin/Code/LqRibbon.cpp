@@ -15,7 +15,6 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QScreen>
-#include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QStandardItemModel>
@@ -47,6 +46,8 @@ const int ribbonTabHeight = 24;
 const int ribbonDefaultBarHeight = 158;
 const int ribbonWindowButtonWidth = 46;
 const int ribbonWindowButtonHeight = 30;
+const int ribbonCollapseButtonWidth = 32;
+const int ribbonCollapseButtonHeight = 24;
 const int ribbonMdiTitleHeight = 28;
 const int ribbonMdiButtonWidth = 28;
 const int ribbonMdiButtonHeight = 24;
@@ -83,6 +84,20 @@ protected:
 private:
     ButtonKind m_buttonKind;
     bool m_restoreMode;
+};
+
+class RibbonCollapseButton : public QToolButton
+{
+public:
+    explicit RibbonCollapseButton(QWidget *parent = nullptr);
+
+    void setCollapsed(bool collapsed);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+
+private:
+    bool m_collapsed;
 };
 
 class RibbonMdiButton : public QToolButton
@@ -213,6 +228,27 @@ void paintRibbonWindowButton(QPainter *painter,
 }
 
 ///
+/// \brief createSearchIcon
+/// Builds the small trailing magnifier used by the title-bar search edit.
+/// \return Icon painted in the neutral Office-style search color.
+///
+QIcon createSearchIcon()
+{
+    QPixmap pixmap(16, 16);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    QPen pen(QColor(QStringLiteral("#6f6f6f")));
+    pen.setWidthF(1.3);
+    painter.setPen(pen);
+    painter.drawEllipse(QRectF(3.5, 3.5, 7.0, 7.0));
+    painter.drawLine(QPointF(9.5, 9.5), QPointF(12.8, 12.8));
+
+    return QIcon(pixmap);
+}
+
+///
 /// \brief visibleWidgetRight
 /// Calculates the visible right edge of a widget on its current screen.
 /// \param widget Widget to inspect.
@@ -259,6 +295,68 @@ void RibbonWindowButton::paintEvent(QPaintEvent *event)
     }
 
     paintRibbonWindowButton(&painter, rect(), m_buttonKind, m_restoreMode);
+}
+
+///
+/// \brief RibbonCollapseButton::RibbonCollapseButton
+/// Creates the caption-row button that collapses or expands the Ribbon page.
+/// \param parent Parent widget that owns the button.
+///
+RibbonCollapseButton::RibbonCollapseButton(QWidget *parent)
+    : QToolButton(parent)
+    , m_collapsed(false)
+{
+    setAutoRaise(true);
+    setCursor(Qt::ArrowCursor);
+    setFixedSize(ribbonCollapseButtonWidth, ribbonCollapseButtonHeight);
+    setFocusPolicy(Qt::NoFocus);
+}
+
+///
+/// \brief RibbonCollapseButton::setCollapsed
+/// Selects whether the button paints the expand or collapse chevron.
+/// \param collapsed true to paint expand, false to paint collapse.
+///
+void RibbonCollapseButton::setCollapsed(bool collapsed)
+{
+    if (m_collapsed == collapsed) {
+        return;
+    }
+
+    m_collapsed = collapsed;
+    update();
+}
+
+///
+/// \brief RibbonCollapseButton::paintEvent
+/// Paints the Office-style Ribbon collapse chevron.
+/// \param event Paint event supplied by Qt.
+///
+void RibbonCollapseButton::paintEvent(QPaintEvent *event)
+{
+    Q_UNUSED(event)
+
+    QPainter painter(this);
+    if (isDown()) {
+        painter.fillRect(rect(), QColor(QStringLiteral("#244d80")));
+    } else if (underMouse()) {
+        painter.fillRect(rect(), QColor(QStringLiteral("#386caf")));
+    }
+
+    QPen pen(Qt::white);
+    pen.setWidthF(1.7);
+    painter.setPen(pen);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    const int centerX = width() / 2;
+    const int centerY = height() / 2;
+    if (m_collapsed) {
+        painter.drawLine(centerX - 6, centerY - 3, centerX, centerY + 3);
+        painter.drawLine(centerX, centerY + 3, centerX + 6, centerY - 3);
+    } else {
+        painter.drawLine(centerX - 6, centerY + 3, centerX, centerY - 3);
+        painter.drawLine(centerX, centerY - 3, centerX + 6, centerY + 3);
+    }
 }
 
 ///
@@ -1324,11 +1422,13 @@ RibbonBar::RibbonBar(QWidget *parent)
                            RibbonWindowButton::MaximizeButton, this))
     , m_closeButton(new RibbonWindowButton(
                         RibbonWindowButton::CloseButton, this))
+    , m_collapseButton(new RibbonCollapseButton(this))
     , m_searchSuggestionModel(new QStringListModel(this))
     , m_searchCompleter(new QCompleter(m_searchSuggestionModel, this))
     , m_searchActionTriggerEnabled(true)
     , m_recentSearchLimit(8)
     , m_frameThemeEnabled(false)
+    , m_ribbonMinimized(false)
     , m_searchVisibleExplicitlySet(false)
 {
     setDocumentMode(false);
@@ -1340,9 +1440,12 @@ RibbonBar::RibbonBar(QWidget *parent)
 
     m_searchEdit->setObjectName(QStringLiteral("lqRibbonSearchEdit"));
     m_searchEdit->setPlaceholderText(tr("Search"));
-    m_searchEdit->setClearButtonEnabled(true);
+    m_searchEdit->setClearButtonEnabled(false);
     m_searchEdit->hide();
     m_searchEdit->installEventFilter(this);
+    QAction *searchLineAction = m_searchEdit->addAction(
+        createSearchIcon(), QLineEdit::TrailingPosition);
+    searchLineAction->setToolTip(tr("Search"));
     m_searchCompleter->setCaseSensitivity(Qt::CaseInsensitive);
     m_searchCompleter->setFilterMode(Qt::MatchContains);
     m_searchCompleter->setCompletionMode(QCompleter::PopupCompletion);
@@ -1371,9 +1474,11 @@ RibbonBar::RibbonBar(QWidget *parent)
     setupWindowControlButton(m_minimizeButton);
     setupWindowControlButton(m_maximizeButton);
     setupWindowControlButton(m_closeButton);
+    setupWindowControlButton(m_collapseButton);
     m_minimizeButton->setToolTip(tr("Minimize"));
     m_maximizeButton->setToolTip(tr("Maximize"));
     m_closeButton->setToolTip(tr("Close"));
+    m_collapseButton->setToolTip(tr("Collapse the Ribbon"));
     updateWindowControlVisibility();
 
     connect(this, &QTabWidget::currentChanged, this, &RibbonBar::pageChanged);
@@ -1383,6 +1488,19 @@ RibbonBar::RibbonBar(QWidget *parent)
             this, &RibbonBar::updateSearchPopup);
     connect(m_searchPopupView, &QListView::clicked,
             this, &RibbonBar::activateSearchPopupIndex);
+    connect(searchLineAction, &QAction::triggered, this, [this]() {
+        m_searchEdit->setFocus();
+        const QString strText = m_searchEdit->text().trimmed();
+        if (strText.isEmpty()) {
+            updateSearchPopup();
+            return;
+        }
+
+        if (!triggerSearchAction(strText)) {
+            emit searchAccepted(strText);
+        }
+        finishSearch();
+    });
     connect(m_minimizeButton, &QToolButton::clicked, this, [this]() {
         if (QWidget *topLevelWidget = window()) {
             topLevelWidget->showMinimized();
@@ -1406,6 +1524,9 @@ RibbonBar::RibbonBar(QWidget *parent)
         if (QWidget *topLevelWidget = window()) {
             topLevelWidget->close();
         }
+    });
+    connect(m_collapseButton, &QToolButton::clicked, this, [this]() {
+        setRibbonMinimized(!m_ribbonMinimized);
     });
     connect(m_searchEdit, &QLineEdit::returnPressed, this, [this]() {
         if (m_searchPopupView->isVisible()
@@ -1882,6 +2003,38 @@ void RibbonBar::setCurrentPageIndex(int index)
 }
 
 ///
+/// \brief RibbonBar::setRibbonMinimized
+/// Collapses or expands the command pages while keeping title and tabs visible.
+/// \param minimized true to collapse the command area.
+///
+void RibbonBar::setRibbonMinimized(bool minimized)
+{
+    if (m_ribbonMinimized == minimized) {
+        return;
+    }
+
+    m_ribbonMinimized = minimized;
+    updateRibbonMetrics();
+    updateRibbonTabGeometry();
+    updateWindowControlState();
+    updateWindowControlGeometry();
+    updateSearchGeometry();
+    updateQuickAccessGeometry();
+    updateGeometry();
+    emit ribbonMinimizedChanged(m_ribbonMinimized);
+}
+
+///
+/// \brief RibbonBar::isRibbonMinimized
+/// Checks whether the command pages are currently collapsed.
+/// \return true when the command area is collapsed.
+///
+bool RibbonBar::isRibbonMinimized() const
+{
+    return m_ribbonMinimized;
+}
+
+///
 /// \brief RibbonBar::setFrameThemeEnabled
 /// Enables or disables Qtitan-style frame painting and controls.
 /// \param enabled true to paint the Ribbon caption and buttons.
@@ -2107,7 +2260,11 @@ void RibbonBar::updateRibbonTabGeometry()
         ? ribbonTabHeight
         : ribbonTabBar->sizeHint().height();
     const int stackTop = titleHeight + tabHeight;
-    const int tabWidth = qMin(width(), ribbonTabBar->sizeHint().width());
+    const int availableTabWidth = m_frameThemeEnabled
+        ? qMax(0, width() - ribbonCollapseButtonWidth)
+        : width();
+    const int tabWidth = qMin(availableTabWidth,
+                              ribbonTabBar->sizeHint().width());
     ribbonTabBar->setGeometry(0, titleHeight, tabWidth, tabHeight);
     ribbonTabBar->raise();
 
@@ -2116,8 +2273,11 @@ void RibbonBar::updateRibbonTabGeometry()
         return;
     }
 
-    const int stackHeight = qMax(0, height() - stackTop);
+    const int stackHeight = m_ribbonMinimized
+        ? 0
+        : qMax(0, height() - stackTop);
     stackedWidget->setGeometry(0, stackTop, width(), stackHeight);
+    stackedWidget->setVisible(!m_ribbonMinimized);
 }
 
 ///
@@ -2127,8 +2287,8 @@ void RibbonBar::updateRibbonTabGeometry()
 void RibbonBar::updateSearchGeometry()
 {
     const int preferredSearchWidth = 416;
-    const int topMargin = 2;
-    const int searchHeight = ribbonWindowButtonHeight - (topMargin * 2);
+    const int topMargin = 5;
+    const int searchHeight = 22;
     const int controlWidth = windowControlWidth();
     const int availableWidth = qMax(0, width() - controlWidth - 48);
     const int searchWidth = qMin(preferredSearchWidth,
@@ -2179,7 +2339,11 @@ void RibbonBar::updateQuickAccessGeometry()
 ///
 void RibbonBar::updateRibbonMetrics()
 {
-    const int barHeight = ribbonBarHeight(this);
+    const int barHeight = m_ribbonMinimized
+        ? (m_frameThemeEnabled
+               ? ribbonCaptionHeight + ribbonTabHeight
+               : tabBar()->sizeHint().height())
+        : ribbonBarHeight(this);
     if (height() != barHeight || minimumHeight() != barHeight) {
         setFixedHeight(barHeight);
     }
@@ -2218,6 +2382,9 @@ void RibbonBar::updateWindowControlGeometry()
         m_maximizeButton->setParent(controlParent);
         m_closeButton->setParent(controlParent);
     }
+    if (m_collapseButton->parentWidget() != controlParent) {
+        m_collapseButton->setParent(controlParent);
+    }
 
     const QPoint topLeft = mapTo(controlParent, QPoint(0, 0));
     const int ribbonRight = mapTo(controlParent, QPoint(width(), 0)).x();
@@ -2231,13 +2398,21 @@ void RibbonBar::updateWindowControlGeometry()
     m_maximizeButton->setGeometry(x, top, buttonWidth, buttonHeight);
     x += buttonWidth;
     m_closeButton->setGeometry(x, top, buttonWidth, buttonHeight);
+    const int collapseTop = topLeft.y() + ribbonCaptionHeight
+        + ((ribbonTabHeight - ribbonCollapseButtonHeight) / 2);
+    m_collapseButton->setGeometry(controlRight - ribbonCollapseButtonWidth,
+                                  collapseTop,
+                                  ribbonCollapseButtonWidth,
+                                  ribbonCollapseButtonHeight);
 
     m_minimizeButton->setVisible(m_frameThemeEnabled);
     m_maximizeButton->setVisible(m_frameThemeEnabled);
     m_closeButton->setVisible(m_frameThemeEnabled);
+    m_collapseButton->setVisible(m_frameThemeEnabled);
     m_minimizeButton->raise();
     m_maximizeButton->raise();
     m_closeButton->raise();
+    m_collapseButton->raise();
 }
 
 ///
@@ -2252,6 +2427,12 @@ void RibbonBar::updateWindowControlState()
         static_cast<RibbonWindowButton *>(m_maximizeButton);
     button->setRestoreMode(isMaximized);
     m_maximizeButton->setToolTip(isMaximized ? tr("Restore") : tr("Maximize"));
+    RibbonCollapseButton *collapseButton =
+        static_cast<RibbonCollapseButton *>(m_collapseButton);
+    collapseButton->setCollapsed(m_ribbonMinimized);
+    m_collapseButton->setToolTip(m_ribbonMinimized
+        ? tr("Expand the Ribbon")
+        : tr("Collapse the Ribbon"));
 
     const bool canMaximize = topLevelWidget
         && topLevelWidget->minimumWidth() < topLevelWidget->maximumWidth()
@@ -2268,6 +2449,7 @@ void RibbonBar::updateWindowControlVisibility()
     m_minimizeButton->setVisible(m_frameThemeEnabled);
     m_maximizeButton->setVisible(m_frameThemeEnabled);
     m_closeButton->setVisible(m_frameThemeEnabled);
+    m_collapseButton->setVisible(m_frameThemeEnabled);
     updateWindowControlState();
 }
 
@@ -2365,7 +2547,6 @@ void RibbonBar::finishSearch()
 {
     hideSearchPopup();
     if (!m_searchEdit->text().isEmpty()) {
-        const QSignalBlocker blocker(m_searchEdit);
         m_searchEdit->clear();
     }
     m_searchEdit->setFocus();
@@ -2447,7 +2628,8 @@ QList<QAction *> RibbonBar::matchedSearchActions(const QString &strText) const
     for (QToolButton *button : buttonList) {
         if (button == m_minimizeButton
             || button == m_maximizeButton
-            || button == m_closeButton) {
+            || button == m_closeButton
+            || button == m_collapseButton) {
             continue;
         }
 

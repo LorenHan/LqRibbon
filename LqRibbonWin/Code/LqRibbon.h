@@ -369,6 +369,18 @@ public:
     ///
     void setCurrentPageIndex(int index);
     ///
+    /// \brief RibbonBar::setRibbonMinimized
+    /// Collapses or expands the Ribbon command area while keeping tabs visible.
+    /// \param minimized true to collapse command pages, false to expand them.
+    ///
+    void setRibbonMinimized(bool minimized);
+    ///
+    /// \brief RibbonBar::isRibbonMinimized
+    /// Checks whether only the Ribbon tabs are currently visible.
+    /// \return true when the command area is collapsed.
+    ///
+    bool isRibbonMinimized() const;
+    ///
     /// \brief RibbonBar::setFrameThemeEnabled
     /// Enables Qtitan-style title-bar painting and frame controls.
     /// \param enabled true to paint Ribbon frame chrome.
@@ -424,6 +436,12 @@ signals:
     /// Emitted when the recent search action history changes.
     ///
     void recentSearchActionsChanged();
+    ///
+    /// \brief RibbonBar::ribbonMinimizedChanged
+    /// Emitted after the Ribbon command area is collapsed or expanded.
+    /// \param minimized true when the command area is collapsed.
+    ///
+    void ribbonMinimizedChanged(bool minimized);
 
 protected:
     bool event(QEvent *event) override;
@@ -471,6 +489,7 @@ private:
     QToolButton *m_minimizeButton;
     QToolButton *m_maximizeButton;
     QToolButton *m_closeButton;
+    QToolButton *m_collapseButton;
     QStringList m_searchSuggestionList;
     QList<SearchCommand> m_searchCommandList;
     QHash<QString, QPointer<QAction>> m_searchActionIndex;
@@ -480,6 +499,7 @@ private:
     bool m_searchActionTriggerEnabled;
     int m_recentSearchLimit;
     bool m_frameThemeEnabled;
+    bool m_ribbonMinimized;
     bool m_searchVisibleExplicitlySet;
 };
 
