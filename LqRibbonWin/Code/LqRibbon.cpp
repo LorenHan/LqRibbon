@@ -2423,23 +2423,21 @@ void RibbonBar::updateRibbonTabGeometry()
 void RibbonBar::updateSearchGeometry()
 {
     const int preferredSearchWidth = 416;
+    const int minimumUsefulSearchWidth = 120;
     const int searchHeight = 22;
     const int topMargin = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - searchHeight) / 2);
     const int controlWidth = windowControlWidth();
-    const int availableWidth = qMax(0, width() - controlWidth - 48);
-    const int searchWidth = qMin(preferredSearchWidth,
-                                 qMax(160, availableWidth));
     const int controlLeft = width() - controlWidth;
-    int x = controlWidth > 0
-        ? (controlLeft - searchWidth) / 2
-        : (width() - searchWidth) / 2;
-
-    if (controlWidth > 0) {
-        x = qMin(x, controlLeft - searchWidth - 10);
-    }
-
-    x = qMax(220, x);
+    const int rightLimit = controlWidth > 0
+        ? controlLeft - 10
+        : width() - 10;
+    const int preferredLeft = 220;
+    const int leftLimit = qMin(preferredLeft,
+                               qMax(0, rightLimit - minimumUsefulSearchWidth));
+    const int availableWidth = qMax(0, rightLimit - leftLimit);
+    const int searchWidth = qMin(preferredSearchWidth, availableWidth);
+    const int x = leftLimit + qMax(0, (availableWidth - searchWidth) / 2);
 
     m_searchEdit->setGeometry(x, topMargin, searchWidth, searchHeight);
     m_searchEdit->raise();
