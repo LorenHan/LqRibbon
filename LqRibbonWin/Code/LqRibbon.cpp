@@ -835,13 +835,17 @@ const char ribbonStyleSheet[] =
     "QToolBar#lqRibbonTitleButtonBar {"
     "    background: transparent;"
     "    border: none;"
-    "    spacing: 2px;"
+    "    spacing: 12px;"
     "}"
     "QToolBar#lqRibbonTitleButtonBar QToolButton {"
-    "    border: 1px solid #6f9fd0;"
+    "    min-width: 22px;"
+    "    max-width: 22px;"
+    "    min-height: 22px;"
+    "    max-height: 22px;"
+    "    border: 1px solid transparent;"
     "    border-radius: 2px;"
-    "    padding: 1px 6px;"
-    "    background: #2f63a3;"
+    "    padding: 0px;"
+    "    background: transparent;"
     "}"
     "QToolBar#lqRibbonTitleButtonBar QToolButton:hover {"
     "    background: #386caf;"
@@ -1615,8 +1619,8 @@ RibbonBar::RibbonBar(QWidget *parent)
     m_titleButtonBar->setObjectName(QStringLiteral("lqRibbonTitleButtonBar"));
     m_titleButtonBar->setMovable(false);
     m_titleButtonBar->setFloatable(false);
-    m_titleButtonBar->setIconSize(QSize(13, 13));
-    m_titleButtonBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_titleButtonBar->setIconSize(QSize(16, 16));
+    m_titleButtonBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     m_titleButtonBar->hide();
 
     setupWindowControlButton(m_minimizeButton);
@@ -2365,27 +2369,6 @@ void RibbonBar::paintEvent(QPaintEvent *event)
                      titleHeight,
                      QColor(QStringLiteral("#2b579a")));
 
-    QWidget *topLevelWidget = window();
-    if (!topLevelWidget) {
-        return;
-    }
-
-    const QIcon windowIcon = topLevelWidget->windowIcon();
-    const int iconSize = 16;
-    const int iconTop = ribbonCaptionTopMargin
-        + ((ribbonWindowButtonHeight - iconSize) / 2);
-    if (!windowIcon.isNull()) {
-        windowIcon.paint(&painter, QRect(7, iconTop, iconSize, iconSize));
-    }
-
-    painter.setPen(Qt::white);
-    painter.drawText(QRect(34,
-                            ribbonCaptionTopMargin,
-                            320,
-                            ribbonWindowButtonHeight),
-                     Qt::AlignLeft | Qt::AlignVCenter,
-                     topLevelWidget->windowTitle());
-
 }
 
 ///
@@ -2477,38 +2460,28 @@ void RibbonBar::updateRibbonTabGeometry()
 
 ///
 /// \brief RibbonBar::updateSearchGeometry
-/// Centers the title-bar search box while avoiding the frame buttons.
+/// Places the title-bar search box in the same left-aligned slot as the
+/// original application frame.
 ///
 void RibbonBar::updateSearchGeometry()
 {
-    const int preferredSearchWidth = 416;
+    const int preferredSearchWidth = 524;
     const int minimumUsefulSearchWidth = 120;
-    const int titleGap = 24;
-    const int titleControlGap = 8;
     const int searchHeight = 22;
     const int topMargin = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - searchHeight) / 2);
     const int controlWidth = windowControlWidth();
-    const int controlLeft = width() - controlWidth;
-    const int rightLimit = controlWidth > 0
-        ? controlLeft - 10
-        : width() - 10;
-    const int preferredLeft = 220;
-    QWidget *topLevelWidget = window();
-    const QString strTitle = topLevelWidget ? topLevelWidget->windowTitle() : QString();
-    const int titleTextRight = strTitle.isEmpty()
-        ? preferredLeft
-        : 34 + fontMetrics().horizontalAdvance(strTitle) + titleGap;
-    const int titleButtonWidth = m_titleButtonBar->isVisible()
-        ? m_titleButtonBar->sizeHint().width() + titleControlGap
+    const int titleButtonReserve = m_titleButtonBar->isVisible()
+        ? m_titleButtonBar->sizeHint().width() + 48
         : 0;
-    const int reservedLeft = qMax(preferredLeft,
-                                  titleTextRight + titleButtonWidth);
-    const int leftLimit = qMin(reservedLeft,
-                               qMax(0, rightLimit - minimumUsefulSearchWidth));
-    const int availableWidth = qMax(0, rightLimit - leftLimit);
+    const int rightLimit = controlWidth > 0
+        ? width() - controlWidth - titleButtonReserve - 24
+        : width() - 10;
+    const int preferredLeft = 80;
+    const int x = qMin(preferredLeft,
+                       qMax(0, rightLimit - minimumUsefulSearchWidth));
+    const int availableWidth = qMax(0, rightLimit - x);
     const int searchWidth = qMin(preferredSearchWidth, availableWidth);
-    const int x = leftLimit + qMax(0, (availableWidth - searchWidth) / 2);
 
     m_searchEdit->setGeometry(x, topMargin, searchWidth, searchHeight);
     m_searchEdit->raise();
@@ -2525,17 +2498,21 @@ void RibbonBar::updateQuickAccessGeometry()
 {
     const int preferredLeftMargin = 340;
     const int rightMargin = 12;
-    const int searchGap = 8;
+    const int itemGap = 8;
     const int controlWidth = windowControlWidth();
     const int barHeight = 24;
     const int topMargin = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - barHeight) / 2);
     const int rightLimit = m_searchEdit->isVisible()
         ? (m_titleButtonBar->isVisible()
-               ? m_titleButtonBar->x() - searchGap
-               : m_searchEdit->x() - searchGap)
+               ? m_titleButtonBar->x() - itemGap
+               : m_searchEdit->x() - itemGap)
         : width() - controlWidth - rightMargin;
-    const int leftMargin = qMin(preferredLeftMargin, qMax(0, rightLimit));
+    const int searchRight = m_searchEdit->isVisible()
+        ? m_searchEdit->geometry().right() + 1 + itemGap
+        : 0;
+    const int leftLimit = qMax(preferredLeftMargin, searchRight);
+    const int leftMargin = qMin(leftLimit, qMax(0, rightLimit));
     const int maxWidth = qMax(0, rightLimit - leftMargin);
     const int barWidth = qMin(m_quickAccessBar->sizeHint().width(), maxWidth);
 
@@ -2545,30 +2522,19 @@ void RibbonBar::updateQuickAccessGeometry()
 
 ///
 /// \brief RibbonBar::updateTitleButtonGeometry
-/// Places text title buttons between the app title and search box.
+/// Places icon-only title buttons near the right caption controls.
 ///
 void RibbonBar::updateTitleButtonGeometry()
 {
-    const int rightMargin = 12;
-    const int searchGap = 8;
-    const int titleGap = 24;
-    const int titleFallbackRight = 170;
+    const int controlGap = 28;
     const int controlWidth = windowControlWidth();
     const int barHeight = 24;
     const int topMargin = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - barHeight) / 2);
-    const int rightLimit = m_searchEdit->isVisible()
-        ? m_searchEdit->x() - searchGap
-        : width() - controlWidth - rightMargin;
-    QWidget *topLevelWidget = window();
-    const QString strTitle = topLevelWidget ? topLevelWidget->windowTitle() : QString();
-    const int titleTextRight = strTitle.isEmpty()
-        ? titleFallbackRight
-        : 34 + fontMetrics().horizontalAdvance(strTitle) + titleGap;
-    const int leftLimit = qMin(titleTextRight, qMax(0, rightLimit));
-    const int maxWidth = qMax(0, rightLimit - leftLimit);
+    const int rightLimit = width() - controlWidth - controlGap;
+    const int maxWidth = qMax(0, rightLimit);
     const int barWidth = qMin(m_titleButtonBar->sizeHint().width(), maxWidth);
-    const int leftMargin = qMax(leftLimit, rightLimit - barWidth);
+    const int leftMargin = qMax(0, rightLimit - barWidth);
 
     m_titleButtonBar->setGeometry(leftMargin, topMargin, barWidth, barHeight);
     m_titleButtonBar->raise();
