@@ -19,6 +19,8 @@ int main(int argc, char *argv[])
     const QString strPreviewPath = previewRequested
         ? argumentList.at(previewIndex + 1)
         : QString();
+    const bool searchPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-search-preview"));
 
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
@@ -132,6 +134,13 @@ int main(int argc, char *argv[])
         QTimer::singleShot(300, &mainWindow, [&mainWindow, strPreviewPath]() {
             mainWindow.grab().save(strPreviewPath);
             qApp->quit();
+        });
+    }
+
+    if (searchPreviewRequested) {
+        QTimer::singleShot(120, &mainWindow, [&mainWindow]() {
+            mainWindow.ribbonBar()->searchLineEdit()->setFocus();
+            mainWindow.ribbonBar()->setSearchText(QStringLiteral("ba"));
         });
     }
 

@@ -13,6 +13,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QList>
+#include <QListView>
 #include <QMainWindow>
 #include <QPaintEvent>
 #include <QPointer>
@@ -21,6 +22,7 @@
 #include <QStatusBar>
 #include <QStringList>
 #include <QStringListModel>
+#include <QStandardItemModel>
 #include <QTabWidget>
 #include <QToolBar>
 #include <QToolButton>
@@ -135,6 +137,7 @@ signals:
 
 protected:
     bool event(QEvent *event) override;
+    bool eventFilter(QObject *object, QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
@@ -148,6 +151,10 @@ private:
     void updateWindowControlState();
     void updateWindowControlVisibility();
     int windowControlWidth() const;
+    void updateSearchPopup();
+    void hideSearchPopup();
+    void activateSearchPopupIndex(const QModelIndex &index);
+    QList<QAction *> matchedSearchActions(const QString &strText) const;
     void updateSearchSuggestions();
     void recordRecentSearchAction(QAction *action);
     void removeInvalidSearchActions();
@@ -167,6 +174,8 @@ private:
 
 private:
     QLineEdit *m_searchEdit;
+    QListView *m_searchPopupView;
+    QStandardItemModel *m_searchPopupModel;
     QToolBar *m_quickAccessBar;
     QToolButton *m_minimizeButton;
     QToolButton *m_maximizeButton;
@@ -180,6 +189,7 @@ private:
     bool m_searchActionTriggerEnabled;
     int m_recentSearchLimit;
     bool m_frameThemeEnabled;
+    bool m_searchVisibleExplicitlySet;
 };
 
 class RibbonMainWindow : public QMainWindow

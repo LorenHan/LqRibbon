@@ -5,12 +5,15 @@
 #include <QComboBox>
 #include <QFontMetrics>
 #include <QGridLayout>
+#include <QKeyEvent>
 #include <QLayout>
+#include <QListView>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QSpinBox>
 #include <QStackedWidget>
+#include <QStandardItemModel>
 #include <QStyle>
 #include <QTabBar>
 #include <QWindow>
@@ -39,6 +42,17 @@ const int ribbonTabHeight = 24;
 const int ribbonDefaultBarHeight = 154;
 const int ribbonWindowButtonWidth = 46;
 const int ribbonWindowButtonHeight = 30;
+const int ribbonSearchPopupMaxHeight = 260;
+const int ribbonSearchPopupRowHeight = 24;
+const int ribbonSearchPopupKindRole = Qt::UserRole + 1;
+const int ribbonSearchPopupActionRole = Qt::UserRole + 2;
+
+enum RibbonSearchPopupKind
+{
+    SearchPopupHeaderItem = 0,
+    SearchPopupActionItem,
+    SearchPopupHelpItem
+};
 
 class RibbonWindowButton : public QToolButton
 {
@@ -173,6 +187,20 @@ const char ribbonStyleSheet[] =
     "    background: #ffffff;"
     "    selection-background-color: #dcecff;"
     "    selection-color: #202020;"
+    "}"
+    "QListView#lqRibbonSearchPopupView {"
+    "    border: 1px solid #8c8c8c;"
+    "    background: #f4f4f4;"
+    "    outline: 0px;"
+    "}"
+    "QListView#lqRibbonSearchPopupView::item {"
+    "    min-height: 22px;"
+    "    padding: 1px 6px;"
+    "    color: #202020;"
+    "}"
+    "QListView#lqRibbonSearchPopupView::item:selected {"
+    "    background: #e8f2ff;"
+    "    color: #202020;"
     "}"
     "QToolBar#lqRibbonQuickAccessBar {"
     "    background: transparent;"
@@ -359,6 +387,38 @@ int ribbonSmallButtonWidth(const QToolButton *button)
     return qBound(ribbonSmallButtonMinimumWidth,
                   qMax(iconTextWidth + textWidth + menuWidth + 10, styleWidth),
                   ribbonSmallButtonMaximumWidth);
+}
+
+QStandardItem *createSearchHeaderItem(const QString &strText)
+{
+    QStandardItem *item = new QStandardItem(strText);
+    QFont itemFont = item->font();
+    itemFont.setBold(true);
+    item->setFont(itemFont);
+    item->setFlags(Qt::NoItemFlags);
+    item->setData(SearchPopupHeaderItem, ribbonSearchPopupKindRole);
+    item->setData(QColor(QStringLiteral("#d0d0d0")), Qt::BackgroundRole);
+    item->setData(QColor(QStringLiteral("#333333")), Qt::ForegroundRole);
+    return item;
+}
+
+QStandardItem *createSearchActionItem(QAction *action)
+{
+    QStandardItem *item = new QStandardItem(action->icon(),
+                                           cleanRibbonButtonText(action->text()));
+    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    item->setData(SearchPopupActionItem, ribbonSearchPopupKindRole);
+    item->setData(static_cast<qlonglong>(reinterpret_cast<quintptr>(action)),
+                  ribbonSearchPopupActionRole);
+    return item;
+}
+
+QStandardItem *createSearchHelpItem(const QString &strText, const QIcon &icon)
+{
+    QStandardItem *item = new QStandardItem(icon, strText);
+    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    item->setData(SearchPopupHelpItem, ribbonSearchPopupKindRole);
+    return item;
 }
 
 } // namespace
@@ -621,6 +681,8 @@ void RibbonPage::setTitle(const QString &strTitle)
 RibbonBar::RibbonBar(QWidget *parent)
     : QTabWidget(parent)
     , m_searchEdit(new QLineEdit(this))
+    , m_searchPopupView(new QListView(this))
+    , m_searchPopupModel(new QStandardItemModel(this))
     , m_quickAccessBar(new QToolBar(this))
     , m_minimizeButton(new RibbonWindowButton(
                            RibbonWindowButton::MinimizeButton, this))
@@ -633,6 +695,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_searchActionTriggerEnabled(true)
     , m_recentSearchLimit(8)
     , m_frameThemeEnabled(false)
+    , m_searchVisibleExplicitlySet(false)
 {
     setDocumentMode(false);
     setMovable(false);
@@ -645,13 +708,24 @@ RibbonBar::RibbonBar(QWidget *parent)
     m_searchEdit->setPlaceholderText(tr("Search"));
     m_searchEdit->setClearButtonEnabled(true);
     m_searchEdit->hide();
+    m_searchEdit->installEventFilter(this);
     m_searchCompleter->setCaseSensitivity(Qt::CaseInsensitive);
     m_searchCompleter->setFilterMode(Qt::MatchContains);
     m_searchCompleter->setCompletionMode(QCompleter::PopupCompletion);
     m_searchCompleter->setMaxVisibleItems(8);
     m_searchCompleter->popup()->setObjectName(
         QStringLiteral("lqRibbonSearchSuggestionPopup"));
-    m_searchEdit->setCompleter(m_searchCompleter);
+
+    m_searchPopupView->setObjectName(QStringLiteral("lqRibbonSearchPopupView"));
+    m_searchPopupView->setModel(m_searchPopupModel);
+    m_searchPopupView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_searchPopupView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_searchPopupView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_searchPopupView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_searchPopupView->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_searchPopupView->setUniformItemSizes(false);
+    m_searchPopupView->installEventFilter(this);
+    m_searchPopupView->hide();
 
     m_quickAccessBar->setObjectName(QStringLiteral("lqRibbonQuickAccessBar"));
     m_quickAccessBar->setMovable(false);
@@ -671,6 +745,10 @@ RibbonBar::RibbonBar(QWidget *parent)
     connect(this, &QTabWidget::currentChanged, this, &RibbonBar::pageChanged);
     connect(m_searchEdit, &QLineEdit::textChanged,
             this, &RibbonBar::searchTextChanged);
+    connect(m_searchEdit, &QLineEdit::textEdited,
+            this, &RibbonBar::updateSearchPopup);
+    connect(m_searchPopupView, &QListView::clicked,
+            this, &RibbonBar::activateSearchPopupIndex);
     connect(m_minimizeButton, &QToolButton::clicked, this, [this]() {
         if (QWidget *topLevelWidget = window()) {
             topLevelWidget->showMinimized();
@@ -696,6 +774,12 @@ RibbonBar::RibbonBar(QWidget *parent)
         }
     });
     connect(m_searchEdit, &QLineEdit::returnPressed, this, [this]() {
+        if (m_searchPopupView->isVisible()
+            && m_searchPopupView->currentIndex().isValid()) {
+            activateSearchPopupIndex(m_searchPopupView->currentIndex());
+            return;
+        }
+
         const QString strText = m_searchEdit->text();
         if (!triggerSearchAction(strText)) {
             emit searchAccepted(strText);
@@ -768,7 +852,12 @@ QCompleter *RibbonBar::searchCompleter() const
 
 void RibbonBar::setSearchVisible(bool visible)
 {
+    m_searchVisibleExplicitlySet = true;
     m_searchEdit->setVisible(visible);
+    if (!visible) {
+        hideSearchPopup();
+    }
+
     updateSearchGeometry();
     updateQuickAccessGeometry();
 }
@@ -791,12 +880,14 @@ QString RibbonBar::searchText() const
 void RibbonBar::setSearchText(const QString &strText)
 {
     m_searchEdit->setText(strText);
+    updateSearchPopup();
 }
 
 void RibbonBar::setSearchSuggestions(const QStringList &strList)
 {
     m_searchSuggestionList = strList;
     updateSearchSuggestions();
+    updateSearchPopup();
 }
 
 QStringList RibbonBar::searchSuggestions() const
@@ -808,6 +899,7 @@ void RibbonBar::clearSearchSuggestions()
 {
     m_searchSuggestionList.clear();
     updateSearchSuggestions();
+    updateSearchPopup();
 }
 
 void RibbonBar::registerSearchAction(QAction *action, const QStringList &strKeywords)
@@ -833,6 +925,7 @@ void RibbonBar::registerSearchAction(QAction *action, const QStringList &strKeyw
 
     rebuildSearchActionIndex();
     updateSearchSuggestions();
+    updateSearchPopup();
 }
 
 void RibbonBar::unregisterSearchAction(QAction *action)
@@ -863,6 +956,7 @@ void RibbonBar::unregisterSearchAction(QAction *action)
 
     rebuildSearchActionIndex();
     updateSearchSuggestions();
+    updateSearchPopup();
 }
 
 QList<QAction *> RibbonBar::searchActions() const
@@ -933,6 +1027,7 @@ void RibbonBar::clearRecentSearchActions()
     m_recentSearchActionList.clear();
     updateSearchSuggestions();
     emit recentSearchActionsChanged();
+    updateSearchPopup();
 }
 
 void RibbonBar::setRecentSearchLimit(int count)
@@ -944,6 +1039,7 @@ void RibbonBar::setRecentSearchLimit(int count)
 
     updateSearchSuggestions();
     emit recentSearchActionsChanged();
+    updateSearchPopup();
 }
 
 int RibbonBar::recentSearchLimit() const
@@ -1003,6 +1099,10 @@ void RibbonBar::setFrameThemeEnabled(bool enabled)
     }
 
     m_frameThemeEnabled = enabled;
+    if (enabled && !m_searchVisibleExplicitlySet) {
+        m_searchEdit->show();
+    }
+
     updateWindowControlVisibility();
     updateRibbonTabGeometry();
     updateWindowControlGeometry();
@@ -1042,6 +1142,42 @@ bool RibbonBar::event(QEvent *event)
     }
 
     return handled;
+}
+
+bool RibbonBar::eventFilter(QObject *object, QEvent *event)
+{
+    if (object == m_searchEdit && event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        if (keyEvent->key() == Qt::Key_Down) {
+            updateSearchPopup();
+            if (m_searchPopupView->isVisible()) {
+                m_searchPopupView->setFocus();
+                m_searchPopupView->setCurrentIndex(
+                    m_searchPopupModel->index(1, 0));
+                return true;
+            }
+        } else if (keyEvent->key() == Qt::Key_Escape) {
+            hideSearchPopup();
+            return true;
+        }
+    }
+
+    if (object == m_searchPopupView && event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        if (keyEvent->key() == Qt::Key_Return
+            || keyEvent->key() == Qt::Key_Enter) {
+            activateSearchPopupIndex(m_searchPopupView->currentIndex());
+            return true;
+        }
+
+        if (keyEvent->key() == Qt::Key_Escape) {
+            hideSearchPopup();
+            m_searchEdit->setFocus();
+            return true;
+        }
+    }
+
+    return QTabWidget::eventFilter(object, event);
 }
 
 void RibbonBar::paintEvent(QPaintEvent *event)
@@ -1152,6 +1288,9 @@ void RibbonBar::updateSearchGeometry()
 
     m_searchEdit->setGeometry(x, topMargin, searchWidth, searchHeight);
     m_searchEdit->raise();
+    if (m_searchPopupView->isVisible()) {
+        updateSearchPopup();
+    }
 }
 
 void RibbonBar::updateQuickAccessGeometry()
@@ -1238,6 +1377,161 @@ int RibbonBar::windowControlWidth() const
     }
 
     return ribbonWindowButtonWidth * 3;
+}
+
+void RibbonBar::updateSearchPopup()
+{
+    if (!m_searchEdit->isVisible()) {
+        hideSearchPopup();
+        return;
+    }
+
+    const QString strText = m_searchEdit->text().trimmed();
+    const QList<QAction *> actionList = matchedSearchActions(strText);
+    m_searchPopupModel->clear();
+
+    if (!actionList.isEmpty()) {
+        m_searchPopupModel->appendRow(createSearchHeaderItem(tr("Actions")));
+        for (QAction *action : actionList) {
+            m_searchPopupModel->appendRow(createSearchActionItem(action));
+        }
+    }
+
+    if (!strText.isEmpty()) {
+        m_searchPopupModel->appendRow(createSearchHeaderItem(tr("Help")));
+        const QString strHelpText = tr("Get Help with \"%1\"").arg(strText);
+        const QIcon helpIcon = style()->standardIcon(QStyle::SP_MessageBoxQuestion);
+        m_searchPopupModel->appendRow(createSearchHelpItem(strHelpText, helpIcon));
+    }
+
+    if (m_searchPopupModel->rowCount() == 0) {
+        hideSearchPopup();
+        return;
+    }
+
+    int popupHeight = 2;
+    for (int row = 0; row < m_searchPopupModel->rowCount(); ++row) {
+        popupHeight += qMax(ribbonSearchPopupRowHeight,
+                            m_searchPopupView->sizeHintForRow(row));
+    }
+
+    const bool needsScrollBar = popupHeight > ribbonSearchPopupMaxHeight;
+    popupHeight = qMin(ribbonSearchPopupMaxHeight, popupHeight);
+    m_searchPopupView->setVerticalScrollBarPolicy(needsScrollBar
+                                                  ? Qt::ScrollBarAsNeeded
+                                                  : Qt::ScrollBarAlwaysOff);
+    const QRect searchRect = m_searchEdit->geometry();
+    m_searchPopupView->setGeometry(searchRect.left(),
+                                   searchRect.bottom(),
+                                   searchRect.width(),
+                                   popupHeight);
+    m_searchPopupView->show();
+    m_searchPopupView->raise();
+
+    for (int row = 0; row < m_searchPopupModel->rowCount(); ++row) {
+        const QModelIndex index = m_searchPopupModel->index(row, 0);
+        if (index.data(ribbonSearchPopupKindRole).toInt()
+            == SearchPopupActionItem) {
+            m_searchPopupView->setCurrentIndex(index);
+            break;
+        }
+    }
+}
+
+void RibbonBar::hideSearchPopup()
+{
+    m_searchPopupView->hide();
+}
+
+void RibbonBar::activateSearchPopupIndex(const QModelIndex &index)
+{
+    if (!index.isValid()) {
+        return;
+    }
+
+    const int itemKind = index.data(ribbonSearchPopupKindRole).toInt();
+    if (itemKind == SearchPopupActionItem) {
+        const qlonglong actionValue =
+            index.data(ribbonSearchPopupActionRole).toLongLong();
+        QAction *action =
+            reinterpret_cast<QAction *>(static_cast<quintptr>(actionValue));
+        if (!action || !action->isEnabled()) {
+            return;
+        }
+
+        QPointer<QAction> actionPointer = action;
+        recordRecentSearchAction(action);
+        hideSearchPopup();
+        action->trigger();
+        if (!actionPointer.isNull()) {
+            emit searchActionTriggered(actionPointer.data());
+        }
+        return;
+    }
+
+    if (itemKind == SearchPopupHelpItem) {
+        const QString strText = m_searchEdit->text().trimmed();
+        hideSearchPopup();
+        emit searchAccepted(strText);
+    }
+}
+
+QList<QAction *> RibbonBar::matchedSearchActions(const QString &strText) const
+{
+    QList<QAction *> actionList;
+    const QString strNormalizedText = normalizedSearchText(strText);
+    if (strNormalizedText.isEmpty()) {
+        for (const QPointer<QAction> &action : m_recentSearchActionList) {
+            if (!action.isNull() && !actionList.contains(action.data())) {
+                actionList.append(action.data());
+            }
+        }
+        return actionList;
+    }
+
+    for (const SearchCommand &command : m_searchCommandList) {
+        if (command.action.isNull()) {
+            continue;
+        }
+
+        QStringList strKeyList = command.strKeywords;
+        strKeyList.prepend(command.strText);
+        for (const QString &strKey : strKeyList) {
+            if (normalizedSearchText(strKey).contains(strNormalizedText)) {
+                actionList.append(command.action.data());
+                break;
+            }
+        }
+    }
+
+    const QList<QToolButton *> buttonList = findChildren<QToolButton *>();
+    for (QToolButton *button : buttonList) {
+        if (button == m_minimizeButton
+            || button == m_maximizeButton
+            || button == m_closeButton) {
+            continue;
+        }
+
+        QAction *action = button->defaultAction();
+        if (!action || actionList.contains(action)) {
+            continue;
+        }
+
+        const QString strActionText = searchActionText(action);
+        const QString strToolTip = action->toolTip();
+        const QString strObjectName = action->objectName();
+        if (normalizedSearchText(strActionText).contains(strNormalizedText)
+            || normalizedSearchText(strToolTip).contains(strNormalizedText)
+            || normalizedSearchText(strObjectName).contains(strNormalizedText)) {
+            actionList.append(action);
+        }
+    }
+
+    while (actionList.count() > 40) {
+        actionList.removeLast();
+    }
+
+    return actionList;
 }
 
 void RibbonBar::updateSearchSuggestions()
@@ -1333,6 +1627,7 @@ void RibbonBar::updateChangedSearchAction()
 
     rebuildSearchActionIndex();
     updateSearchSuggestions();
+    updateSearchPopup();
 }
 
 void RibbonBar::rebuildSearchActionIndex()
