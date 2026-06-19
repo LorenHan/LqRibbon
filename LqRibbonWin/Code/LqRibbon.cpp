@@ -2529,7 +2529,7 @@ void RibbonBar::updateWindowControlGeometry()
     const int ribbonRight = mapTo(controlParent, QPoint(width(), 0)).x();
     const int controlRight = qMin(visibleWidgetRight(controlParent),
                                   ribbonRight);
-    int x = controlRight - (buttonWidth * 3);
+    int x = qMax(topLeft.x(), controlRight - (buttonWidth * 3));
     const int top = topLeft.y() + ribbonCaptionTopMargin;
 
     m_minimizeButton->setGeometry(x, top, buttonWidth, buttonHeight);
@@ -2539,7 +2539,8 @@ void RibbonBar::updateWindowControlGeometry()
     m_closeButton->setGeometry(x, top, buttonWidth, buttonHeight);
     const int collapseTop = topLeft.y() + ribbonCaptionHeight
         + ((ribbonTabHeight - ribbonCollapseButtonHeight) / 2);
-    m_collapseButton->setGeometry(controlRight - ribbonCollapseButtonWidth,
+    m_collapseButton->setGeometry(qMax(topLeft.x(),
+                                      controlRight - ribbonCollapseButtonWidth),
                                   collapseTop,
                                   ribbonCollapseButtonWidth,
                                   ribbonCollapseButtonHeight);
