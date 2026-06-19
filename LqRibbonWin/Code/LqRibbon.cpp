@@ -715,13 +715,14 @@ void RibbonMdiTitleBar::paintEvent(QPaintEvent *event)
     }
 
     painter.setPen(Qt::white);
-    const QRect textRect(28,
-                         0,
-                         width() - (ribbonMdiButtonWidth * 3) - 34,
-                         height());
-    painter.drawText(textRect,
-                     Qt::AlignLeft | Qt::AlignVCenter,
-                     m_subWindow->windowTitle());
+    const int textLeft = icon.isNull() ? 8 : 28;
+    const int buttonGroupLeft = qMax(0, width() - (ribbonMdiButtonWidth * 3));
+    const int textWidth = qMax(0, buttonGroupLeft - textLeft - 6);
+    if (textWidth > 0) {
+        painter.drawText(QRect(textLeft, 0, textWidth, height()),
+                         Qt::AlignLeft | Qt::AlignVCenter,
+                         m_subWindow->windowTitle());
+    }
 }
 
 ///
@@ -749,8 +750,8 @@ void RibbonMdiTitleBar::toggleMaximized()
 ///
 void RibbonMdiTitleBar::updateButtonGeometry()
 {
-    int x = width() - (ribbonMdiButtonWidth * 3);
-    const int y = (height() - ribbonMdiButtonHeight) / 2;
+    int x = qMax(0, width() - (ribbonMdiButtonWidth * 3));
+    const int y = qMax(0, (height() - ribbonMdiButtonHeight) / 2);
     m_minimizeButton->setGeometry(x, y, ribbonMdiButtonWidth, ribbonMdiButtonHeight);
     x += ribbonMdiButtonWidth;
     m_maximizeButton->setGeometry(x, y, ribbonMdiButtonWidth, ribbonMdiButtonHeight);
