@@ -2022,12 +2022,14 @@ void RibbonBar::paintEvent(QPaintEvent *event)
     }
 
     const QIcon windowIcon = topLevelWidget->windowIcon();
+    const int iconSize = 16;
+    const int iconTop = (ribbonWindowButtonHeight - iconSize) / 2;
     if (!windowIcon.isNull()) {
-        windowIcon.paint(&painter, QRect(7, 13, 16, 16));
+        windowIcon.paint(&painter, QRect(7, iconTop, iconSize, iconSize));
     }
 
     painter.setPen(Qt::white);
-    painter.drawText(QRect(34, 8, 320, ribbonCaptionHeight),
+    painter.drawText(QRect(34, 0, 320, ribbonWindowButtonHeight),
                      Qt::AlignLeft | Qt::AlignVCenter,
                      topLevelWidget->windowTitle());
 
