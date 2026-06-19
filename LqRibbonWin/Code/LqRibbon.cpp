@@ -10,7 +10,6 @@
 #include <QKeyEvent>
 #include <QLayout>
 #include <QListView>
-#include <QLocale>
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QMouseEvent>
@@ -165,9 +164,7 @@ QString ribbonText(const char *sourceText)
         return strGenericRibbonText;
     }
 
-    const bool chineseLocale = QLocale().language() == QLocale::Chinese
-        || QLocale::system().language() == QLocale::Chinese;
-    if (chineseLocale || hasChineseApplicationTranslation()) {
+    if (hasChineseApplicationTranslation()) {
         const QString strBuiltInText = builtInChineseRibbonText(sourceText);
         if (!strBuiltInText.isEmpty()) {
             return strBuiltInText;
