@@ -41,9 +41,9 @@ const int ribbonGroupRightMargin = 5;
 const int ribbonGroupBottomMargin = 0;
 const int ribbonGroupLeftMargin = 4;
 const int ribbonSmallButtonColumnSpacing = 4;
-const int ribbonCaptionHeight = 30;
+const int ribbonCaptionHeight = 36;
 const int ribbonTabHeight = 24;
-const int ribbonDefaultBarHeight = 154;
+const int ribbonDefaultBarHeight = 158;
 const int ribbonWindowButtonWidth = 46;
 const int ribbonWindowButtonHeight = 30;
 const int ribbonMdiTitleHeight = 28;
@@ -1548,11 +1548,11 @@ void RibbonBar::paintEvent(QPaintEvent *event)
 
     const QIcon windowIcon = topLevelWidget->windowIcon();
     if (!windowIcon.isNull()) {
-        windowIcon.paint(&painter, QRect(4, 7, 16, 16));
+        windowIcon.paint(&painter, QRect(7, 13, 16, 16));
     }
 
     painter.setPen(Qt::white);
-    painter.drawText(QRect(26, 0, 320, ribbonCaptionHeight),
+    painter.drawText(QRect(34, 8, 320, ribbonCaptionHeight),
                      Qt::AlignLeft | Qt::AlignVCenter,
                      topLevelWidget->windowTitle());
 
@@ -1561,7 +1561,7 @@ void RibbonBar::paintEvent(QPaintEvent *event)
     int controlRight = visibleWidgetRight(this);
     if (m_searchEdit->isVisible()) {
         const int searchRight = m_searchEdit->geometry().right() + 1;
-        const int fallbackRight = searchRight + 10 + windowControlWidth();
+        const int fallbackRight = searchRight + 270 + windowControlWidth();
         if (controlRight - fallbackRight > 240) {
             controlRight = fallbackRight;
         }
@@ -1614,7 +1614,7 @@ bool RibbonBar::isWindowControlPoint(const QPoint &point) const
         const int searchRight = m_searchEdit->mapTo(controlParent,
                                                     QPoint(m_searchEdit->width(),
                                                            0)).x();
-        const int fallbackRight = searchRight + 10 + windowControlWidth();
+        const int fallbackRight = searchRight + 270 + windowControlWidth();
         if (controlRight - fallbackRight > 240) {
             controlRight = fallbackRight;
         }
@@ -1658,9 +1658,9 @@ void RibbonBar::updateRibbonTabGeometry()
 
 void RibbonBar::updateSearchGeometry()
 {
-    const int preferredSearchWidth = 428;
-    const int searchHeight = 24;
-    const int topMargin = 3;
+    const int preferredSearchWidth = 416;
+    const int searchHeight = 16;
+    const int topMargin = 12;
     const int controlWidth = windowControlWidth();
     const int availableWidth = qMax(0, width() - controlWidth - 48);
     const int searchWidth = qMin(preferredSearchWidth,
@@ -1685,7 +1685,7 @@ void RibbonBar::updateSearchGeometry()
 
 void RibbonBar::updateQuickAccessGeometry()
 {
-    const int topMargin = 3;
+    const int topMargin = 12;
     const int leftMargin = 340;
     const int rightMargin = 12;
     const int searchGap = 8;
@@ -1741,7 +1741,7 @@ void RibbonBar::updateWindowControlGeometry()
         const int searchRight = m_searchEdit->mapTo(controlParent,
                                                     QPoint(m_searchEdit->width(),
                                                            0)).x();
-        const int fallbackRight = searchRight + 10 + windowControlWidth();
+        const int fallbackRight = searchRight + 270 + windowControlWidth();
         if (controlRight - fallbackRight > 240) {
             controlRight = fallbackRight;
         }
