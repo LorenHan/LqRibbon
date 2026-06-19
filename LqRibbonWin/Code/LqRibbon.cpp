@@ -400,6 +400,7 @@ void RibbonMdiTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
         toggleMaximized();
+        event->accept();
         return;
     }
 
@@ -413,6 +414,11 @@ void RibbonMdiTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
 ///
 void RibbonMdiTitleBar::mouseMoveEvent(QMouseEvent *event)
 {
+    if (!(event->buttons() & Qt::LeftButton)) {
+        m_dragging = false;
+        releaseMouse();
+    }
+
     if (!m_dragging || !m_subWindow || m_subWindow->isMaximized()) {
         QWidget::mouseMoveEvent(event);
         return;
@@ -420,6 +426,7 @@ void RibbonMdiTitleBar::mouseMoveEvent(QMouseEvent *event)
 
     const QPoint delta = event->globalPos() - m_dragGlobalPos;
     m_subWindow->move(m_dragWindowPos + delta);
+    event->accept();
 }
 
 ///
@@ -437,6 +444,9 @@ void RibbonMdiTitleBar::mousePressEvent(QMouseEvent *event)
         m_dragging = true;
         m_dragGlobalPos = event->globalPos();
         m_dragWindowPos = m_subWindow->pos();
+        grabMouse();
+        event->accept();
+        return;
     }
 
     QWidget::mousePressEvent(event);
@@ -451,6 +461,9 @@ void RibbonMdiTitleBar::mouseReleaseEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
         m_dragging = false;
+        releaseMouse();
+        event->accept();
+        return;
     }
 
     QWidget::mouseReleaseEvent(event);
@@ -2018,32 +2031,6 @@ void RibbonBar::paintEvent(QPaintEvent *event)
                      Qt::AlignLeft | Qt::AlignVCenter,
                      topLevelWidget->windowTitle());
 
-    const int buttonWidth = ribbonWindowButtonWidth;
-    const int buttonHeight = ribbonWindowButtonHeight;
-    int controlRight = visibleWidgetRight(this);
-    if (m_searchEdit->isVisible()) {
-        const int searchRight = m_searchEdit->geometry().right() + 1;
-        const int fallbackRight = searchRight + 270 + windowControlWidth();
-        if (controlRight - fallbackRight > 240) {
-            controlRight = fallbackRight;
-        }
-    }
-
-    int x = controlRight - (buttonWidth * 3);
-    paintRibbonWindowButton(&painter,
-                            QRect(x, 0, buttonWidth, buttonHeight),
-                            RibbonWindowButton::MinimizeButton,
-                            false);
-    x += buttonWidth;
-    paintRibbonWindowButton(&painter,
-                            QRect(x, 0, buttonWidth, buttonHeight),
-                            RibbonWindowButton::MaximizeButton,
-                            topLevelWidget->isMaximized());
-    x += buttonWidth;
-    paintRibbonWindowButton(&painter,
-                            QRect(x, 0, buttonWidth, buttonHeight),
-                            RibbonWindowButton::CloseButton,
-                            false);
 }
 
 ///
@@ -2082,17 +2069,8 @@ bool RibbonBar::isWindowControlPoint(const QPoint &point) const
 
     const int ribbonRight = mapTo(
         controlParent, QPoint(width(), 0)).x();
-    int controlRight = qMin(visibleWidgetRight(controlParent), ribbonRight);
-    if (m_searchEdit->isVisible()) {
-        const int searchRight = m_searchEdit->mapTo(controlParent,
-                                                    QPoint(m_searchEdit->width(),
-                                                           0)).x();
-        const int fallbackRight = searchRight + 270 + windowControlWidth();
-        if (controlRight - fallbackRight > 240) {
-            controlRight = fallbackRight;
-        }
-    }
-
+    const int controlRight = qMin(visibleWidgetRight(controlParent),
+                                  ribbonRight);
     const int controlLeft = controlRight - windowControlWidth();
     const QPoint topLeft = mapFrom(controlParent, QPoint(controlLeft, 0));
     const QRect buttonRect(topLeft.x(),
@@ -2234,17 +2212,8 @@ void RibbonBar::updateWindowControlGeometry()
 
     const QPoint topLeft = mapTo(controlParent, QPoint(0, 0));
     const int ribbonRight = mapTo(controlParent, QPoint(width(), 0)).x();
-    int controlRight = qMin(visibleWidgetRight(controlParent), ribbonRight);
-    if (m_searchEdit->isVisible()) {
-        const int searchRight = m_searchEdit->mapTo(controlParent,
-                                                    QPoint(m_searchEdit->width(),
-                                                           0)).x();
-        const int fallbackRight = searchRight + 270 + windowControlWidth();
-        if (controlRight - fallbackRight > 240) {
-            controlRight = fallbackRight;
-        }
-    }
-
+    const int controlRight = qMin(visibleWidgetRight(controlParent),
+                                  ribbonRight);
     int x = controlRight - (buttonWidth * 3);
     const int top = topLeft.y();
 
@@ -2940,8 +2909,8 @@ void RibbonMainWindow::polishMdiSubWindow(QMdiSubWindow *subWindow)
 
     if (!subWindow->property("lqRibbonMdiPolished").toBool()) {
         subWindow->setProperty("lqRibbonMdiPolished", true);
-        subWindow->setOption(QMdiSubWindow::RubberBandMove, true);
-        subWindow->setOption(QMdiSubWindow::RubberBandResize, true);
+        subWindow->setOption(QMdiSubWindow::RubberBandMove, false);
+        subWindow->setOption(QMdiSubWindow::RubberBandResize, false);
         subWindow->setAttribute(Qt::WA_StyledBackground, true);
         subWindow->installEventFilter(this);
     }
