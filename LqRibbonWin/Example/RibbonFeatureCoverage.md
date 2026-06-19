@@ -31,3 +31,45 @@ not copied implementation.
   backstage/system menu, status bar helpers, and gallery controls.
 - Each new feature must add or extend an example path, build with Qt 5.15.2,
   run to a screenshot, and be committed separately.
+
+## File-by-File Coverage
+
+Status rules:
+
+- `Complete`: public usage, visual behavior, example path, build, and screenshot
+  verification are all done.
+- `Partial`: a comparable LqRibbon feature exists, but public usage or behavior
+  is incomplete.
+- `Missing`: no LqRibbon feature covers the file yet.
+- `Planned`: scheduled next, but no verified LqRibbon feature exists yet.
+
+| Reference file | Main capability | LqRibbon coverage | Status |
+| --- | --- | --- | --- |
+| `QtnRibbonDef.h` | Shared constants, list typedefs, version/custom text | Built-in text exists for search/frame strings; version and customize constants are missing | Partial |
+| `QtnRibbonMainWindow.h` | Ribbon host, replaceable Ribbon bar, central widget overloads | `RibbonMainWindow` hosts a bar and central widget; replaceable bar and style central widget overload are missing | Partial |
+| `QtnRibbonBar.h` | Menu-bar based Ribbon root, page management, title groups, backstage, search, simplify mode, customization | `RibbonBar` covers add page, current page, search, minimize, frame theme, quick access, title buttons; missing backstage, system button, contextual/title groups, simplify mode, movable tabs, customize manager | Partial |
+| `QtnRibbonPage.h` | Page group management, contextual metadata, visibility/enabled state | `RibbonPage` covers title and append group; missing insert/remove groups and contextual integration | Partial |
+| `QtnRibbonGroup.h` | Group controls, option button, size reduction, scrolling | `RibbonGroup` covers title, actions, widgets, large/small rows; missing option button, size definitions, reduced popup, group scrolling | Partial |
+| `QtnRibbonButton.h` | Dedicated word-wrapped Ribbon button | LqRibbon currently uses configured `QToolButton`; no dedicated button class | Partial |
+| `QtnRibbonControls.h` | Base control abstraction, size definitions, label/toolbar/column break controls | No public LqRibbon control abstraction yet | Missing |
+| `QtnRibbonButtonControls.h` | Button, check box, radio button controls | No wrapper controls yet | Missing |
+| `QtnRibbonInputControls.h` | Font combo, line edit, combo, spin, slider, date/time controls | No wrapper controls yet | Missing |
+| `QtnRibbonGallery.h` | Gallery item, gallery group, in-ribbon gallery, popup gallery | No gallery module yet | Missing |
+| `QtnRibbonGalleryControls.h` | Gallery control wrapper for groups | No gallery control wrapper yet | Missing |
+| `QtnRibbonBackstageView.h` | Backstage view, pages, buttons, separators, close prevention | No backstage module yet | Missing |
+| `QtnRibbonSystemMenu.h` | File/system button, menu, recent files, page popup | No system menu module yet | Missing |
+| `QtnRibbonQuickAccessBar.h` | Quick access toolbar, visibility per action, customize menu | LqRibbon has quick access actions; missing standalone class, per-action visibility, visible count, customize signal | Partial |
+| `QtnRibbonSearchBar.h` | Search field, compact mode, help, suggested actions, popup | LqRibbon has search field, suggestions, action matching, recent actions; missing standalone class, compact/help APIs, animation hooks | Partial |
+| `QtnRibbonStatusBar.h` | Status bar, permanent action area, switch group | No committed and verified status bar module yet | Planned |
+| `QtnRibbonSliderPane.h` | Compact slider with scroll buttons and value signals | No committed and verified slider pane yet | Planned |
+| `QtnRibbonProgressBar.h` | Compact progress bar and threaded operation helper | No committed and verified progress helper yet | Planned |
+| `QtnRibbonWorkspace.h` | Ribbon scroll area, workspace, MDI area | LqRibbon polishes standard `QMdiArea`; standalone scroll/workspace/MDI classes are missing | Partial |
+| `QtnRibbonCustomizeManager.h` | Runtime customization model and persistence | No customization manager yet | Missing |
+| `QtnRibbonCustomizeDialog.h` | Customization dialog | No customization dialog yet | Missing |
+| `QtnRibbonCustomizePage.h` | Quick access and Ribbon customize pages | No customization pages yet | Missing |
+| `QtnOfficePopupMenu.h` | Office-style popup menu | No dedicated popup menu module yet | Missing |
+| `QtnOfficePopupWindow.h` | Toast/popup notification window | No popup notification module yet | Missing |
+| `QtnOfficePopupColorButton.h` | Popup color button | No popup color button module yet | Missing |
+
+Style headers and unrelated base widgets are tracked separately from Ribbon
+feature coverage unless they are pulled in by the aggregate Ribbon include.
