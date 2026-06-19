@@ -595,9 +595,9 @@ void RibbonMdiTitleBar::syncWithSubWindow()
         return;
     }
 
-    setGeometry(1,
-                1,
-                qMax(0, m_subWindow->width() - 2),
+    setGeometry(0,
+                0,
+                qMax(0, m_subWindow->width()),
                 ribbonMdiTitleHeight);
     updateButtonGeometry();
     m_maximizeButton->setRestoreMode(m_subWindow->isMaximized());
