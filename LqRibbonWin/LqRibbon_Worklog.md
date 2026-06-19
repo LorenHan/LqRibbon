@@ -30,9 +30,9 @@
 - LqRibbon 源码放在 `LqRibbonWin/Code`，示例和测试入口放在 `LqRibbonWin/Example`。
 - `LqRibbonWin` 只是区分 Python 版本的目录名，类名、命名空间和接口仍然叫 `LqRibbon`。
 - LqRibbon 每完成一个小任务就单独 commit；只 commit LqRibbon 仓库，不 push。
-- `KincoServoPro.pro` 项目除了 QtitanRibbon 替换成 LqRibbon 外，其他业务代码尽量不动。
-- 替换后主项目中不应再出现 QtitanRibbon 依赖或接口痕迹；接口写法尽量保持 QtitanRibbon 兼容，只换库名。
-- UI 目标是对齐旧 QtitanRibbon 版 Kinco Servo3 和最新版 Office 的 Ribbon 效果，不是重新设计。
+- `KincoServoPro.pro` 项目除了 reference Ribbon 替换成 LqRibbon 外，其他业务代码尽量不动。
+- 替换后主项目中不应再出现 reference Ribbon 依赖或接口痕迹；接口写法尽量保持 reference Ribbon 兼容，只换库名。
+- UI 目标是对齐旧 reference Ribbon 版 Kinco Servo3 和最新版 Office 的 Ribbon 效果，不是重新设计。
 - 需要兼容 Windows、Linux、macOS；Windows 无边框/原生边框手势要尽量完整。
 
 ## 已经踩过的具体坑

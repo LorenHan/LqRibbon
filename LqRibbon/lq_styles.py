@@ -5,7 +5,7 @@ LqRibbon Style Module - Blue flat style definitions
 class LqStyle:
     """Blue flat style for LqRibbon"""
 
-    # Color scheme - matching QtitanRibbon screenshot
+    # Color scheme aligned with the captured Ribbon baseline
     PRIMARY_COLOR = "#2B579A"        # Main blue color
     TAB_SELECTED = "#2B579A"         # Selected tab blue
     TAB_HOVER = "#3A6AB1"            # Hover blue

@@ -1,4 +1,4 @@
-# QtitanRibbon Pixel Comparison Checklist
+# Ribbon Pixel Comparison Checklist
 
 Scope: Ribbon framework only. Business logic, CAN communication, OD data, and
 servo-specific dialogs are out of scope unless they expose Ribbon chrome.
@@ -164,7 +164,7 @@ servo-specific dialogs are out of scope unless they expose Ribbon chrome.
 
 ## Current Baseline Notes
 
-- Qtitan pinned baseline executable:
+- Reference pinned baseline executable:
   `D:/backup/KincoServo3/kincoservo-pro/KincoServo3_MSVC32/KincoServo3_V2.exe`.
 - LqRibbon comparison executable:
   `KincoServo3_MinGW32/KincoServo3_V2.exe`.
