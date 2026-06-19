@@ -2905,6 +2905,7 @@ void RibbonBar::removeInvalidSearchActions()
 
     rebuildSearchActionIndex();
     updateSearchSuggestions();
+    updateSearchPopup();
 }
 
 ///
