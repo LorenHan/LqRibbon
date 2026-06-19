@@ -443,6 +443,7 @@ private:
     int windowControlWidth() const;
     void updateSearchPopup();
     void hideSearchPopup();
+    void finishSearch();
     void activateSearchPopupIndex(const QModelIndex &index);
     QList<QAction *> matchedSearchActions(const QString &strText) const;
     void updateSearchSuggestions();

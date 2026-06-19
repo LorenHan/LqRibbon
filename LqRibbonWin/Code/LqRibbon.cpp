@@ -15,6 +15,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QScreen>
+#include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QStandardItemModel>
@@ -1413,10 +1414,16 @@ RibbonBar::RibbonBar(QWidget *parent)
             return;
         }
 
-        const QString strText = m_searchEdit->text();
+        const QString strText = m_searchEdit->text().trimmed();
+        if (strText.isEmpty()) {
+            finishSearch();
+            return;
+        }
+
         if (!triggerSearchAction(strText)) {
             emit searchAccepted(strText);
         }
+        finishSearch();
     });
     connect(m_searchCompleter,
             QOverload<const QString &>::of(&QCompleter::activated),
@@ -1426,6 +1433,7 @@ RibbonBar::RibbonBar(QWidget *parent)
                 if (!triggerSearchAction(strText)) {
                     emit searchAccepted(strText);
                 }
+                finishSearch();
             });
 
     updateStyleSheet();
@@ -1966,7 +1974,7 @@ bool RibbonBar::eventFilter(QObject *object, QEvent *event)
                 return true;
             }
         } else if (keyEvent->key() == Qt::Key_Escape) {
-            hideSearchPopup();
+            finishSearch();
             return true;
         }
     }
@@ -1980,8 +1988,7 @@ bool RibbonBar::eventFilter(QObject *object, QEvent *event)
         }
 
         if (keyEvent->key() == Qt::Key_Escape) {
-            hideSearchPopup();
-            m_searchEdit->setFocus();
+            finishSearch();
             return true;
         }
     }
@@ -2120,8 +2127,8 @@ void RibbonBar::updateRibbonTabGeometry()
 void RibbonBar::updateSearchGeometry()
 {
     const int preferredSearchWidth = 416;
-    const int searchHeight = 18;
-    const int topMargin = (ribbonWindowButtonHeight - searchHeight) / 2;
+    const int topMargin = 2;
+    const int searchHeight = ribbonWindowButtonHeight - (topMargin * 2);
     const int controlWidth = windowControlWidth();
     const int availableWidth = qMax(0, width() - controlWidth - 48);
     const int searchWidth = qMin(preferredSearchWidth,
@@ -2351,6 +2358,20 @@ void RibbonBar::hideSearchPopup()
 }
 
 ///
+/// \brief RibbonBar::finishSearch
+/// Closes the search UI and clears accepted text after a completed search.
+///
+void RibbonBar::finishSearch()
+{
+    hideSearchPopup();
+    if (!m_searchEdit->text().isEmpty()) {
+        const QSignalBlocker blocker(m_searchEdit);
+        m_searchEdit->clear();
+    }
+    m_searchEdit->setFocus();
+}
+
+///
 /// \brief RibbonBar::activateSearchPopupIndex
 /// Activates the command or helper row selected in the search popup.
 /// \param index Popup model index to activate.
@@ -2373,7 +2394,7 @@ void RibbonBar::activateSearchPopupIndex(const QModelIndex &index)
 
         QPointer<QAction> actionPointer = action;
         recordRecentSearchAction(action);
-        hideSearchPopup();
+        finishSearch();
         action->trigger();
         if (!actionPointer.isNull()) {
             emit searchActionTriggered(actionPointer.data());
@@ -2383,8 +2404,8 @@ void RibbonBar::activateSearchPopupIndex(const QModelIndex &index)
 
     if (itemKind == SearchPopupHelpItem) {
         const QString strText = m_searchEdit->text().trimmed();
-        hideSearchPopup();
         emit searchAccepted(strText);
+        finishSearch();
     }
 }
 
