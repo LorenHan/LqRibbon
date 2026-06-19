@@ -1,8 +1,11 @@
 #include <QApplication>
 #include <QLabel>
+#include <QMdiArea>
+#include <QMdiSubWindow>
 #include <QMenu>
 #include <QMessageBox>
 #include <QStyle>
+#include <QTableWidget>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -21,6 +24,10 @@ int main(int argc, char *argv[])
         : QString();
     const bool searchPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-search-preview"));
+    const bool mdiPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-mdi-preview"));
+    const bool tabPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-tab-preview"));
 
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
@@ -104,9 +111,31 @@ int main(int argc, char *argv[])
                                  QObject::tr("Connect"));
     });
 
-    QLabel *contentLabel = new QLabel(QObject::tr("LqRibbon Qt 5.15.2 C++ example"));
-    contentLabel->setAlignment(Qt::AlignCenter);
-    mainWindow.setCentralWidget(contentLabel);
+    if (mdiPreviewRequested || tabPreviewRequested) {
+        QMdiArea *mdiArea = new QMdiArea(&mainWindow);
+        mdiArea->setViewMode(tabPreviewRequested
+                             ? QMdiArea::TabbedView
+                             : QMdiArea::SubWindowView);
+
+        for (int index = 0; index < 2; ++index) {
+            QTableWidget *tableWidget = new QTableWidget(8, 4, mdiArea);
+            tableWidget->setWindowTitle(index == 0
+                                        ? QObject::tr("Write Settings")
+                                        : QObject::tr("Control Loop Specialist"));
+            QMdiSubWindow *subWindow = mdiArea->addSubWindow(tableWidget);
+            subWindow->setWindowTitle(tableWidget->windowTitle());
+            subWindow->resize(index == 0 ? 360 : 300, 220);
+            subWindow->move(index == 0 ? 40 : 460, index == 0 ? 60 : 80);
+            subWindow->show();
+        }
+
+        mainWindow.setCentralWidget(mdiArea);
+    } else {
+        QLabel *contentLabel = new QLabel(
+            QObject::tr("LqRibbon Qt 5.15.2 C++ example"));
+        contentLabel->setAlignment(Qt::AlignCenter);
+        mainWindow.setCentralWidget(contentLabel);
+    }
     mainWindow.ribbonBar()->setCurrentPageIndex(1);
     mainWindow.setFrameThemeEnabled(true);
     mainWindow.ribbonBar()->setSearchVisible(true);

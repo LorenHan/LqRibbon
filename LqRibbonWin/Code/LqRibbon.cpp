@@ -2,15 +2,19 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QChildEvent>
 #include <QComboBox>
 #include <QFontMetrics>
 #include <QGridLayout>
 #include <QKeyEvent>
 #include <QLayout>
 #include <QListView>
+#include <QMdiArea>
+#include <QMdiSubWindow>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QScreen>
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QStandardItemModel>
@@ -42,6 +46,9 @@ const int ribbonTabHeight = 24;
 const int ribbonDefaultBarHeight = 154;
 const int ribbonWindowButtonWidth = 46;
 const int ribbonWindowButtonHeight = 30;
+const int ribbonMdiTitleHeight = 28;
+const int ribbonMdiButtonWidth = 28;
+const int ribbonMdiButtonHeight = 24;
 const int ribbonSearchPopupMaxHeight = 260;
 const int ribbonSearchPopupRowHeight = 24;
 const int ribbonSearchPopupKindRole = Qt::UserRole + 1;
@@ -77,6 +84,57 @@ private:
     bool m_restoreMode;
 };
 
+class RibbonMdiButton : public QToolButton
+{
+public:
+    enum ButtonKind
+    {
+        MinimizeButton,
+        MaximizeButton,
+        CloseButton
+    };
+
+public:
+    explicit RibbonMdiButton(ButtonKind buttonKind, QWidget *parent = nullptr);
+
+    void setRestoreMode(bool restoreMode);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+
+private:
+    ButtonKind m_buttonKind;
+    bool m_restoreMode;
+};
+
+class RibbonMdiTitleBar : public QWidget
+{
+public:
+    explicit RibbonMdiTitleBar(QMdiSubWindow *subWindow);
+
+    void syncWithSubWindow();
+
+protected:
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
+
+private:
+    void toggleMaximized();
+    void updateButtonGeometry();
+
+private:
+    QMdiSubWindow *m_subWindow;
+    RibbonMdiButton *m_minimizeButton;
+    RibbonMdiButton *m_maximizeButton;
+    RibbonMdiButton *m_closeButton;
+    QPoint m_dragGlobalPos;
+    QPoint m_dragWindowPos;
+    bool m_dragging;
+};
+
 RibbonWindowButton::RibbonWindowButton(ButtonKind buttonKind, QWidget *parent)
     : QToolButton(parent)
     , m_buttonKind(buttonKind)
@@ -98,6 +156,60 @@ void RibbonWindowButton::setRestoreMode(bool restoreMode)
     update();
 }
 
+void paintRibbonWindowButton(QPainter *painter,
+                             const QRect &buttonRect,
+                             RibbonWindowButton::ButtonKind buttonKind,
+                             bool restoreMode)
+{
+    painter->save();
+
+    QPen pen(Qt::white);
+    pen.setWidthF(1.3);
+    painter->setPen(pen);
+    painter->setRenderHint(QPainter::Antialiasing, false);
+
+    const int centerX = buttonRect.x() + buttonRect.width() / 2;
+    const int centerY = buttonRect.y() + buttonRect.height() / 2;
+
+    switch (buttonKind) {
+    case RibbonWindowButton::MinimizeButton:
+        painter->drawLine(centerX - 6, centerY + 5, centerX + 6, centerY + 5);
+        break;
+    case RibbonWindowButton::MaximizeButton:
+        if (restoreMode) {
+            painter->drawRect(QRect(centerX - 2, centerY - 7, 10, 10));
+            painter->drawRect(QRect(centerX - 6, centerY - 3, 10, 10));
+        } else {
+            painter->drawRect(QRect(centerX - 6, centerY - 6, 12, 12));
+        }
+        break;
+    case RibbonWindowButton::CloseButton:
+        painter->drawLine(centerX - 5, centerY - 5, centerX + 5, centerY + 5);
+        painter->drawLine(centerX + 5, centerY - 5, centerX - 5, centerY + 5);
+        break;
+    }
+
+    painter->restore();
+}
+
+int visibleWidgetRight(const QWidget *widget)
+{
+    if (!widget) {
+        return 0;
+    }
+
+    int right = widget->width();
+    QWindow *windowHandle = widget->windowHandle();
+    if (!windowHandle || !windowHandle->screen()) {
+        return right;
+    }
+
+    const QRect screenGeometry = windowHandle->screen()->availableGeometry();
+    const QPoint screenRight = widget->mapFromGlobal(
+        QPoint(screenGeometry.right(), screenGeometry.top()));
+    return qMin(right, screenRight.x() + 1);
+}
+
 void RibbonWindowButton::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event)
@@ -115,8 +227,49 @@ void RibbonWindowButton::paintEvent(QPaintEvent *event)
                              : QColor(QStringLiteral("#386caf")));
     }
 
+    paintRibbonWindowButton(&painter, rect(), m_buttonKind, m_restoreMode);
+}
+
+RibbonMdiButton::RibbonMdiButton(ButtonKind buttonKind, QWidget *parent)
+    : QToolButton(parent)
+    , m_buttonKind(buttonKind)
+    , m_restoreMode(false)
+{
+    setAutoRaise(true);
+    setCursor(Qt::ArrowCursor);
+    setFixedSize(ribbonMdiButtonWidth, ribbonMdiButtonHeight);
+    setFocusPolicy(Qt::NoFocus);
+}
+
+void RibbonMdiButton::setRestoreMode(bool restoreMode)
+{
+    if (m_restoreMode == restoreMode) {
+        return;
+    }
+
+    m_restoreMode = restoreMode;
+    update();
+}
+
+void RibbonMdiButton::paintEvent(QPaintEvent *event)
+{
+    Q_UNUSED(event)
+
+    QPainter painter(this);
+    if (isDown()) {
+        painter.fillRect(rect(),
+                         m_buttonKind == CloseButton
+                             ? QColor(QStringLiteral("#8f1f15"))
+                             : QColor(QStringLiteral("#244d80")));
+    } else if (underMouse()) {
+        painter.fillRect(rect(),
+                         m_buttonKind == CloseButton
+                             ? QColor(QStringLiteral("#c42b1c"))
+                             : QColor(QStringLiteral("#386caf")));
+    }
+
     QPen pen(Qt::white);
-    pen.setWidthF(1.3);
+    pen.setWidthF(1.2);
     painter.setPen(pen);
     painter.setRenderHint(QPainter::Antialiasing, false);
 
@@ -125,21 +278,159 @@ void RibbonWindowButton::paintEvent(QPaintEvent *event)
 
     switch (m_buttonKind) {
     case MinimizeButton:
-        painter.drawLine(centerX - 6, centerY + 5, centerX + 6, centerY + 5);
+        painter.drawLine(centerX - 5, centerY + 5, centerX + 5, centerY + 5);
         break;
     case MaximizeButton:
         if (m_restoreMode) {
-            painter.drawRect(QRect(centerX - 2, centerY - 7, 10, 10));
-            painter.drawRect(QRect(centerX - 6, centerY - 3, 10, 10));
+            painter.drawRect(QRect(centerX - 1, centerY - 6, 8, 8));
+            painter.drawRect(QRect(centerX - 5, centerY - 2, 8, 8));
         } else {
-            painter.drawRect(QRect(centerX - 6, centerY - 6, 12, 12));
+            painter.drawRect(QRect(centerX - 5, centerY - 5, 10, 10));
         }
         break;
     case CloseButton:
-        painter.drawLine(centerX - 5, centerY - 5, centerX + 5, centerY + 5);
-        painter.drawLine(centerX + 5, centerY - 5, centerX - 5, centerY + 5);
+        painter.drawLine(centerX - 4, centerY - 4, centerX + 4, centerY + 4);
+        painter.drawLine(centerX + 4, centerY - 4, centerX - 4, centerY + 4);
         break;
     }
+}
+
+RibbonMdiTitleBar::RibbonMdiTitleBar(QMdiSubWindow *subWindow)
+    : QWidget(subWindow)
+    , m_subWindow(subWindow)
+    , m_minimizeButton(new RibbonMdiButton(
+                           RibbonMdiButton::MinimizeButton, this))
+    , m_maximizeButton(new RibbonMdiButton(
+                           RibbonMdiButton::MaximizeButton, this))
+    , m_closeButton(new RibbonMdiButton(RibbonMdiButton::CloseButton, this))
+    , m_dragging(false)
+{
+    setObjectName(QStringLiteral("lqRibbonMdiTitleBar"));
+    setMouseTracking(true);
+    setFixedHeight(ribbonMdiTitleHeight);
+
+    connect(m_minimizeButton, &QToolButton::clicked, this, [this]() {
+        m_subWindow->showMinimized();
+    });
+    connect(m_maximizeButton, &QToolButton::clicked, this, [this]() {
+        toggleMaximized();
+    });
+    connect(m_closeButton, &QToolButton::clicked, this, [this]() {
+        m_subWindow->close();
+    });
+}
+
+void RibbonMdiTitleBar::syncWithSubWindow()
+{
+    if (!m_subWindow) {
+        return;
+    }
+
+    setGeometry(1,
+                1,
+                qMax(0, m_subWindow->width() - 2),
+                ribbonMdiTitleHeight);
+    updateButtonGeometry();
+    m_maximizeButton->setRestoreMode(m_subWindow->isMaximized());
+    raise();
+    update();
+}
+
+void RibbonMdiTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        toggleMaximized();
+        return;
+    }
+
+    QWidget::mouseDoubleClickEvent(event);
+}
+
+void RibbonMdiTitleBar::mouseMoveEvent(QMouseEvent *event)
+{
+    if (!m_dragging || !m_subWindow || m_subWindow->isMaximized()) {
+        QWidget::mouseMoveEvent(event);
+        return;
+    }
+
+    const QPoint delta = event->globalPos() - m_dragGlobalPos;
+    m_subWindow->move(m_dragWindowPos + delta);
+}
+
+void RibbonMdiTitleBar::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && m_subWindow) {
+        if (m_subWindow->mdiArea()) {
+            m_subWindow->mdiArea()->setActiveSubWindow(m_subWindow);
+        }
+
+        m_dragging = true;
+        m_dragGlobalPos = event->globalPos();
+        m_dragWindowPos = m_subWindow->pos();
+    }
+
+    QWidget::mousePressEvent(event);
+}
+
+void RibbonMdiTitleBar::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        m_dragging = false;
+    }
+
+    QWidget::mouseReleaseEvent(event);
+}
+
+void RibbonMdiTitleBar::paintEvent(QPaintEvent *event)
+{
+    Q_UNUSED(event)
+
+    QPainter painter(this);
+    painter.fillRect(rect(), QColor(QStringLiteral("#2b579a")));
+
+    if (!m_subWindow) {
+        return;
+    }
+
+    const QIcon icon = m_subWindow->windowIcon();
+    if (!icon.isNull()) {
+        icon.paint(&painter, QRect(6, 6, 16, 16));
+    }
+
+    painter.setPen(Qt::white);
+    const QRect textRect(28,
+                         0,
+                         width() - (ribbonMdiButtonWidth * 3) - 34,
+                         height());
+    painter.drawText(textRect,
+                     Qt::AlignLeft | Qt::AlignVCenter,
+                     m_subWindow->windowTitle());
+}
+
+void RibbonMdiTitleBar::toggleMaximized()
+{
+    if (!m_subWindow) {
+        return;
+    }
+
+    if (m_subWindow->isMaximized()) {
+        m_subWindow->showNormal();
+    } else {
+        m_subWindow->showMaximized();
+    }
+
+    syncWithSubWindow();
+}
+
+void RibbonMdiTitleBar::updateButtonGeometry()
+{
+    int x = width() - (ribbonMdiButtonWidth * 3);
+    const int y = (height() - ribbonMdiButtonHeight) / 2;
+    m_minimizeButton->setGeometry(x, y, ribbonMdiButtonWidth, ribbonMdiButtonHeight);
+    x += ribbonMdiButtonWidth;
+    m_maximizeButton->setGeometry(x, y, ribbonMdiButtonWidth, ribbonMdiButtonHeight);
+    x += ribbonMdiButtonWidth;
+    m_closeButton->setGeometry(x, y, ribbonMdiButtonWidth, ribbonMdiButtonHeight);
 }
 
 const char ribbonStyleSheet[] =
@@ -253,6 +544,54 @@ const char ribbonStyleSheet[] =
     "    subcontrol-origin: padding;"
     "    subcontrol-position: center right;"
     "    right: 3px;"
+    "}";
+
+const char ribbonMdiAreaStyleSheet[] =
+    "QMdiArea {"
+    "    background: #cfcfcf;"
+    "}"
+    "QMdiSubWindow {"
+    "    background: #ffffff;"
+    "    border: 1px solid #8aaed7;"
+    "}"
+    "QMdiSubWindow::title {"
+    "    background: #2b579a;"
+    "    color: #ffffff;"
+    "    padding-left: 6px;"
+    "    height: 28px;"
+    "}"
+    "QMdiSubWindow::close-button,"
+    "QMdiSubWindow::normal-button,"
+    "QMdiSubWindow::minimize-button {"
+    "    border: none;"
+    "    width: 28px;"
+    "    height: 22px;"
+    "    background: transparent;"
+    "}"
+    "QMdiSubWindow::close-button:hover {"
+    "    background: #c42b1c;"
+    "}"
+    "QMdiSubWindow::normal-button:hover,"
+    "QMdiSubWindow::minimize-button:hover {"
+    "    background: #386caf;"
+    "}"
+    "QTabBar {"
+    "    background: #d7d7d7;"
+    "}"
+    "QTabBar::tab {"
+    "    min-width: 0px;"
+    "    padding: 4px 16px 4px 10px;"
+    "    border: 1px solid #9eb6d8;"
+    "    border-bottom: none;"
+    "    background: #efefef;"
+    "    color: #202020;"
+    "}"
+    "QTabBar::tab:selected {"
+    "    background: #ffffff;"
+    "    color: #202020;"
+    "}"
+    "QTabBar::tab:hover:!selected {"
+    "    background: #e8f2ff;"
     "}";
 
 void prepareMetricWidget(QWidget *widget, const QFont &font)
@@ -1182,6 +1521,11 @@ bool RibbonBar::eventFilter(QObject *object, QEvent *event)
 
 void RibbonBar::paintEvent(QPaintEvent *event)
 {
+    if (m_frameThemeEnabled) {
+        updateWindowControlState();
+        updateWindowControlGeometry();
+    }
+
     updateRibbonTabGeometry();
     QTabWidget::paintEvent(event);
 
@@ -1211,6 +1555,33 @@ void RibbonBar::paintEvent(QPaintEvent *event)
     painter.drawText(QRect(26, 0, 320, ribbonCaptionHeight),
                      Qt::AlignLeft | Qt::AlignVCenter,
                      topLevelWidget->windowTitle());
+
+    const int buttonWidth = ribbonWindowButtonWidth;
+    const int buttonHeight = ribbonWindowButtonHeight;
+    int controlRight = visibleWidgetRight(this);
+    if (m_searchEdit->isVisible()) {
+        const int searchRight = m_searchEdit->geometry().right() + 1;
+        const int fallbackRight = searchRight + 10 + windowControlWidth();
+        if (controlRight - fallbackRight > 240) {
+            controlRight = fallbackRight;
+        }
+    }
+
+    int x = controlRight - (buttonWidth * 3);
+    paintRibbonWindowButton(&painter,
+                            QRect(x, 0, buttonWidth, buttonHeight),
+                            RibbonWindowButton::MinimizeButton,
+                            false);
+    x += buttonWidth;
+    paintRibbonWindowButton(&painter,
+                            QRect(x, 0, buttonWidth, buttonHeight),
+                            RibbonWindowButton::MaximizeButton,
+                            topLevelWidget->isMaximized());
+    x += buttonWidth;
+    paintRibbonWindowButton(&painter,
+                            QRect(x, 0, buttonWidth, buttonHeight),
+                            RibbonWindowButton::CloseButton,
+                            false);
 }
 
 void RibbonBar::resizeEvent(QResizeEvent *event)
@@ -1231,12 +1602,31 @@ bool RibbonBar::isWindowControlPoint(const QPoint &point) const
         return false;
     }
 
-    return (m_minimizeButton->isVisible()
-            && m_minimizeButton->geometry().contains(point))
-        || (m_maximizeButton->isVisible()
-            && m_maximizeButton->geometry().contains(point))
-        || (m_closeButton->isVisible()
-            && m_closeButton->geometry().contains(point));
+    const QWidget *controlParent = window();
+    if (!controlParent) {
+        controlParent = this;
+    }
+
+    const int ribbonRight = mapTo(
+        controlParent, QPoint(width(), 0)).x();
+    int controlRight = qMin(visibleWidgetRight(controlParent), ribbonRight);
+    if (m_searchEdit->isVisible()) {
+        const int searchRight = m_searchEdit->mapTo(controlParent,
+                                                    QPoint(m_searchEdit->width(),
+                                                           0)).x();
+        const int fallbackRight = searchRight + 10 + windowControlWidth();
+        if (controlRight - fallbackRight > 240) {
+            controlRight = fallbackRight;
+        }
+    }
+
+    const int controlLeft = controlRight - windowControlWidth();
+    const QPoint topLeft = mapFrom(controlParent, QPoint(controlLeft, 0));
+    const QRect buttonRect(topLeft.x(),
+                           topLeft.y(),
+                           windowControlWidth(),
+                           ribbonWindowButtonHeight);
+    return buttonRect.contains(point);
 }
 
 void RibbonBar::updateRibbonTabGeometry()
@@ -1333,8 +1723,32 @@ void RibbonBar::updateWindowControlGeometry()
 {
     const int buttonWidth = ribbonWindowButtonWidth;
     const int buttonHeight = ribbonWindowButtonHeight;
-    const int top = 0;
-    int x = width() - (buttonWidth * 3);
+    QWidget *controlParent = window();
+    if (!controlParent) {
+        controlParent = this;
+    }
+
+    if (m_minimizeButton->parentWidget() != controlParent) {
+        m_minimizeButton->setParent(controlParent);
+        m_maximizeButton->setParent(controlParent);
+        m_closeButton->setParent(controlParent);
+    }
+
+    const QPoint topLeft = mapTo(controlParent, QPoint(0, 0));
+    const int ribbonRight = mapTo(controlParent, QPoint(width(), 0)).x();
+    int controlRight = qMin(visibleWidgetRight(controlParent), ribbonRight);
+    if (m_searchEdit->isVisible()) {
+        const int searchRight = m_searchEdit->mapTo(controlParent,
+                                                    QPoint(m_searchEdit->width(),
+                                                           0)).x();
+        const int fallbackRight = searchRight + 10 + windowControlWidth();
+        if (controlRight - fallbackRight > 240) {
+            controlRight = fallbackRight;
+        }
+    }
+
+    int x = controlRight - (buttonWidth * 3);
+    const int top = topLeft.y();
 
     m_minimizeButton->setGeometry(x, top, buttonWidth, buttonHeight);
     x += buttonWidth;
@@ -1342,6 +1756,9 @@ void RibbonBar::updateWindowControlGeometry()
     x += buttonWidth;
     m_closeButton->setGeometry(x, top, buttonWidth, buttonHeight);
 
+    m_minimizeButton->setVisible(m_frameThemeEnabled);
+    m_maximizeButton->setVisible(m_frameThemeEnabled);
+    m_closeButton->setVisible(m_frameThemeEnabled);
     m_minimizeButton->raise();
     m_maximizeButton->raise();
     m_closeButton->raise();
@@ -1720,6 +2137,7 @@ void RibbonMainWindow::setCentralWidget(QWidget *widget)
     widget->setParent(m_rootWidget);
     widget->setMouseTracking(true);
     m_rootLayout->addWidget(widget, 1);
+    polishMdiObject(widget);
 }
 
 void RibbonMainWindow::setNativeFrameEnabled(bool enabled)
@@ -1790,7 +2208,126 @@ bool RibbonMainWindow::eventFilter(QObject *object, QEvent *event)
         return true;
     }
 
+    if (event->type() == QEvent::ChildAdded) {
+        QChildEvent *childEvent = static_cast<QChildEvent *>(event);
+        polishMdiObject(childEvent->child());
+        polishMdiObject(object);
+    } else if (event->type() == QEvent::Show
+               || event->type() == QEvent::Polish
+               || event->type() == QEvent::Resize
+               || event->type() == QEvent::WindowActivate
+               || event->type() == QEvent::WindowDeactivate
+               || event->type() == QEvent::WindowStateChange
+               || event->type() == QEvent::WindowTitleChange
+               || event->type() == QEvent::WindowIconChange) {
+        polishMdiObject(object);
+    }
+
     return false;
+}
+
+void RibbonMainWindow::polishMdiObject(QObject *object)
+{
+    if (!object) {
+        return;
+    }
+
+    QMdiArea *mdiArea = qobject_cast<QMdiArea *>(object);
+    if (mdiArea) {
+        polishMdiArea(mdiArea);
+        return;
+    }
+
+    QMdiSubWindow *subWindow = qobject_cast<QMdiSubWindow *>(object);
+    if (subWindow) {
+        polishMdiSubWindow(subWindow);
+        return;
+    }
+
+    QWidget *widget = qobject_cast<QWidget *>(object);
+    if (!widget) {
+        return;
+    }
+
+    const QList<QMdiArea *> mdiAreaList = widget->findChildren<QMdiArea *>();
+    for (QMdiArea *childMdiArea : mdiAreaList) {
+        polishMdiArea(childMdiArea);
+    }
+
+    const QList<QMdiSubWindow *> subWindowList =
+        widget->findChildren<QMdiSubWindow *>();
+    for (QMdiSubWindow *childSubWindow : subWindowList) {
+        polishMdiSubWindow(childSubWindow);
+    }
+}
+
+void RibbonMainWindow::polishMdiArea(QMdiArea *mdiArea)
+{
+    if (!mdiArea) {
+        return;
+    }
+
+    if (!mdiArea->property("lqRibbonMdiPolished").toBool()) {
+        mdiArea->setProperty("lqRibbonMdiPolished", true);
+        mdiArea->setStyleSheet(QString::fromLatin1(ribbonMdiAreaStyleSheet));
+        mdiArea->setTabsClosable(true);
+        mdiArea->setTabsMovable(true);
+        mdiArea->setTabPosition(QTabWidget::North);
+        mdiArea->installEventFilter(this);
+    }
+
+    updateMdiTabBars(mdiArea);
+
+    const QList<QMdiSubWindow *> subWindowList = mdiArea->subWindowList();
+    for (QMdiSubWindow *subWindow : subWindowList) {
+        polishMdiSubWindow(subWindow);
+    }
+}
+
+void RibbonMainWindow::polishMdiSubWindow(QMdiSubWindow *subWindow)
+{
+    if (!subWindow) {
+        return;
+    }
+
+    if (!subWindow->property("lqRibbonMdiPolished").toBool()) {
+        subWindow->setProperty("lqRibbonMdiPolished", true);
+        subWindow->setOption(QMdiSubWindow::RubberBandMove, true);
+        subWindow->setOption(QMdiSubWindow::RubberBandResize, true);
+        subWindow->setAttribute(Qt::WA_StyledBackground, true);
+        subWindow->installEventFilter(this);
+    }
+
+    QWidget *titleBarWidget = subWindow->findChild<QWidget *>(
+        QStringLiteral("lqRibbonMdiTitleBar"), Qt::FindDirectChildrenOnly);
+    RibbonMdiTitleBar *titleBar =
+        static_cast<RibbonMdiTitleBar *>(titleBarWidget);
+    if (!titleBar) {
+        if (subWindow->property("lqRibbonMdiTitleBarCreating").toBool()) {
+            return;
+        }
+
+        subWindow->setProperty("lqRibbonMdiTitleBarCreating", true);
+        titleBar = new RibbonMdiTitleBar(subWindow);
+        subWindow->setProperty("lqRibbonMdiTitleBarCreating", false);
+    }
+
+    titleBar->syncWithSubWindow();
+}
+
+void RibbonMainWindow::updateMdiTabBars(QMdiArea *mdiArea)
+{
+    if (!mdiArea) {
+        return;
+    }
+
+    const QList<QTabBar *> tabBarList = mdiArea->findChildren<QTabBar *>();
+    for (QTabBar *tabBar : tabBarList) {
+        tabBar->setDocumentMode(false);
+        tabBar->setElideMode(Qt::ElideRight);
+        tabBar->setExpanding(false);
+        tabBar->setUsesScrollButtons(true);
+    }
 }
 
 bool RibbonMainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result)
@@ -1871,6 +2408,32 @@ bool RibbonMainWindow::handleNativeFrameEvent(QObject *object, QEvent *event)
     case QEvent::Leave:
         unsetCursor();
         return false;
+    case QEvent::MouseButtonRelease: {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (widget == m_ribbonBar && mouseEvent->button() == Qt::LeftButton) {
+            const QPoint ribbonPoint =
+                m_ribbonBar->mapFromGlobal(mouseEvent->globalPos());
+            if (m_ribbonBar->isWindowControlPoint(ribbonPoint)) {
+                const int controlLeft = visibleWidgetRight(this)
+                    - (ribbonWindowButtonWidth * 3);
+                const int left = m_ribbonBar->mapFrom(this,
+                                                      QPoint(controlLeft, 0)).x();
+                const int buttonIndex =
+                    (ribbonPoint.x() - left) / ribbonWindowButtonWidth;
+                if (buttonIndex == 0) {
+                    showMinimized();
+                } else if (buttonIndex == 1 && canNativeMaximize()) {
+                    isMaximized() ? showNormal() : showMaximized();
+                } else if (buttonIndex == 2) {
+                    close();
+                }
+
+                return true;
+            }
+        }
+
+        break;
+    }
     case QEvent::MouseButtonDblClick: {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
         if (mouseEvent->button() == Qt::LeftButton

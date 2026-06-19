@@ -29,6 +29,11 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+QT_BEGIN_NAMESPACE
+class QMdiArea;
+class QMdiSubWindow;
+QT_END_NAMESPACE
+
 namespace LqRibbon {
 
 class RibbonGroup : public QFrame
@@ -232,6 +237,10 @@ private:
     bool canNativeResizeVertically() const;
     bool canNativeMaximize() const;
     void updateNativeWindowStyle();
+    void polishMdiObject(QObject *object);
+    void polishMdiArea(QMdiArea *mdiArea);
+    void polishMdiSubWindow(QMdiSubWindow *subWindow);
+    void updateMdiTabBars(QMdiArea *mdiArea);
 
 private:
     QWidget *m_rootWidget;
