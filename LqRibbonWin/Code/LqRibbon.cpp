@@ -2675,7 +2675,7 @@ void RibbonBar::updateSearchPopup()
                                                   : Qt::ScrollBarAlwaysOff);
     const QRect searchRect = m_searchEdit->geometry();
     m_searchPopupView->setGeometry(searchRect.left(),
-                                   searchRect.bottom(),
+                                   searchRect.bottom() + 1,
                                    searchRect.width(),
                                    popupHeight);
     m_searchPopupView->show();
