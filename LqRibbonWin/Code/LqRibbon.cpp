@@ -2121,7 +2121,7 @@ void RibbonBar::updateSearchGeometry()
 {
     const int preferredSearchWidth = 416;
     const int searchHeight = 18;
-    const int topMargin = 12;
+    const int topMargin = (ribbonWindowButtonHeight - searchHeight) / 2;
     const int controlWidth = windowControlWidth();
     const int availableWidth = qMax(0, width() - controlWidth - 48);
     const int searchWidth = qMin(preferredSearchWidth,
@@ -2150,12 +2150,12 @@ void RibbonBar::updateSearchGeometry()
 ///
 void RibbonBar::updateQuickAccessGeometry()
 {
-    const int topMargin = 12;
     const int leftMargin = 340;
     const int rightMargin = 12;
     const int searchGap = 8;
     const int controlWidth = windowControlWidth();
     const int barHeight = 24;
+    const int topMargin = (ribbonWindowButtonHeight - barHeight) / 2;
     const int rightLimit = m_searchEdit->isVisible()
         ? m_searchEdit->x() - searchGap
         : width() - controlWidth - rightMargin;
