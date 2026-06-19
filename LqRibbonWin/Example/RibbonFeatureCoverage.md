@@ -13,7 +13,7 @@ not copied implementation.
 | Pages | Add/insert/remove pages, visible/enabled state, contextual page groups | Missing contextual groups | Planned example tab coverage |
 | Groups | Command groups, option button, row layout, group collapse/scroll | Partial | `main.cpp`, planned scroll preview |
 | Buttons | Large/small buttons, popup modes, word wrap | Partial | `main.cpp` |
-| Input controls | Check box, radio, combo box, font combo, line edit, spin boxes | Missing wrappers | Planned controls example |
+| Input controls | Check box, radio, combo box, font combo, line edit, spin boxes | Complete | `--grab-controls-preview` |
 | Galleries | In-ribbon gallery, popup gallery, gallery groups/items | Missing | Planned gallery example |
 | Backstage | File page, backstage buttons, pages, separators, close behavior | Missing | Planned backstage example |
 | System menu | File button menu, recent files, page popup | Missing | Planned system-menu example |
@@ -51,9 +51,9 @@ Status rules:
 | `QtnRibbonPage.h` | Page group management, contextual metadata, visibility/enabled state | `RibbonPage` covers title and append group; missing insert/remove groups and contextual integration | Partial |
 | `QtnRibbonGroup.h` | Group controls, option button, size reduction, scrolling | `RibbonGroup` covers title, actions, widgets, large/small rows; missing option button, size definitions, reduced popup, group scrolling | Partial |
 | `QtnRibbonButton.h` | Dedicated word-wrapped Ribbon button | LqRibbon currently uses configured `QToolButton`; no dedicated button class | Partial |
-| `QtnRibbonControls.h` | Base control abstraction, size definitions, label/toolbar/column break controls | No public LqRibbon control abstraction yet | Missing |
-| `QtnRibbonButtonControls.h` | Button, check box, radio button controls | No wrapper controls yet | Missing |
-| `QtnRibbonInputControls.h` | Font combo, line edit, combo, spin, slider, date/time controls | No wrapper controls yet | Missing |
+| `QtnRibbonControls.h` | Base control abstraction, size definitions, label/toolbar/column break controls | `RibbonControl`, `RibbonWidgetControl`, label, toolbar, and column break controls cover public usage | Complete |
+| `QtnRibbonButtonControls.h` | Button, check box, radio button controls | `RibbonButtonControl`, `RibbonCheckBoxControl`, and `RibbonRadioButtonControl` cover public usage | Complete |
+| `QtnRibbonInputControls.h` | Font combo, line edit, combo, spin, slider, date/time controls | Input wrappers cover native Qt input widgets and slider pane; controls preview is verified by screenshot | Complete |
 | `QtnRibbonGallery.h` | Gallery item, gallery group, in-ribbon gallery, popup gallery | No gallery module yet | Missing |
 | `QtnRibbonGalleryControls.h` | Gallery control wrapper for groups | No gallery control wrapper yet | Missing |
 | `QtnRibbonBackstageView.h` | Backstage view, pages, buttons, separators, close prevention | No backstage module yet | Missing |

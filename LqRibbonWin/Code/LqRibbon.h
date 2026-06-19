@@ -29,6 +29,7 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include "LqRibbonControls.h"
 #include "LqRibbonStatusBar.h"
 
 QT_BEGIN_NAMESPACE
@@ -653,6 +654,25 @@ using LqRibbonSliderPane = RibbonSliderPane;
 using LqRibbonProgressBar = RibbonProgressBar;
 using LqRibbonProgressOperation = RibbonProgressOperation;
 using LqRibbonStatusBar = RibbonStatusBar;
+using LqRibbonControlSizeDefinition = RibbonControlSizeDefinition;
+using LqRibbonControl = RibbonControl;
+using LqRibbonWidgetControl = RibbonWidgetControl;
+using LqRibbonColumnBreakControl = RibbonColumnBreakControl;
+using LqRibbonLabelControl = RibbonLabelControl;
+using LqRibbonToolBarControl = RibbonToolBarControl;
+using LqRibbonButtonControl = RibbonButtonControl;
+using LqRibbonCheckBoxControl = RibbonCheckBoxControl;
+using LqRibbonRadioButtonControl = RibbonRadioButtonControl;
+using LqRibbonFontComboBoxControl = RibbonFontComboBoxControl;
+using LqRibbonLineEditControl = RibbonLineEditControl;
+using LqRibbonComboBoxControl = RibbonComboBoxControl;
+using LqRibbonSpinBoxControl = RibbonSpinBoxControl;
+using LqRibbonDoubleSpinBoxControl = RibbonDoubleSpinBoxControl;
+using LqRibbonSliderControl = RibbonSliderControl;
+using LqRibbonSliderPaneControl = RibbonSliderPaneControl;
+using LqRibbonDateTimeEditControl = RibbonDateTimeEditControl;
+using LqRibbonTimeEditControl = RibbonTimeEditControl;
+using LqRibbonDateEditControl = RibbonDateEditControl;
 
 } // namespace LqRibbon
 
@@ -666,5 +686,24 @@ using RibbonProgressBar = LqRibbon::RibbonProgressBar;
 using RibbonProgressData = LqRibbon::RibbonProgressData;
 using RibbonProgressOperation = LqRibbon::RibbonProgressOperation;
 using RibbonStatusBar = LqRibbon::RibbonStatusBar;
+using RibbonControlSizeDefinition = LqRibbon::RibbonControlSizeDefinition;
+using RibbonControl = LqRibbon::RibbonControl;
+using RibbonWidgetControl = LqRibbon::RibbonWidgetControl;
+using RibbonColumnBreakControl = LqRibbon::RibbonColumnBreakControl;
+using RibbonLabelControl = LqRibbon::RibbonLabelControl;
+using RibbonToolBarControl = LqRibbon::RibbonToolBarControl;
+using RibbonButtonControl = LqRibbon::RibbonButtonControl;
+using RibbonCheckBoxControl = LqRibbon::RibbonCheckBoxControl;
+using RibbonRadioButtonControl = LqRibbon::RibbonRadioButtonControl;
+using RibbonFontComboBoxControl = LqRibbon::RibbonFontComboBoxControl;
+using RibbonLineEditControl = LqRibbon::RibbonLineEditControl;
+using RibbonComboBoxControl = LqRibbon::RibbonComboBoxControl;
+using RibbonSpinBoxControl = LqRibbon::RibbonSpinBoxControl;
+using RibbonDoubleSpinBoxControl = LqRibbon::RibbonDoubleSpinBoxControl;
+using RibbonSliderControl = LqRibbon::RibbonSliderControl;
+using RibbonSliderPaneControl = LqRibbon::RibbonSliderPaneControl;
+using RibbonDateTimeEditControl = LqRibbon::RibbonDateTimeEditControl;
+using RibbonTimeEditControl = LqRibbon::RibbonTimeEditControl;
+using RibbonDateEditControl = LqRibbon::RibbonDateEditControl;
 
 #endif // LQRIBBON_H

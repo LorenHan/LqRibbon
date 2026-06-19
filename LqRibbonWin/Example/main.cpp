@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QActionGroup>
+#include <QDate>
 #include <QLabel>
 #include <QMdiArea>
 #include <QMdiSubWindow>
@@ -31,10 +32,15 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-mdi-preview"));
     const bool tabPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-tab-preview"));
+    const bool controlsPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-controls-preview"));
 
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
     mainWindow.resize(920, 560);
+    if (controlsPreviewRequested) {
+        mainWindow.resize(1180, 560);
+    }
 
     LqRibbon::RibbonPage *generalPage = mainWindow.ribbonBar()->addPage(QObject::tr("General"));
     LqRibbon::RibbonGroup *viewGroup = generalPage->addGroup(QObject::tr("View"));
@@ -85,6 +91,82 @@ int main(int argc, char *argv[])
     toolButtonControl->menu()->addAction(QObject::tr("Pulse Mode"));
     toolButtonControl->menu()->addAction(QObject::tr("Analog Velocity Mode"));
     specialistGroup->addWidget(toolButtonControl);
+
+    LqRibbon::RibbonPage *controlsPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Controls"));
+    LqRibbon::RibbonGroup *selectorGroup =
+        controlsPage->addGroup(QObject::tr("Selectors"));
+    LqRibbon::RibbonComboBoxControl *modeCombo =
+        new LqRibbon::RibbonComboBoxControl(selectorGroup);
+    modeCombo->widget()->addItems(QStringList()
+                                  << QObject::tr("Position")
+                                  << QObject::tr("Velocity")
+                                  << QObject::tr("Torque"));
+    selectorGroup->addWidget(modeCombo);
+
+    LqRibbon::RibbonFontComboBoxControl *fontCombo =
+        new LqRibbon::RibbonFontComboBoxControl(selectorGroup);
+    selectorGroup->addWidget(fontCombo);
+
+    LqRibbon::RibbonCheckBoxControl *enabledCheck =
+        new LqRibbon::RibbonCheckBoxControl(QObject::tr("Enabled"),
+                                            selectorGroup);
+    enabledCheck->widget()->setChecked(true);
+    selectorGroup->addWidget(enabledCheck);
+
+    LqRibbon::RibbonRadioButtonControl *autoRadio =
+        new LqRibbon::RibbonRadioButtonControl(QObject::tr("Auto"),
+                                               selectorGroup);
+    autoRadio->widget()->setChecked(true);
+    selectorGroup->addWidget(autoRadio);
+
+    LqRibbon::RibbonGroup *valueGroup =
+        controlsPage->addGroup(QObject::tr("Values"));
+    LqRibbon::RibbonLineEditControl *nameEdit =
+        new LqRibbon::RibbonLineEditControl(valueGroup);
+    nameEdit->widget()->setPlaceholderText(QObject::tr("Axis name"));
+    valueGroup->addWidget(nameEdit);
+
+    LqRibbon::RibbonSpinBoxControl *speedSpin =
+        new LqRibbon::RibbonSpinBoxControl(valueGroup);
+    speedSpin->widget()->setRange(0, 6000);
+    speedSpin->widget()->setValue(1500);
+    valueGroup->addWidget(speedSpin);
+
+    LqRibbon::RibbonDoubleSpinBoxControl *gainSpin =
+        new LqRibbon::RibbonDoubleSpinBoxControl(valueGroup);
+    gainSpin->widget()->setRange(0.0, 10.0);
+    gainSpin->widget()->setSingleStep(0.1);
+    gainSpin->widget()->setValue(1.5);
+    valueGroup->addWidget(gainSpin);
+
+    LqRibbon::RibbonDateEditControl *dateEdit =
+        new LqRibbon::RibbonDateEditControl(valueGroup);
+    dateEdit->setCalendarPopup(true);
+    dateEdit->widget()->setDate(QDate::currentDate());
+    valueGroup->addWidget(dateEdit);
+
+    LqRibbon::RibbonGroup *rangeGroup =
+        controlsPage->addGroup(QObject::tr("Range"));
+    LqRibbon::RibbonSliderControl *limitSlider =
+        new LqRibbon::RibbonSliderControl(Qt::Horizontal, rangeGroup);
+    limitSlider->widget()->setRange(0, 100);
+    limitSlider->widget()->setValue(35);
+    rangeGroup->addWidget(limitSlider);
+
+    LqRibbon::RibbonSliderPaneControl *fineSlider =
+        new LqRibbon::RibbonSliderPaneControl(rangeGroup);
+    fineSlider->widget()->setValue(65);
+    rangeGroup->addWidget(fineSlider);
+
+    LqRibbon::RibbonButtonControl *applyButton =
+        new LqRibbon::RibbonButtonControl(rangeGroup);
+    applyButton->setSmallIcon(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton));
+    applyButton->setLargeIcon(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton));
+    applyButton->setLabel(QObject::tr("Apply"));
+    rangeGroup->addWidget(applyButton);
 
     QObject::connect(fullScreenAction, &QAction::triggered, [&mainWindow]() {
         mainWindow.setWindowState(mainWindow.windowState() ^ Qt::WindowFullScreen);
@@ -185,7 +267,10 @@ int main(int argc, char *argv[])
     QObject::connect(zoomSlider, &LqRibbon::RibbonSliderPane::valueChanged,
                      progressBar, &LqRibbon::RibbonProgressBar::setValueSafe);
 
-    mainWindow.ribbonBar()->setCurrentPageIndex(1);
+    const int controlsPageIndex = mainWindow.ribbonBar()->indexOf(controlsPage);
+    mainWindow.ribbonBar()->setCurrentPageIndex(controlsPreviewRequested
+                                                ? controlsPageIndex
+                                                : 1);
     mainWindow.setFrameThemeEnabled(true);
     mainWindow.ribbonBar()->setSearchVisible(true);
     mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
