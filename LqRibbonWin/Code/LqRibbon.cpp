@@ -243,6 +243,7 @@ public:
     explicit RibbonMdiTitleBar(QMdiSubWindow *subWindow);
 
     void syncWithSubWindow();
+    void cancelDrag();
 
 protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
@@ -602,6 +603,16 @@ void RibbonMdiTitleBar::syncWithSubWindow()
     m_maximizeButton->setRestoreMode(m_subWindow->isMaximized());
     raise();
     update();
+}
+
+///
+/// \brief RibbonMdiTitleBar::cancelDrag
+/// Clears an active title-bar drag before hiding or changing MDI view mode.
+///
+void RibbonMdiTitleBar::cancelDrag()
+{
+    m_dragging = false;
+    releaseMouse();
 }
 
 ///
@@ -3172,6 +3183,7 @@ bool RibbonMainWindow::eventFilter(QObject *object, QEvent *event)
         polishMdiObject(object);
     } else if (event->type() == QEvent::Show
                || event->type() == QEvent::Polish
+               || event->type() == QEvent::LayoutRequest
                || event->type() == QEvent::Resize
                || event->type() == QEvent::WindowActivate
                || event->type() == QEvent::WindowDeactivate
@@ -3275,6 +3287,17 @@ void RibbonMainWindow::polishMdiSubWindow(QMdiSubWindow *subWindow)
         QStringLiteral("lqRibbonMdiTitleBar"), Qt::FindDirectChildrenOnly);
     RibbonMdiTitleBar *titleBar =
         static_cast<RibbonMdiTitleBar *>(titleBarWidget);
+    QMdiArea *mdiArea = subWindow->mdiArea();
+    const bool isTabbedView = mdiArea
+        && mdiArea->viewMode() == QMdiArea::TabbedView;
+    if (isTabbedView) {
+        if (titleBar) {
+            titleBar->cancelDrag();
+            titleBar->hide();
+        }
+        return;
+    }
+
     if (!titleBar) {
         if (subWindow->property("lqRibbonMdiTitleBarCreating").toBool()) {
             return;
@@ -3285,6 +3308,7 @@ void RibbonMainWindow::polishMdiSubWindow(QMdiSubWindow *subWindow)
         subWindow->setProperty("lqRibbonMdiTitleBarCreating", false);
     }
 
+    titleBar->show();
     titleBar->syncWithSubWindow();
 }
 
