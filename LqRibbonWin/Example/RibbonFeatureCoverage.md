@@ -14,7 +14,7 @@ not copied implementation.
 | Groups | Command groups, option button, row layout, group collapse/scroll | Partial | `main.cpp`, planned scroll preview |
 | Buttons | Large/small buttons, popup modes, word wrap | Partial | `main.cpp` |
 | Input controls | Check box, radio, combo box, font combo, line edit, spin boxes | Complete | `--grab-controls-preview` |
-| Galleries | In-ribbon gallery, popup gallery, gallery groups/items | Missing | Planned gallery example |
+| Galleries | In-ribbon gallery, popup gallery, gallery groups/items | Complete | `--grab-gallery-preview` |
 | Backstage | File page, backstage buttons, pages, separators, close behavior | Missing | Planned backstage example |
 | System menu | File button menu, recent files, page popup | Missing | Planned system-menu example |
 | Search | Search box, suggestions, actions, recent commands | Partial | `--grab-search-preview` |
@@ -54,8 +54,8 @@ Status rules:
 | `QtnRibbonControls.h` | Base control abstraction, size definitions, label/toolbar/column break controls | `RibbonControl`, `RibbonWidgetControl`, label, toolbar, and column break controls cover public usage | Complete |
 | `QtnRibbonButtonControls.h` | Button, check box, radio button controls | `RibbonButtonControl`, `RibbonCheckBoxControl`, and `RibbonRadioButtonControl` cover public usage | Complete |
 | `QtnRibbonInputControls.h` | Font combo, line edit, combo, spin, slider, date/time controls | Input wrappers cover native Qt input widgets and slider pane; controls preview is verified by screenshot | Complete |
-| `QtnRibbonGallery.h` | Gallery item, gallery group, in-ribbon gallery, popup gallery | No gallery module yet | Missing |
-| `QtnRibbonGalleryControls.h` | Gallery control wrapper for groups | No gallery control wrapper yet | Missing |
+| `QtnRibbonGallery.h` | Gallery item, gallery group, in-ribbon gallery, popup gallery | `RibbonGalleryItem`, `RibbonGalleryGroup`, and `RibbonGallery` cover public usage; gallery preview is verified by screenshot | Complete |
+| `QtnRibbonGalleryControls.h` | Gallery control wrapper for groups | `RibbonGalleryControl` embeds galleries in Ribbon groups; gallery preview is verified by screenshot | Complete |
 | `QtnRibbonBackstageView.h` | Backstage view, pages, buttons, separators, close prevention | No backstage module yet | Missing |
 | `QtnRibbonSystemMenu.h` | File/system button, menu, recent files, page popup | No system menu module yet | Missing |
 | `QtnRibbonQuickAccessBar.h` | Quick access toolbar, visibility per action, customize menu | LqRibbon has quick access actions; missing standalone class, per-action visibility, visible count, customize signal | Partial |

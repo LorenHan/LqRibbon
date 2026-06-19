@@ -30,6 +30,7 @@
 #include <QWidget>
 
 #include "LqRibbonControls.h"
+#include "LqRibbonGallery.h"
 #include "LqRibbonStatusBar.h"
 
 QT_BEGIN_NAMESPACE
@@ -673,6 +674,10 @@ using LqRibbonSliderPaneControl = RibbonSliderPaneControl;
 using LqRibbonDateTimeEditControl = RibbonDateTimeEditControl;
 using LqRibbonTimeEditControl = RibbonTimeEditControl;
 using LqRibbonDateEditControl = RibbonDateEditControl;
+using LqRibbonGalleryItem = RibbonGalleryItem;
+using LqRibbonGalleryGroup = RibbonGalleryGroup;
+using LqRibbonGallery = RibbonGallery;
+using LqRibbonGalleryControl = RibbonGalleryControl;
 
 } // namespace LqRibbon
 
@@ -705,5 +710,9 @@ using RibbonSliderPaneControl = LqRibbon::RibbonSliderPaneControl;
 using RibbonDateTimeEditControl = LqRibbon::RibbonDateTimeEditControl;
 using RibbonTimeEditControl = LqRibbon::RibbonTimeEditControl;
 using RibbonDateEditControl = LqRibbon::RibbonDateEditControl;
+using RibbonGalleryItem = LqRibbon::RibbonGalleryItem;
+using RibbonGalleryGroup = LqRibbon::RibbonGalleryGroup;
+using RibbonGallery = LqRibbon::RibbonGallery;
+using RibbonGalleryControl = LqRibbon::RibbonGalleryControl;
 
 #endif // LQRIBBON_H

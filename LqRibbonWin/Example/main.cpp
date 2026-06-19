@@ -34,11 +34,13 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-tab-preview"));
     const bool controlsPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-controls-preview"));
+    const bool galleryPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-gallery-preview"));
 
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
     mainWindow.resize(920, 560);
-    if (controlsPreviewRequested) {
+    if (controlsPreviewRequested || galleryPreviewRequested) {
         mainWindow.resize(1180, 560);
     }
 
@@ -168,6 +170,65 @@ int main(int argc, char *argv[])
     applyButton->setLabel(QObject::tr("Apply"));
     rangeGroup->addWidget(applyButton);
 
+    LqRibbon::RibbonPage *galleryPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Gallery"));
+    LqRibbon::RibbonGroup *styleGroup =
+        galleryPage->addGroup(QObject::tr("Styles"));
+    LqRibbon::RibbonGalleryGroup *styleGalleryGroup =
+        new LqRibbon::RibbonGalleryGroup(&mainWindow);
+    styleGalleryGroup->setSize(QSize(72, 42));
+    styleGalleryGroup->addItem(
+        QObject::tr("Normal"),
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+    styleGalleryGroup->addItem(
+        QObject::tr("Compact"),
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogListView));
+    styleGalleryGroup->addItem(
+        QObject::tr("Drive"),
+        mainWindow.style()->standardIcon(QStyle::SP_DriveHDIcon));
+    styleGalleryGroup->addItem(
+        QObject::tr("Network"),
+        mainWindow.style()->standardIcon(QStyle::SP_ComputerIcon));
+    styleGalleryGroup->addItem(
+        QObject::tr("Apply"),
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton));
+    styleGalleryGroup->addItem(
+        QObject::tr("Help"),
+        mainWindow.style()->standardIcon(QStyle::SP_MessageBoxQuestion));
+
+    LqRibbon::RibbonGallery *styleGallery =
+        new LqRibbon::RibbonGallery(styleGroup);
+    styleGallery->setGalleryGroup(styleGalleryGroup);
+    styleGallery->setColumnCount(3);
+    styleGallery->setRowCount(2);
+    styleGallery->setCheckedIndex(1);
+
+    QMenu *galleryMenu = new QMenu(styleGallery);
+    galleryMenu->addAction(QObject::tr("More styles"));
+    galleryMenu->addAction(QObject::tr("Reset style"));
+    styleGallery->setPopupMenu(galleryMenu);
+
+    LqRibbon::RibbonGalleryControl *styleGalleryControl =
+        new LqRibbon::RibbonGalleryControl(styleGroup, styleGallery);
+    styleGroup->addWidget(styleGalleryControl);
+
+    LqRibbon::RibbonGroup *galleryActionGroup =
+        galleryPage->addGroup(QObject::tr("Actions"));
+    LqRibbon::RibbonToolBarControl *galleryToolBar =
+        new LqRibbon::RibbonToolBarControl(galleryActionGroup);
+    galleryToolBar->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogOpenButton),
+        QObject::tr("Open"));
+    galleryToolBar->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogSaveButton),
+        QObject::tr("Save"));
+    galleryToolBar->addSeparator();
+    galleryToolBar->addMenu(
+        mainWindow.style()->standardIcon(QStyle::SP_ArrowDown),
+        QObject::tr("More"),
+        galleryMenu);
+    galleryActionGroup->addWidget(galleryToolBar);
+
     QObject::connect(fullScreenAction, &QAction::triggered, [&mainWindow]() {
         mainWindow.setWindowState(mainWindow.windowState() ^ Qt::WindowFullScreen);
     });
@@ -268,9 +329,14 @@ int main(int argc, char *argv[])
                      progressBar, &LqRibbon::RibbonProgressBar::setValueSafe);
 
     const int controlsPageIndex = mainWindow.ribbonBar()->indexOf(controlsPage);
-    mainWindow.ribbonBar()->setCurrentPageIndex(controlsPreviewRequested
-                                                ? controlsPageIndex
-                                                : 1);
+    const int galleryPageIndex = mainWindow.ribbonBar()->indexOf(galleryPage);
+    if (galleryPreviewRequested) {
+        mainWindow.ribbonBar()->setCurrentPageIndex(galleryPageIndex);
+    } else if (controlsPreviewRequested) {
+        mainWindow.ribbonBar()->setCurrentPageIndex(controlsPageIndex);
+    } else {
+        mainWindow.ribbonBar()->setCurrentPageIndex(1);
+    }
     mainWindow.setFrameThemeEnabled(true);
     mainWindow.ribbonBar()->setSearchVisible(true);
     mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
