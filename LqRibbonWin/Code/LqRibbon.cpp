@@ -463,8 +463,8 @@ const char ribbonStyleSheet[] =
     "    background: #386caf;"
     "}"
     "QLineEdit#lqRibbonSearchEdit {"
-    "    min-height: 22px;"
-    "    padding: 1px 22px 1px 6px;"
+    "    min-height: 18px;"
+    "    padding: 0px 22px 0px 6px;"
     "    border: 1px solid #b7cbe6;"
     "    border-radius: 1px;"
     "    background: #ffffff;"
@@ -1659,7 +1659,7 @@ void RibbonBar::updateRibbonTabGeometry()
 void RibbonBar::updateSearchGeometry()
 {
     const int preferredSearchWidth = 416;
-    const int searchHeight = 16;
+    const int searchHeight = 18;
     const int topMargin = 12;
     const int controlWidth = windowControlWidth();
     const int availableWidth = qMax(0, width() - controlWidth - 48);
