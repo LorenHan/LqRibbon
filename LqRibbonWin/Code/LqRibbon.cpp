@@ -4,11 +4,13 @@
 #include <QApplication>
 #include <QChildEvent>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QFontMetrics>
 #include <QGridLayout>
 #include <QKeyEvent>
 #include <QLayout>
 #include <QListView>
+#include <QLocale>
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QMouseEvent>
@@ -63,6 +65,117 @@ enum RibbonSearchPopupKind
     SearchPopupActionItem,
     SearchPopupHelpItem
 };
+
+struct RibbonTranslationEntry
+{
+    const char *sourceText;
+    const char *zhCnText;
+};
+
+const RibbonTranslationEntry ribbonTranslationTable[] = {
+    {"Search", "\xE6\x90\x9C\xE7\xB4\xA2"},
+    {"Actions", "\xE6\x93\x8D\xE4\xBD\x9C"},
+    {"Help", "\xE5\xB8\xAE\xE5\x8A\xA9"},
+    {"Get Help with \"%1\"",
+     "\xE8\x8E\xB7\xE5\x8F\x96\x20\x22\x25\x31\x22\x20"
+     "\xE7\x9A\x84\xE5\xB8\xAE\xE5\x8A\xA9"},
+    {"Minimize", "\xE6\x9C\x80\xE5\xB0\x8F\xE5\x8C\x96"},
+    {"Maximize", "\xE6\x9C\x80\xE5\xA4\xA7\xE5\x8C\x96"},
+    {"Restore", "\xE8\xBF\x98\xE5\x8E\x9F"},
+    {"Close", "\xE5\x85\xB3\xE9\x97\xAD"},
+    {"Collapse the Ribbon",
+     "\xE6\x8A\x98\xE5\x8F\xA0\xE5\x8A\x9F\xE8\x83\xBD\xE5\x8C\xBA"},
+    {"Expand the Ribbon",
+     "\xE5\xB1\x95\xE5\xBC\x80\xE5\x8A\x9F\xE8\x83\xBD\xE5\x8C\xBA"}
+};
+
+///
+/// \brief containsChineseCharacter
+/// Checks whether a translated Qt string contains a CJK character.
+/// \param strText Text returned by an installed application translator.
+/// \return true when the string contains a Chinese/Japanese/Korean glyph.
+///
+bool containsChineseCharacter(const QString &strText)
+{
+    for (const QChar ch : strText) {
+        const ushort unicode = ch.unicode();
+        if ((unicode >= 0x3400 && unicode <= 0x9fff)
+            || (unicode >= 0xf900 && unicode <= 0xfaff)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+///
+/// \brief hasChineseApplicationTranslation
+/// Detects applications that switched to Chinese without changing QLocale.
+/// \return true when installed translators already expose Chinese UI text.
+///
+bool hasChineseApplicationTranslation()
+{
+    const QString strDemoSearch = QCoreApplication::translate(
+        "DemoRibbonWindow", "Search");
+    if (containsChineseCharacter(strDemoSearch)) {
+        return true;
+    }
+
+    const QString strPageHelp = QCoreApplication::translate(
+        "PageHelp", "Help");
+    return containsChineseCharacter(strPageHelp);
+}
+
+///
+/// \brief builtInChineseRibbonText
+/// Returns LqRibbon's built-in simplified Chinese text for core UI strings.
+/// \param sourceText English source text used by the public LqRibbon API.
+/// \return Built-in Chinese text, or an empty string when the key is unknown.
+///
+QString builtInChineseRibbonText(const char *sourceText)
+{
+    const QLatin1String strSourceText(sourceText);
+    for (const RibbonTranslationEntry &entry : ribbonTranslationTable) {
+        if (strSourceText == QLatin1String(entry.sourceText)) {
+            return QString::fromUtf8(entry.zhCnText);
+        }
+    }
+
+    return QString();
+}
+
+///
+/// \brief ribbonText
+/// Translates LqRibbon core strings without requiring host project TS files.
+/// \param sourceText English source text.
+/// \return Text translated by installed translators or LqRibbon's fallback.
+///
+QString ribbonText(const char *sourceText)
+{
+    const QString strSourceText = QString::fromLatin1(sourceText);
+    const QString strRibbonText = QCoreApplication::translate(
+        "LqRibbon::RibbonBar", sourceText);
+    if (strRibbonText != strSourceText) {
+        return strRibbonText;
+    }
+
+    const QString strGenericRibbonText = QCoreApplication::translate(
+        "LqRibbon", sourceText);
+    if (strGenericRibbonText != strSourceText) {
+        return strGenericRibbonText;
+    }
+
+    const bool chineseLocale = QLocale().language() == QLocale::Chinese
+        || QLocale::system().language() == QLocale::Chinese;
+    if (chineseLocale || hasChineseApplicationTranslation()) {
+        const QString strBuiltInText = builtInChineseRibbonText(sourceText);
+        if (!strBuiltInText.isEmpty()) {
+            return strBuiltInText;
+        }
+    }
+
+    return strSourceText;
+}
 
 class RibbonWindowButton : public QToolButton
 {
@@ -1416,6 +1529,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_searchEdit(new QLineEdit(this))
     , m_searchPopupView(new QListView(this))
     , m_searchPopupModel(new QStandardItemModel(this))
+    , m_searchLineAction(nullptr)
     , m_quickAccessBar(new QToolBar(this))
     , m_minimizeButton(new RibbonWindowButton(
                            RibbonWindowButton::MinimizeButton, this))
@@ -1431,6 +1545,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_frameThemeEnabled(false)
     , m_ribbonMinimized(false)
     , m_searchVisibleExplicitlySet(false)
+    , m_searchPlaceholderExplicitlySet(false)
 {
     setDocumentMode(false);
     setMovable(false);
@@ -1440,13 +1555,12 @@ RibbonBar::RibbonBar(QWidget *parent)
     tabBar()->setUsesScrollButtons(true);
 
     m_searchEdit->setObjectName(QStringLiteral("lqRibbonSearchEdit"));
-    m_searchEdit->setPlaceholderText(tr("Search"));
+    m_searchEdit->setPlaceholderText(ribbonText("Search"));
     m_searchEdit->setClearButtonEnabled(false);
     m_searchEdit->hide();
     m_searchEdit->installEventFilter(this);
-    QAction *searchLineAction = m_searchEdit->addAction(
+    m_searchLineAction = m_searchEdit->addAction(
         createSearchIcon(), QLineEdit::TrailingPosition);
-    searchLineAction->setToolTip(tr("Search"));
     m_searchCompleter->setCaseSensitivity(Qt::CaseInsensitive);
     m_searchCompleter->setFilterMode(Qt::MatchContains);
     m_searchCompleter->setCompletionMode(QCompleter::PopupCompletion);
@@ -1476,10 +1590,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     setupWindowControlButton(m_maximizeButton);
     setupWindowControlButton(m_closeButton);
     setupWindowControlButton(m_collapseButton);
-    m_minimizeButton->setToolTip(tr("Minimize"));
-    m_maximizeButton->setToolTip(tr("Maximize"));
-    m_closeButton->setToolTip(tr("Close"));
-    m_collapseButton->setToolTip(tr("Collapse the Ribbon"));
+    updateLocalizedText();
     updateWindowControlVisibility();
 
     connect(this, &QTabWidget::currentChanged, this, &RibbonBar::pageChanged);
@@ -1489,7 +1600,7 @@ RibbonBar::RibbonBar(QWidget *parent)
             this, &RibbonBar::updateSearchPopup);
     connect(m_searchPopupView, &QListView::clicked,
             this, &RibbonBar::activateSearchPopupIndex);
-    connect(searchLineAction, &QAction::triggered, this, [this]() {
+    connect(m_searchLineAction, &QAction::triggered, this, [this]() {
         m_searchEdit->setFocus();
         const QString strText = m_searchEdit->text().trimmed();
         if (strText.isEmpty()) {
@@ -1678,6 +1789,7 @@ bool RibbonBar::isSearchVisible() const
 ///
 void RibbonBar::setSearchPlaceholderText(const QString &strText)
 {
+    m_searchPlaceholderExplicitlySet = true;
     m_searchEdit->setPlaceholderText(strText);
 }
 
@@ -2093,6 +2205,15 @@ bool RibbonBar::event(QEvent *event)
         updateSearchGeometry();
         updateQuickAccessGeometry();
         break;
+    case QEvent::LanguageChange:
+    case QEvent::LocaleChange:
+        updateLocalizedText();
+        updateRibbonMetrics();
+        updateRibbonTabGeometry();
+        updateWindowControlGeometry();
+        updateSearchGeometry();
+        updateQuickAccessGeometry();
+        break;
     case QEvent::LayoutRequest:
     case QEvent::PolishRequest:
     case QEvent::Show:
@@ -2434,13 +2555,15 @@ void RibbonBar::updateWindowControlState()
     RibbonWindowButton *button =
         static_cast<RibbonWindowButton *>(m_maximizeButton);
     button->setRestoreMode(isMaximized);
-    m_maximizeButton->setToolTip(isMaximized ? tr("Restore") : tr("Maximize"));
+    m_maximizeButton->setToolTip(isMaximized
+        ? ribbonText("Restore")
+        : ribbonText("Maximize"));
     RibbonCollapseButton *collapseButton =
         static_cast<RibbonCollapseButton *>(m_collapseButton);
     collapseButton->setCollapsed(m_ribbonMinimized);
     m_collapseButton->setToolTip(m_ribbonMinimized
-        ? tr("Expand the Ribbon")
-        : tr("Collapse the Ribbon"));
+        ? ribbonText("Expand the Ribbon")
+        : ribbonText("Collapse the Ribbon"));
 
     const bool canMaximize = topLevelWidget
         && topLevelWidget->minimumWidth() < topLevelWidget->maximumWidth()
@@ -2459,6 +2582,25 @@ void RibbonBar::updateWindowControlVisibility()
     m_closeButton->setVisible(m_frameThemeEnabled);
     m_collapseButton->setVisible(m_frameThemeEnabled);
     updateWindowControlState();
+}
+///
+/// rief RibbonBar::updateLocalizedText
+/// Refreshes built-in LqRibbon text after locale or translator changes.
+///
+void RibbonBar::updateLocalizedText()
+{
+    if (!m_searchPlaceholderExplicitlySet) {
+        m_searchEdit->setPlaceholderText(ribbonText("Search"));
+    }
+
+    if (m_searchLineAction) {
+        m_searchLineAction->setToolTip(ribbonText("Search"));
+    }
+
+    m_minimizeButton->setToolTip(ribbonText("Minimize"));
+    m_closeButton->setToolTip(ribbonText("Close"));
+    updateWindowControlState();
+    updateSearchPopup();
 }
 
 ///
@@ -2491,15 +2633,16 @@ void RibbonBar::updateSearchPopup()
     m_searchPopupModel->clear();
 
     if (!actionList.isEmpty()) {
-        m_searchPopupModel->appendRow(createSearchHeaderItem(tr("Actions")));
+        m_searchPopupModel->appendRow(createSearchHeaderItem(ribbonText("Actions")));
         for (QAction *action : actionList) {
             m_searchPopupModel->appendRow(createSearchActionItem(action));
         }
     }
 
     if (!strText.isEmpty()) {
-        m_searchPopupModel->appendRow(createSearchHeaderItem(tr("Help")));
-        const QString strHelpText = tr("Get Help with \"%1\"").arg(strText);
+        m_searchPopupModel->appendRow(createSearchHeaderItem(ribbonText("Help")));
+        const QString strHelpText =
+            ribbonText("Get Help with \"%1\"").arg(strText);
         const QIcon helpIcon = style()->standardIcon(QStyle::SP_MessageBoxQuestion);
         m_searchPopupModel->appendRow(createSearchHelpItem(strHelpText, helpIcon));
     }

@@ -458,6 +458,7 @@ private:
     void updateWindowControlGeometry();
     void updateWindowControlState();
     void updateWindowControlVisibility();
+    void updateLocalizedText();
     int windowControlWidth() const;
     void updateSearchPopup();
     void hideSearchPopup();
@@ -485,6 +486,7 @@ private:
     QLineEdit *m_searchEdit;
     QListView *m_searchPopupView;
     QStandardItemModel *m_searchPopupModel;
+    QAction *m_searchLineAction;
     QToolBar *m_quickAccessBar;
     QToolButton *m_minimizeButton;
     QToolButton *m_maximizeButton;
@@ -501,6 +503,7 @@ private:
     bool m_frameThemeEnabled;
     bool m_ribbonMinimized;
     bool m_searchVisibleExplicitlySet;
+    bool m_searchPlaceholderExplicitlySet;
 };
 
 ///
