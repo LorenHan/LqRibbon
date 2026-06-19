@@ -40,8 +40,8 @@ namespace LqRibbon {
 /// \brief The RibbonGroup class displays one titled group of Ribbon commands.
 ///
 /// A group arranges large buttons, small command rows, and custom widgets under
-/// one title. The layout is intentionally close to QtitanRibbon so existing
-/// Ribbon pages can keep their command grouping when switching to LqRibbon.
+/// one title. The layout keeps existing Ribbon pages readable while switching
+/// to LqRibbon.
 ///
 class RibbonGroup : public QFrame
 {
@@ -168,9 +168,9 @@ private:
 ///
 /// \brief The RibbonBar class implements the tabbed Ribbon command surface.
 ///
-/// RibbonBar owns pages, search, quick access commands, and optional
-/// Qtitan-style frame chrome. It is designed to be embedded at the top of
-/// RibbonMainWindow but can also be used as a standalone widget.
+/// RibbonBar owns pages, search, quick access commands, and optional themed
+/// frame chrome. It is designed to be embedded at the top of RibbonMainWindow
+/// but can also be used as a standalone widget.
 ///
 class RibbonBar : public QTabWidget
 {
@@ -358,6 +358,14 @@ public:
     ///
     void addQuickAccessAction(QAction *action);
     ///
+    /// \brief RibbonBar::addTitleButton
+    /// Adds a text button to the themed title bar.
+    /// \param icon Icon displayed by the title button.
+    /// \param strText Button text and tooltip source.
+    /// \return Newly created action owned by the Ribbon bar.
+    ///
+    QAction *addTitleButton(const QIcon &icon, const QString &strText);
+    ///
     /// \brief RibbonBar::clearQuickAccessActions
     /// Removes all actions from the quick access toolbar.
     ///
@@ -382,13 +390,13 @@ public:
     bool isRibbonMinimized() const;
     ///
     /// \brief RibbonBar::setFrameThemeEnabled
-    /// Enables Qtitan-style title-bar painting and frame controls.
+    /// Enables themed title-bar painting and frame controls.
     /// \param enabled true to paint Ribbon frame chrome.
     ///
     void setFrameThemeEnabled(bool enabled);
     ///
     /// \brief RibbonBar::isFrameThemeEnabled
-    /// Returns whether Qtitan-style frame chrome is enabled.
+    /// Returns whether themed frame chrome is enabled.
     /// \return true when custom frame painting is active.
     ///
     bool isFrameThemeEnabled() const;
@@ -452,6 +460,7 @@ protected:
 private:
     void updateRibbonTabGeometry();
     void updateSearchGeometry();
+    void updateTitleButtonGeometry();
     void updateQuickAccessGeometry();
     void updateRibbonMetrics();
     void setupWindowControlButton(QToolButton *button);
@@ -488,6 +497,7 @@ private:
     QStandardItemModel *m_searchPopupModel;
     QAction *m_searchLineAction;
     QToolBar *m_quickAccessBar;
+    QToolBar *m_titleButtonBar;
     QToolButton *m_minimizeButton;
     QToolButton *m_maximizeButton;
     QToolButton *m_closeButton;
@@ -509,9 +519,9 @@ private:
 ///
 /// \brief The RibbonMainWindow class hosts a Ribbon bar and optional frame.
 ///
-/// RibbonMainWindow mirrors the common QtitanRibbon main-window shape: a Ribbon
-/// bar at the top, a central widget below it, flat MDI polish, and optional
-/// native frame gesture handling for frameless windows.
+/// RibbonMainWindow provides the common Ribbon main-window shape: a Ribbon bar
+/// at the top, a central widget below it, flat MDI polish, and optional native
+/// frame gesture handling for frameless windows.
 ///
 class RibbonMainWindow : public QMainWindow
 {
@@ -580,7 +590,7 @@ public:
     int nativeResizeBorderWidth() const;
     ///
     /// \brief RibbonMainWindow::setFrameThemeEnabled
-    /// Enables Qtitan-style Ribbon frame painting.
+    /// Enables themed Ribbon frame painting.
     /// \param enabled true to enable themed frame painting.
     ///
     void setFrameThemeEnabled(bool enabled);

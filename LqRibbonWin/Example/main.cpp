@@ -152,6 +152,24 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(driverAction);
     mainWindow.ribbonBar()->addQuickAccessAction(fullScreenAction);
     mainWindow.ribbonBar()->addQuickAccessAction(connectAction);
+
+    QAction *helpTitleAction = mainWindow.ribbonBar()->addTitleButton(
+        mainWindow.style()->standardIcon(QStyle::SP_MessageBoxQuestion),
+        QObject::tr("Help"));
+    QAction *accountTitleAction = mainWindow.ribbonBar()->addTitleButton(
+        mainWindow.style()->standardIcon(QStyle::SP_DirHomeIcon),
+        QObject::tr("Account"));
+    QObject::connect(helpTitleAction, &QAction::triggered, [&mainWindow]() {
+        QMessageBox::information(&mainWindow,
+                                 QObject::tr("LqRibbon"),
+                                 QObject::tr("Help"));
+    });
+    QObject::connect(accountTitleAction, &QAction::triggered, [&mainWindow]() {
+        QMessageBox::information(&mainWindow,
+                                 QObject::tr("LqRibbon"),
+                                 QObject::tr("Account"));
+    });
+
     QObject::connect(mainWindow.ribbonBar(), &LqRibbon::RibbonBar::searchAccepted,
                      [&mainWindow](const QString &strText) {
                          QMessageBox::information(&mainWindow,

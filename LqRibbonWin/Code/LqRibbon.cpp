@@ -832,6 +832,21 @@ const char ribbonStyleSheet[] =
     "    background: #386caf;"
     "    border-color: #b7cbe6;"
     "}"
+    "QToolBar#lqRibbonTitleButtonBar {"
+    "    background: transparent;"
+    "    border: none;"
+    "    spacing: 2px;"
+    "}"
+    "QToolBar#lqRibbonTitleButtonBar QToolButton {"
+    "    border: 1px solid #6f9fd0;"
+    "    border-radius: 2px;"
+    "    padding: 1px 6px;"
+    "    background: #2f63a3;"
+    "}"
+    "QToolBar#lqRibbonTitleButtonBar QToolButton:hover {"
+    "    background: #386caf;"
+    "    border-color: #b7cbe6;"
+    "}"
     "LqRibbon--RibbonGroup {"
     "    background: transparent;"
     "    border: none;"
@@ -1085,7 +1100,7 @@ int ribbonButtonTextWidth(const QWidget *widget, const QString &strText)
 
 ///
 /// \brief ribbonLargeButtonWidth
-/// Calculates a Qtitan-like width for a large Ribbon command button.
+/// Calculates an Office-style width for a large Ribbon command button.
 /// \param button Button whose text, icon, menu, and style are measured.
 /// \return Bounded large button width in logical pixels.
 ///
@@ -1109,7 +1124,7 @@ int ribbonLargeButtonWidth(const QToolButton *button)
 
 ///
 /// \brief ribbonSmallButtonWidth
-/// Calculates a Qtitan-like width for a compact Ribbon command button.
+/// Calculates an Office-style width for a compact Ribbon command button.
 /// \param button Button whose text, icon, menu, and style are measured.
 /// \return Bounded compact button width in logical pixels.
 ///
@@ -1541,6 +1556,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_searchPopupModel(new QStandardItemModel(this))
     , m_searchLineAction(nullptr)
     , m_quickAccessBar(new QToolBar(this))
+    , m_titleButtonBar(new QToolBar(this))
     , m_minimizeButton(new RibbonWindowButton(
                            RibbonWindowButton::MinimizeButton, this))
     , m_maximizeButton(new RibbonWindowButton(
@@ -1595,6 +1611,13 @@ RibbonBar::RibbonBar(QWidget *parent)
     m_quickAccessBar->setIconSize(ribbonSmallIconSize(m_quickAccessBar));
     m_quickAccessBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     m_quickAccessBar->hide();
+
+    m_titleButtonBar->setObjectName(QStringLiteral("lqRibbonTitleButtonBar"));
+    m_titleButtonBar->setMovable(false);
+    m_titleButtonBar->setFloatable(false);
+    m_titleButtonBar->setIconSize(QSize(13, 13));
+    m_titleButtonBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_titleButtonBar->hide();
 
     setupWindowControlButton(m_minimizeButton);
     setupWindowControlButton(m_maximizeButton);
@@ -1683,6 +1706,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     updateRibbonTabGeometry();
     updateWindowControlGeometry();
     updateSearchGeometry();
+    updateTitleButtonGeometry();
     updateQuickAccessGeometry();
 }
 
@@ -2104,6 +2128,31 @@ void RibbonBar::addQuickAccessAction(QAction *action)
 }
 
 ///
+/// \brief RibbonBar::addTitleButton
+/// Creates a caption button and returns its action.
+/// \param icon Icon shown by the title button.
+/// \param strText Text and tooltip source for the button.
+/// \return Newly created action owned by the Ribbon bar.
+///
+QAction *RibbonBar::addTitleButton(const QIcon &icon, const QString &strText)
+{
+    QAction *action = new QAction(icon, strText, this);
+    action->setToolTip(strText);
+    m_titleButtonBar->addAction(action);
+    m_titleButtonBar->show();
+
+    connect(action, &QAction::changed, this, [this]() {
+        updateTitleButtonGeometry();
+        updateStyleSheet();
+    });
+
+    updateTitleButtonGeometry();
+    updateQuickAccessGeometry();
+    updateStyleSheet();
+    return action;
+}
+
+///
 /// \brief RibbonBar::clearQuickAccessActions
 /// Removes all actions from the quick access toolbar.
 ///
@@ -2142,6 +2191,7 @@ void RibbonBar::setRibbonMinimized(bool minimized)
     updateWindowControlState();
     updateWindowControlGeometry();
     updateSearchGeometry();
+    updateTitleButtonGeometry();
     updateQuickAccessGeometry();
     updateGeometry();
     emit ribbonMinimizedChanged(m_ribbonMinimized);
@@ -2159,7 +2209,7 @@ bool RibbonBar::isRibbonMinimized() const
 
 ///
 /// \brief RibbonBar::setFrameThemeEnabled
-/// Enables or disables Qtitan-style frame painting and controls.
+/// Enables or disables themed frame painting and controls.
 /// \param enabled true to paint the Ribbon caption and buttons.
 ///
 void RibbonBar::setFrameThemeEnabled(bool enabled)
@@ -2185,6 +2235,7 @@ void RibbonBar::setFrameThemeEnabled(bool enabled)
     updateRibbonTabGeometry();
     updateWindowControlGeometry();
     updateSearchGeometry();
+    updateTitleButtonGeometry();
     updateQuickAccessGeometry();
     updateStyleSheet();
 }
@@ -2216,6 +2267,7 @@ bool RibbonBar::event(QEvent *event)
         updateRibbonTabGeometry();
         updateWindowControlGeometry();
         updateSearchGeometry();
+        updateTitleButtonGeometry();
         updateQuickAccessGeometry();
         break;
     case QEvent::LanguageChange:
@@ -2225,6 +2277,7 @@ bool RibbonBar::event(QEvent *event)
         updateRibbonTabGeometry();
         updateWindowControlGeometry();
         updateSearchGeometry();
+        updateTitleButtonGeometry();
         updateQuickAccessGeometry();
         break;
     case QEvent::LayoutRequest:
@@ -2233,6 +2286,7 @@ bool RibbonBar::event(QEvent *event)
         updateRibbonTabGeometry();
         updateWindowControlGeometry();
         updateSearchGeometry();
+        updateTitleButtonGeometry();
         updateQuickAccessGeometry();
         break;
     default:
@@ -2286,7 +2340,7 @@ bool RibbonBar::eventFilter(QObject *object, QEvent *event)
 
 ///
 /// \brief RibbonBar::paintEvent
-/// Paints the tab widget and Qtitan-style caption area when enabled.
+/// Paints the tab widget and themed caption area when enabled.
 /// \param event Paint event supplied by Qt.
 ///
 void RibbonBar::paintEvent(QPaintEvent *event)
@@ -2347,6 +2401,7 @@ void RibbonBar::resizeEvent(QResizeEvent *event)
     updateRibbonTabGeometry();
     updateWindowControlGeometry();
     updateSearchGeometry();
+    updateTitleButtonGeometry();
     updateQuickAccessGeometry();
     updateStyleSheet();
 }
@@ -2428,6 +2483,8 @@ void RibbonBar::updateSearchGeometry()
 {
     const int preferredSearchWidth = 416;
     const int minimumUsefulSearchWidth = 120;
+    const int titleGap = 24;
+    const int titleControlGap = 8;
     const int searchHeight = 22;
     const int topMargin = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - searchHeight) / 2);
@@ -2437,7 +2494,17 @@ void RibbonBar::updateSearchGeometry()
         ? controlLeft - 10
         : width() - 10;
     const int preferredLeft = 220;
-    const int leftLimit = qMin(preferredLeft,
+    QWidget *topLevelWidget = window();
+    const QString strTitle = topLevelWidget ? topLevelWidget->windowTitle() : QString();
+    const int titleTextRight = strTitle.isEmpty()
+        ? preferredLeft
+        : 34 + fontMetrics().horizontalAdvance(strTitle) + titleGap;
+    const int titleButtonWidth = m_titleButtonBar->isVisible()
+        ? m_titleButtonBar->sizeHint().width() + titleControlGap
+        : 0;
+    const int reservedLeft = qMax(preferredLeft,
+                                  titleTextRight + titleButtonWidth);
+    const int leftLimit = qMin(reservedLeft,
                                qMax(0, rightLimit - minimumUsefulSearchWidth));
     const int availableWidth = qMax(0, rightLimit - leftLimit);
     const int searchWidth = qMin(preferredSearchWidth, availableWidth);
@@ -2464,7 +2531,9 @@ void RibbonBar::updateQuickAccessGeometry()
     const int topMargin = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - barHeight) / 2);
     const int rightLimit = m_searchEdit->isVisible()
-        ? m_searchEdit->x() - searchGap
+        ? (m_titleButtonBar->isVisible()
+               ? m_titleButtonBar->x() - searchGap
+               : m_searchEdit->x() - searchGap)
         : width() - controlWidth - rightMargin;
     const int leftMargin = qMin(preferredLeftMargin, qMax(0, rightLimit));
     const int maxWidth = qMax(0, rightLimit - leftMargin);
@@ -2472,6 +2541,37 @@ void RibbonBar::updateQuickAccessGeometry()
 
     m_quickAccessBar->setGeometry(leftMargin, topMargin, barWidth, barHeight);
     m_quickAccessBar->raise();
+}
+
+///
+/// \brief RibbonBar::updateTitleButtonGeometry
+/// Places text title buttons between the app title and search box.
+///
+void RibbonBar::updateTitleButtonGeometry()
+{
+    const int rightMargin = 12;
+    const int searchGap = 8;
+    const int titleGap = 24;
+    const int titleFallbackRight = 170;
+    const int controlWidth = windowControlWidth();
+    const int barHeight = 24;
+    const int topMargin = ribbonCaptionTopMargin
+        + ((ribbonWindowButtonHeight - barHeight) / 2);
+    const int rightLimit = m_searchEdit->isVisible()
+        ? m_searchEdit->x() - searchGap
+        : width() - controlWidth - rightMargin;
+    QWidget *topLevelWidget = window();
+    const QString strTitle = topLevelWidget ? topLevelWidget->windowTitle() : QString();
+    const int titleTextRight = strTitle.isEmpty()
+        ? titleFallbackRight
+        : 34 + fontMetrics().horizontalAdvance(strTitle) + titleGap;
+    const int leftLimit = qMin(titleTextRight, qMax(0, rightLimit));
+    const int maxWidth = qMax(0, rightLimit - leftLimit);
+    const int barWidth = qMin(m_titleButtonBar->sizeHint().width(), maxWidth);
+    const int leftMargin = qMax(leftLimit, rightLimit - barWidth);
+
+    m_titleButtonBar->setGeometry(leftMargin, topMargin, barWidth, barHeight);
+    m_titleButtonBar->raise();
 }
 
 ///
@@ -3148,7 +3248,7 @@ int RibbonMainWindow::nativeResizeBorderWidth() const
 
 ///
 /// \brief RibbonMainWindow::setFrameThemeEnabled
-/// Enables Qtitan-style Ribbon frame painting on the embedded Ribbon bar.
+/// Enables themed Ribbon frame painting on the embedded Ribbon bar.
 /// \param enabled true to enable themed frame painting.
 ///
 void RibbonMainWindow::setFrameThemeEnabled(bool enabled)
@@ -3241,7 +3341,7 @@ void RibbonMainWindow::polishMdiObject(QObject *object)
 
 ///
 /// \brief RibbonMainWindow::polishMdiArea
-/// Applies Qtitan-like styling and event filtering to an MDI area.
+/// Applies Ribbon styling and event filtering to an MDI area.
 /// \param mdiArea MDI area to polish.
 ///
 void RibbonMainWindow::polishMdiArea(QMdiArea *mdiArea)
@@ -3507,6 +3607,13 @@ bool RibbonMainWindow::isNativeCaptionPoint(const QPoint &globalPoint) const
 
     if (m_ribbonBar->searchLineEdit()->isVisible()
         && m_ribbonBar->searchLineEdit()->geometry().contains(ribbonPoint)) {
+        return false;
+    }
+
+    QToolBar *titleButtonBar = m_ribbonBar->findChild<QToolBar *>(
+        QStringLiteral("lqRibbonTitleButtonBar"));
+    if (titleButtonBar && titleButtonBar->isVisible()
+        && titleButtonBar->geometry().contains(ribbonPoint)) {
         return false;
     }
 
