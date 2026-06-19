@@ -2173,8 +2173,11 @@ void RibbonBar::setFrameThemeEnabled(bool enabled)
     }
 
     m_frameThemeEnabled = enabled;
-    if (enabled && !m_searchVisibleExplicitlySet) {
-        m_searchEdit->show();
+    if (!m_searchVisibleExplicitlySet) {
+        m_searchEdit->setVisible(enabled);
+        if (!enabled) {
+            hideSearchPopup();
+        }
     }
 
     updateWindowControlVisibility();
