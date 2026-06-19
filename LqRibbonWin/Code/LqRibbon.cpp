@@ -42,6 +42,7 @@ const int ribbonGroupBottomMargin = 0;
 const int ribbonGroupLeftMargin = 4;
 const int ribbonSmallButtonColumnSpacing = 4;
 const int ribbonCaptionHeight = 36;
+const int ribbonCaptionTopMargin = 3;
 const int ribbonTabHeight = 24;
 const int ribbonDefaultBarHeight = 158;
 const int ribbonWindowButtonWidth = 46;
@@ -2183,13 +2184,17 @@ void RibbonBar::paintEvent(QPaintEvent *event)
 
     const QIcon windowIcon = topLevelWidget->windowIcon();
     const int iconSize = 16;
-    const int iconTop = (ribbonWindowButtonHeight - iconSize) / 2;
+    const int iconTop = ribbonCaptionTopMargin
+        + ((ribbonWindowButtonHeight - iconSize) / 2);
     if (!windowIcon.isNull()) {
         windowIcon.paint(&painter, QRect(7, iconTop, iconSize, iconSize));
     }
 
     painter.setPen(Qt::white);
-    painter.drawText(QRect(34, 0, 320, ribbonWindowButtonHeight),
+    painter.drawText(QRect(34,
+                            ribbonCaptionTopMargin,
+                            320,
+                            ribbonWindowButtonHeight),
                      Qt::AlignLeft | Qt::AlignVCenter,
                      topLevelWidget->windowTitle());
 
@@ -2234,7 +2239,8 @@ bool RibbonBar::isWindowControlPoint(const QPoint &point) const
     const int controlRight = qMin(visibleWidgetRight(controlParent),
                                   ribbonRight);
     const int controlLeft = controlRight - windowControlWidth();
-    const QPoint topLeft = mapFrom(controlParent, QPoint(controlLeft, 0));
+    const QPoint topLeft = mapFrom(
+        controlParent, QPoint(controlLeft, ribbonCaptionTopMargin));
     const QRect buttonRect(topLeft.x(),
                            topLeft.y(),
                            windowControlWidth(),
@@ -2287,8 +2293,9 @@ void RibbonBar::updateRibbonTabGeometry()
 void RibbonBar::updateSearchGeometry()
 {
     const int preferredSearchWidth = 416;
-    const int topMargin = 5;
     const int searchHeight = 22;
+    const int topMargin = ribbonCaptionTopMargin
+        + ((ribbonWindowButtonHeight - searchHeight) / 2);
     const int controlWidth = windowControlWidth();
     const int availableWidth = qMax(0, width() - controlWidth - 48);
     const int searchWidth = qMin(preferredSearchWidth,
@@ -2322,7 +2329,8 @@ void RibbonBar::updateQuickAccessGeometry()
     const int searchGap = 8;
     const int controlWidth = windowControlWidth();
     const int barHeight = 24;
-    const int topMargin = (ribbonWindowButtonHeight - barHeight) / 2;
+    const int topMargin = ribbonCaptionTopMargin
+        + ((ribbonWindowButtonHeight - barHeight) / 2);
     const int rightLimit = m_searchEdit->isVisible()
         ? m_searchEdit->x() - searchGap
         : width() - controlWidth - rightMargin;
@@ -2391,7 +2399,7 @@ void RibbonBar::updateWindowControlGeometry()
     const int controlRight = qMin(visibleWidgetRight(controlParent),
                                   ribbonRight);
     int x = controlRight - (buttonWidth * 3);
-    const int top = topLeft.y();
+    const int top = topLeft.y() + ribbonCaptionTopMargin;
 
     m_minimizeButton->setGeometry(x, top, buttonWidth, buttonHeight);
     x += buttonWidth;
