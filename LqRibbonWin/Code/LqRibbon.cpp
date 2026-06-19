@@ -51,6 +51,7 @@ const int ribbonWindowButtonHeight = 30;
 const int ribbonCollapseButtonWidth = 32;
 const int ribbonCollapseButtonHeight = 24;
 const int ribbonMdiTitleHeight = 28;
+const int ribbonMdiTitleBottomOverlap = 2;
 const int ribbonMdiButtonWidth = 28;
 const int ribbonMdiButtonHeight = 24;
 const int ribbonSearchPopupMaxHeight = 260;
@@ -569,7 +570,7 @@ RibbonMdiTitleBar::RibbonMdiTitleBar(QMdiSubWindow *subWindow)
 {
     setObjectName(QStringLiteral("lqRibbonMdiTitleBar"));
     setMouseTracking(true);
-    setFixedHeight(ribbonMdiTitleHeight);
+    setFixedHeight(ribbonMdiTitleHeight + ribbonMdiTitleBottomOverlap);
 
     connect(m_minimizeButton, &QToolButton::clicked, this, [this]() {
         m_subWindow->showMinimized();
@@ -595,7 +596,7 @@ void RibbonMdiTitleBar::syncWithSubWindow()
     setGeometry(0,
                 0,
                 qMax(0, m_subWindow->width()),
-                ribbonMdiTitleHeight);
+                ribbonMdiTitleHeight + ribbonMdiTitleBottomOverlap);
     updateButtonGeometry();
     m_maximizeButton->setRestoreMode(m_subWindow->isMaximized());
     raise();
@@ -874,14 +875,14 @@ const char ribbonMdiAreaStyleSheet[] =
     "    background: #cfcfcf;"
     "}"
     "QMdiSubWindow {"
-    "    background: #ffffff;"
+    "    background: #2b579a;"
     "    border: 1px solid #8aaed7;"
     "}"
     "QMdiSubWindow::title {"
     "    background: #2b579a;"
     "    color: #ffffff;"
     "    padding-left: 6px;"
-    "    height: 28px;"
+    "    height: 30px;"
     "}"
     "QMdiSubWindow::close-button,"
     "QMdiSubWindow::normal-button,"
