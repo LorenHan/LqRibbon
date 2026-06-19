@@ -2455,7 +2455,7 @@ void RibbonBar::updateSearchGeometry()
 ///
 void RibbonBar::updateQuickAccessGeometry()
 {
-    const int leftMargin = 340;
+    const int preferredLeftMargin = 340;
     const int rightMargin = 12;
     const int searchGap = 8;
     const int controlWidth = windowControlWidth();
@@ -2465,6 +2465,7 @@ void RibbonBar::updateQuickAccessGeometry()
     const int rightLimit = m_searchEdit->isVisible()
         ? m_searchEdit->x() - searchGap
         : width() - controlWidth - rightMargin;
+    const int leftMargin = qMin(preferredLeftMargin, qMax(0, rightLimit));
     const int maxWidth = qMax(0, rightLimit - leftMargin);
     const int barWidth = qMin(m_quickAccessBar->sizeHint().width(), maxWidth);
 
