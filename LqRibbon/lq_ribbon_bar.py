@@ -404,8 +404,12 @@ class LqRibbonBar(QTabWidget):
         text = self._search_bar.text().strip()
         if not text:
             return
-        if not self.triggerSearchAction(text):
-            self.searchAccepted.emit(text)
+        if self.triggerSearchAction(text):
+            self._search_bar.closePopup()
+            self._search_bar.clear()
+            self._search_bar.setFocus()
+            return
+        self.searchAccepted.emit(text)
 
     def add_page(self, title):
         """Add a new ribbon page

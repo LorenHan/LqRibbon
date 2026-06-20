@@ -497,6 +497,27 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         return 1;
     }
 
+    ribbonBar->clearRecentSearchActions();
+    centerSearchAction->trigger();
+    ribbonBar->setSearchText(QStringLiteral("Compact Search"));
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    sendCollapseTestKey(ribbonBar->searchLineEdit(),
+                        Qt::Key_Return,
+                        Qt::NoModifier);
+    const QList<QAction *> enterRecentActions = ribbonBar->recentSearchActions();
+    if (!require(ribbonBar->searchBarAppearance()
+                         == LqRibbon::RibbonBar::SearchBarCompact
+                     && compactSearchAction->isChecked()
+                     && !enterRecentActions.isEmpty()
+                     && enterRecentActions.first() == compactSearchAction
+                     && ribbonBar->searchText().isEmpty(),
+                 QStringLiteral("search Enter triggers registered action"))) {
+        return 1;
+    }
+    centerSearchAction->trigger();
+    ribbonBar->clearRecentSearchActions();
+
     reset();
     doubleClickCollapseTestTab(ribbonBar, firstIndex);
     if (!require(ribbonBar->isRibbonMinimized()

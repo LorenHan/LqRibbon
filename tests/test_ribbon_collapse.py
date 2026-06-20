@@ -392,6 +392,26 @@ def test_example_alt_q_restores_and_focuses_caption_search():
     window.close()
 
 
+def test_example_search_enter_triggers_registered_action():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    search = ribbon.searchLineEdit()
+
+    window.center_search_action.trigger()
+    search.setFocus()
+    search.setText("Compact Search")
+    QTest.keyClick(search, Qt.Key.Key_Return)
+    _app().processEvents()
+
+    assert ribbon.searchBarAppearance() == SEARCH_BAR_COMPACT
+    assert window.compact_search_action.isChecked()
+    assert ribbon.recentSearchActions()[0] is window.compact_search_action
+    assert search.text() == ""
+    window.close()
+
+
 def test_example_zero_query_search_shows_default_suggestions():
     window = MainWindow()
     window.show()
@@ -1018,6 +1038,7 @@ def main():
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,
         test_example_alt_q_restores_and_focuses_caption_search,
+        test_example_search_enter_triggers_registered_action,
         test_example_zero_query_search_shows_default_suggestions,
         test_example_zero_query_search_groups_recent_actions,
         test_example_search_shows_document_result_section,
