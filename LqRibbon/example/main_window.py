@@ -53,6 +53,8 @@ from LqRibbon import (
 )
 
 SYSTEM_RIBBON_STYLE_VALUE = -1
+QUICK_ACCESS_TOP_POSITION = 1
+QUICK_ACCESS_BOTTOM_POSITION = 2
 RIBBON_STYLE_SETTINGS_KEY = "Ribbon/Style"
 
 
@@ -825,6 +827,16 @@ class MainWindow(RibbonMainWindow):
         self.show_quick_access_action.setObjectName("showQuickAccessBarAction")
         self.show_quick_access_action.setCheckable(True)
         self.show_quick_access_action.toggled.connect(self.set_quick_access_visible)
+        self.quick_access_above_action = QAction(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowUp),
+            "Show Quick Access Toolbar Above the Ribbon",
+            self,
+        )
+        self.quick_access_above_action.setObjectName("quickAccessAboveAction")
+        self.quick_access_above_action.setCheckable(True)
+        self.quick_access_above_action.triggered.connect(
+            self.set_quick_access_above_ribbon
+        )
         self.ribbonBar().quickAccessBar().show_customize_menu.connect(
             self.populate_quick_access_menu
         )
@@ -848,6 +860,7 @@ class MainWindow(RibbonMainWindow):
             self.toggle_group_action,
             self.width_stress_action,
             self.show_quick_access_action,
+            self.quick_access_above_action,
             self.office_popup_action,
             self.office_menu_action,
             self.show_customize_action,
@@ -861,9 +874,15 @@ class MainWindow(RibbonMainWindow):
     def populate_quick_access_menu(self, menu):
         self.update_quick_access_preview()
         menu.addAction(self.show_quick_access_action)
+        menu.addSeparator()
+        menu.addAction(self.quick_access_above_action)
 
     def set_quick_access_visible(self, visible):
         self.ribbonBar().quickAccessBar().setVisible(bool(visible))
+        self.update_quick_access_preview()
+
+    def set_quick_access_above_ribbon(self):
+        self.ribbonBar().setQuickAccessBarPosition(QUICK_ACCESS_TOP_POSITION)
         self.update_quick_access_preview()
 
     def update_quick_access_preview(self):
@@ -872,10 +891,15 @@ class MainWindow(RibbonMainWindow):
         blocked = self.show_quick_access_action.blockSignals(True)
         self.show_quick_access_action.setChecked(visible)
         self.show_quick_access_action.blockSignals(blocked)
+        above_blocked = self.quick_access_above_action.blockSignals(True)
+        above = self.ribbonBar().quickAccessBarPosition() == QUICK_ACCESS_TOP_POSITION
+        self.quick_access_above_action.setChecked(above)
+        self.quick_access_above_action.blockSignals(above_blocked)
         visible_count = quick_access_bar.visibleCount() if visible else 0
         self.quick_access_status_preview.setText(
             f"QAT: {'Visible' if visible else 'Hidden'} "
-            f"{visible_count}/{len(self.quick_access_actions)}"
+            f"{visible_count}/{len(self.quick_access_actions)} | "
+            f"{'Above' if above else 'Below'}"
         )
 
     def restore_classic_ribbon(self):

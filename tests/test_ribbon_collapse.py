@@ -24,7 +24,11 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel, QMenu, QStackedWidget, QToolButton
 
 from LqRibbon import RibbonMainWindow
-from main_window import MainWindow
+from main_window import (
+    MainWindow,
+    QUICK_ACCESS_BOTTOM_POSITION,
+    QUICK_ACCESS_TOP_POSITION,
+)
 
 
 def _app():
@@ -367,10 +371,14 @@ def test_example_quick_access_menu_controls_toolbar_visibility():
     menu = QMenu(window)
     window.populate_quick_access_menu(menu)
     assert window.show_quick_access_action in menu.actions()
+    assert window.quick_access_above_action in menu.actions()
     assert window.show_quick_access_action.isChecked()
+    assert window.quick_access_above_action.isChecked()
+    assert window.ribbonBar().quickAccessBarPosition() == QUICK_ACCESS_TOP_POSITION
     assert not quick_access_bar.isHidden()
     assert quick_access_bar.visibleCount() == 3
     assert "Visible 3/3" in status.text()
+    assert "Above" in status.text()
 
     window.show_quick_access_action.trigger()
     _app().processEvents()
@@ -383,6 +391,14 @@ def test_example_quick_access_menu_controls_toolbar_visibility():
     assert not quick_access_bar.isHidden()
     assert window.show_quick_access_action.isChecked()
     assert "Visible 3/3" in status.text()
+    window.ribbonBar().setQuickAccessBarPosition(QUICK_ACCESS_BOTTOM_POSITION)
+    window.update_quick_access_preview()
+    assert "Below" in status.text()
+    window.quick_access_above_action.trigger()
+    _app().processEvents()
+    assert window.ribbonBar().quickAccessBarPosition() == QUICK_ACCESS_TOP_POSITION
+    assert window.quick_access_above_action.isChecked()
+    assert "Above" in status.text()
     window.close()
 
 

@@ -67,6 +67,7 @@ def main():
     shell_preview = "--grab-shell-preview" in arguments
     width_stress_preview = "--grab-width-stress-preview" in arguments
     quick_access_hidden_preview = "--grab-qat-hidden-preview" in arguments
+    quick_access_above_preview = "--grab-qat-above-preview" in arguments
     style_preview = "--grab-style-preview" in arguments
     style_name = _option_value(arguments, "--style")
     deterministic_style = bool(preview_path)
@@ -87,6 +88,7 @@ def main():
         or shell_preview
         or width_stress_preview
         or quick_access_hidden_preview
+        or quick_access_above_preview
         or simplified_preview
         or temporary_preview
         or double_click_preview
@@ -94,7 +96,11 @@ def main():
         window.resize(1180, 560)
     if style_preview:
         window.resize(1180, 560)
-    if width_stress_preview or quick_access_hidden_preview:
+    if (
+        width_stress_preview
+        or quick_access_hidden_preview
+        or quick_access_above_preview
+    ):
         window.resize(1476, 560)
     if style_name:
         window.set_ribbon_style(style_name)
@@ -111,6 +117,7 @@ def main():
             shell_preview
             or width_stress_preview
             or quick_access_hidden_preview
+            or quick_access_above_preview
             or simplified_preview
             or temporary_preview
             or double_click_preview
@@ -143,7 +150,12 @@ def main():
     if width_stress_preview:
         QTimer.singleShot(120, lambda: window.width_stress_action.setChecked(True))
     if quick_access_hidden_preview:
-        QTimer.singleShot(120, lambda: window.show_quick_access_action.setChecked(False))
+        QTimer.singleShot(
+            120,
+            lambda: window.show_quick_access_action.setChecked(False),
+        )
+    if quick_access_above_preview:
+        QTimer.singleShot(120, window.quick_access_above_action.trigger)
     if preview_path:
         QTimer.singleShot(300, lambda: (window.grab().save(preview_path), app.quit()))
 
