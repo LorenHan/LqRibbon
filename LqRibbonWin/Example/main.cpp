@@ -25,6 +25,7 @@
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QToolButton>
+#include <QToolBar>
 #include <QVBoxLayout>
 
 #include "LqRibbon.h"
@@ -154,7 +155,12 @@ QToolButton *collapseTestActionButton(LqRibbon::RibbonBar *ribbonBar,
 int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *classicRibbonAction,
                      QAction *pinRibbonAction,
-                     QAction *unpinRibbonAction)
+                     QAction *unpinRibbonAction,
+                     QAction *displayOptionsTitleAction,
+                     QAction *showTabsAndCommandsAction,
+                     QAction *showTabsOnlyAction,
+                     QAction *alwaysShowRibbonAction,
+                     QAction *autoHideRibbonAction)
 {
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     ribbonBar->setMinimizationEnabled(true);
@@ -315,6 +321,46 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     if (!require(ribbonBar->isRibbonMinimized()
                      && collapseTestCommandAreaVisible(ribbonBar),
                  QStringLiteral("unpinned ribbon temporarily expands"))) {
+        return 1;
+    }
+
+    reset();
+    if (!require(displayOptionsTitleAction->menu()
+                     && displayOptionsTitleAction->menu()->actions().size() >= 4,
+                 QStringLiteral("display options menu exposes ribbon modes"))) {
+        return 1;
+    }
+    showTabsOnlyAction->trigger();
+    processCollapseTestEvents();
+    if (!require(ribbonBar->isMinimizationEnabled()
+                     && ribbonBar->isRibbonMinimized()
+                     && !collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("display menu switches to tabs only"))) {
+        return 1;
+    }
+    showTabsAndCommandsAction->trigger();
+    processCollapseTestEvents();
+    if (!require(ribbonBar->isMinimizationEnabled()
+                     && !ribbonBar->simplifiedMode()
+                     && !ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("display menu shows tabs and commands"))) {
+        return 1;
+    }
+    alwaysShowRibbonAction->trigger();
+    processCollapseTestEvents();
+    if (!require(!ribbonBar->isMinimizationEnabled()
+                     && !ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("display menu always shows ribbon"))) {
+        return 1;
+    }
+    autoHideRibbonAction->trigger();
+    processCollapseTestEvents();
+    if (!require(ribbonBar->isMinimizationEnabled()
+                     && ribbonBar->isRibbonMinimized()
+                     && !collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("display menu auto hides ribbon"))) {
         return 1;
     }
 
@@ -1871,6 +1917,33 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->addQuickAccessAction(connectAction);
     mainWindow.ribbonBar()->addQuickAccessAction(minimizeRibbonAction);
 
+    QMenu *displayOptionsMenu =
+        new QMenu(QObject::tr("Ribbon Display Options"), &mainWindow);
+    QAction *showTabsAndCommandsAction = displayOptionsMenu->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_TitleBarUnshadeButton),
+        QObject::tr("Show Tabs and Commands"));
+    QAction *showTabsOnlyAction = displayOptionsMenu->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_TitleBarShadeButton),
+        QObject::tr("Show Tabs Only"));
+    QAction *alwaysShowRibbonAction = displayOptionsMenu->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
+        QObject::tr("Always Show Ribbon"));
+    QAction *autoHideRibbonAction = displayOptionsMenu->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogCancelButton),
+        QObject::tr("Auto-Hide Ribbon"));
+    QAction *displayOptionsTitleAction = mainWindow.ribbonBar()->addTitleButton(
+        mainWindow.style()->standardIcon(QStyle::SP_TitleBarMenuButton),
+        QObject::tr("Ribbon Display Options"));
+    displayOptionsTitleAction->setMenu(displayOptionsMenu);
+    if (QToolBar *titleButtonBar = mainWindow.ribbonBar()->findChild<QToolBar *>(
+            QStringLiteral("lqRibbonTitleButtonBar"))) {
+        if (QToolButton *displayButton =
+                qobject_cast<QToolButton *>(
+                    titleButtonBar->widgetForAction(displayOptionsTitleAction))) {
+            displayButton->setPopupMode(QToolButton::InstantPopup);
+        }
+    }
+
     QAction *helpTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxQuestion),
         QObject::tr("Help"));
@@ -1887,6 +1960,30 @@ int main(int argc, char *argv[])
                                  QObject::tr("LqRibbon"),
                                  QObject::tr("Account"));
     });
+    QObject::connect(showTabsAndCommandsAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.ribbonBar()->setMinimizationEnabled(true);
+                         mainWindow.ribbonBar()->setSimplifiedMode(false);
+                         mainWindow.ribbonBar()->setRibbonMinimized(false);
+                     });
+    QObject::connect(showTabsOnlyAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.ribbonBar()->setMinimizationEnabled(true);
+                         mainWindow.ribbonBar()->setSimplifiedMode(false);
+                         mainWindow.ribbonBar()->setRibbonMinimized(true);
+                     });
+    QObject::connect(alwaysShowRibbonAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.ribbonBar()->setSimplifiedMode(false);
+                         mainWindow.ribbonBar()->setRibbonMinimized(false);
+                         mainWindow.ribbonBar()->setMinimizationEnabled(false);
+                     });
+    QObject::connect(autoHideRibbonAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.ribbonBar()->setMinimizationEnabled(true);
+                         mainWindow.ribbonBar()->setSimplifiedMode(false);
+                         mainWindow.ribbonBar()->setRibbonMinimized(true);
+                     });
 
     QObject::connect(mainWindow.ribbonBar(), &LqRibbon::RibbonBar::searchAccepted,
                      [&mainWindow](const QString &strText) {
@@ -1903,11 +2000,21 @@ int main(int argc, char *argv[])
                            [&mainWindow,
                             classicRibbonAction,
                             pinRibbonAction,
-                            unpinRibbonAction]() {
+                            unpinRibbonAction,
+                            displayOptionsTitleAction,
+                            showTabsAndCommandsAction,
+                            showTabsOnlyAction,
+                            alwaysShowRibbonAction,
+                            autoHideRibbonAction]() {
             qApp->exit(runCollapseTests(mainWindow,
                                         classicRibbonAction,
                                         pinRibbonAction,
-                                        unpinRibbonAction));
+                                        unpinRibbonAction,
+                                        displayOptionsTitleAction,
+                                        showTabsAndCommandsAction,
+                                        showTabsOnlyAction,
+                                        alwaysShowRibbonAction,
+                                        autoHideRibbonAction));
         });
         return application.exec();
     }

@@ -3,7 +3,14 @@ LqRibbonBar - Ribbon bar container that holds ribbon pages
 """
 
 from PySide6.QtWidgets import (
-    QApplication, QTabWidget, QWidget, QHBoxLayout, QMenu, QStackedWidget, QToolButton
+    QApplication,
+    QTabWidget,
+    QWidget,
+    QHBoxLayout,
+    QMenu,
+    QStackedWidget,
+    QToolBar,
+    QToolButton,
 )
 from PySide6.QtCore import Qt, Signal, QEvent, QSize, QTimer
 from PySide6.QtGui import QAction, QIcon, QPainter, QColor, QPen, QPixmap
@@ -96,6 +103,7 @@ class LqRibbonBar(QTabWidget):
         super().__init__(parent)
         self.pages = CallableList()
         self._quick_access_bar = LqRibbonQuickAccessBar(self)
+        self._title_button_bar = QToolBar(self)
         self._search_bar = LqRibbonSearchBar(self)
         self._progress_bar = LqRibbonProgressBar(self)
         self._system_button = None
@@ -162,6 +170,12 @@ class LqRibbonBar(QTabWidget):
         self.setStyleSheet(self._style_sheet())
         self._search_bar.setObjectName("lqRibbonSearchEdit")
         self._quick_access_bar.hide()
+        self._title_button_bar.setObjectName("lqRibbonTitleButtonBar")
+        self._title_button_bar.setMovable(False)
+        self._title_button_bar.setFloatable(False)
+        self._title_button_bar.setIconSize(QSize(16, 16))
+        self._title_button_bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._title_button_bar.hide()
         self._search_bar.hide()
         self._progress_bar.hide()
         self._collapse_button.hide()
@@ -255,6 +269,21 @@ class LqRibbonBar(QTabWidget):
             22,
         )
         self._search_bar.raise_()
+
+        title_bar_width = min(
+            self._title_button_bar.sizeHint().width(),
+            max(0, self.width() - self._search_bar.geometry().right() - 48),
+        )
+        if self._title_button_bar.actions() and title_bar_width > 0:
+            title_bar_x = max(
+                self._search_bar.geometry().right() + 8,
+                self.width() - title_bar_width - 48,
+            )
+            self._title_button_bar.setGeometry(title_bar_x, 6, title_bar_width, 24)
+            self._title_button_bar.show()
+            self._title_button_bar.raise_()
+        else:
+            self._title_button_bar.hide()
 
         collapse_x = max(0, self.width() - RIBBON_COLLAPSE_BUTTON_WIDTH)
         collapse_y = max(0, self.height() - RIBBON_COLLAPSE_BUTTON_HEIGHT - 2)
@@ -591,7 +620,11 @@ class LqRibbonBar(QTabWidget):
         self._quick_access_bar.addAction(self._quick_access_bar.actionCustomizeButton())
 
     def addTitleButton(self, icon, text):
-        return QAction(icon if isinstance(icon, QIcon) else QIcon(icon), text, self)
+        action = QAction(icon if isinstance(icon, QIcon) else QIcon(icon), text, self)
+        action.setToolTip(text)
+        self._title_button_bar.addAction(action)
+        self._update_layout()
+        return action
 
     def addAction(self, *args):
         if len(args) == 1 and isinstance(args[0], QAction):
@@ -602,7 +635,9 @@ class LqRibbonBar(QTabWidget):
         return None
 
     def removeTitleButton(self, action):
+        self._title_button_bar.removeAction(action)
         action.deleteLater()
+        self._update_layout()
 
     def setCurrentPageIndex(self, index):
         self.setCurrentIndex(index)

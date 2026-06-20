@@ -710,6 +710,34 @@ class MainWindow(RibbonMainWindow):
             lambda text: self._message(f"No command: {text}")
         )
 
+        self.display_options_menu = QMenu("Ribbon Display Options", self)
+        self.display_show_tabs_commands_action = self.display_options_menu.addAction(
+            self._icon(QStyle.StandardPixmap.SP_TitleBarUnshadeButton),
+            "Show Tabs and Commands",
+        )
+        self.display_show_tabs_only_action = self.display_options_menu.addAction(
+            self._icon(QStyle.StandardPixmap.SP_TitleBarShadeButton),
+            "Show Tabs Only",
+        )
+        self.display_always_show_action = self.display_options_menu.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DialogApplyButton),
+            "Always Show Ribbon",
+        )
+        self.display_auto_hide_action = self.display_options_menu.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DialogCancelButton),
+            "Auto-Hide Ribbon",
+        )
+        self.display_options_title_action = self.ribbonBar().addTitleButton(
+            self._icon(QStyle.StandardPixmap.SP_TitleBarMenuButton),
+            "Ribbon Display Options",
+        )
+        self.display_options_title_action.setMenu(self.display_options_menu)
+        display_button = self.ribbonBar()._title_button_bar.widgetForAction(
+            self.display_options_title_action
+        )
+        if isinstance(display_button, QToolButton):
+            display_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+
         self.help_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_MessageBoxQuestion), "Help"
         )
@@ -722,6 +750,12 @@ class MainWindow(RibbonMainWindow):
         self.account_title_action.triggered.connect(
             lambda: QMessageBox.information(self, "LqRibbon", "Account")
         )
+        self.display_show_tabs_commands_action.triggered.connect(
+            self.show_tabs_and_commands
+        )
+        self.display_show_tabs_only_action.triggered.connect(self.show_tabs_only)
+        self.display_always_show_action.triggered.connect(self.always_show_ribbon)
+        self.display_auto_hide_action.triggered.connect(self.auto_hide_ribbon)
 
     def _configure_search_and_quick_access(self):
         self.search_actions = [
@@ -762,6 +796,25 @@ class MainWindow(RibbonMainWindow):
     def unpin_ribbon(self):
         self.ribbonBar().setMinimizationEnabled(True)
         self.ribbonBar().setRibbonMinimized(True)
+
+    def show_tabs_and_commands(self):
+        self.ribbonBar().setMinimizationEnabled(True)
+        self.ribbonBar().setSimplifiedMode(False)
+        self.ribbonBar().setRibbonMinimized(False)
+
+    def show_tabs_only(self):
+        self.ribbonBar().setMinimizationEnabled(True)
+        self.ribbonBar().setSimplifiedMode(False)
+        self.ribbonBar().setRibbonMinimized(True)
+
+    def auto_hide_ribbon(self):
+        self.ribbonBar().setMinimizationEnabled(True)
+        self.ribbonBar().setSimplifiedMode(False)
+        self.ribbonBar().setRibbonMinimized(True)
+
+    def always_show_ribbon(self):
+        self.ribbonBar().setSimplifiedMode(False)
+        self.pin_ribbon()
 
     def install_default_content(self):
         content = QLabel("LqRibbon PySide6 example")

@@ -240,6 +240,50 @@ def test_example_pin_unpin_actions_control_display_policy():
     window.close()
 
 
+def test_example_display_options_menu_controls_ribbon_modes():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    menu = window.display_options_title_action.menu()
+    assert menu is window.display_options_menu
+    assert [action.text() for action in menu.actions()] == [
+        "Show Tabs and Commands",
+        "Show Tabs Only",
+        "Always Show Ribbon",
+        "Auto-Hide Ribbon",
+    ]
+
+    window.display_show_tabs_only_action.trigger()
+    _app().processEvents()
+    assert ribbon.isMinimizationEnabled()
+    assert ribbon.isRibbonMinimized()
+    assert not _command_area_visible(ribbon)
+
+    window.display_show_tabs_commands_action.trigger()
+    _app().processEvents()
+    assert ribbon.isMinimizationEnabled()
+    assert not ribbon.simplifiedMode()
+    assert not ribbon.isRibbonMinimized()
+    assert _command_area_visible(ribbon)
+
+    ribbon.setSimplifiedMode(True)
+    window.display_always_show_action.trigger()
+    _app().processEvents()
+    assert not ribbon.isMinimizationEnabled()
+    assert not ribbon.simplifiedMode()
+    assert not ribbon.isRibbonMinimized()
+    assert _command_area_visible(ribbon)
+
+    window.display_auto_hide_action.trigger()
+    _app().processEvents()
+    assert ribbon.isMinimizationEnabled()
+    assert not ribbon.simplifiedMode()
+    assert ribbon.isRibbonMinimized()
+    assert not _command_area_visible(ribbon)
+    window.close()
+
+
 def test_single_click_collapsed_tab_temporarily_expands():
     window, ribbon, *_ = _window()
     ribbon.setRibbonMinimized(True)
@@ -332,6 +376,7 @@ def main():
         test_simplified_mode_keeps_one_line_command_area,
         test_example_classic_action_restores_multi_line_ribbon,
         test_example_pin_unpin_actions_control_display_policy,
+        test_example_display_options_menu_controls_ribbon_modes,
         test_single_click_collapsed_tab_temporarily_expands,
         test_action_triggers_while_temporarily_expanded,
         test_action_hides_temporary_expansion,
