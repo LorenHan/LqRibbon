@@ -614,6 +614,60 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("action context menu prevents duplicate quick access add"))) {
         return 1;
     }
+    QMenu moveRenameLeftContextMenu;
+    populateQuickAccessActionContextMenu(&moveRenameLeftContextMenu,
+                                         renamePageAction);
+    QAction *moveRenameLeftAction = nullptr;
+    QAction *moveRenameRightAtEndAction = nullptr;
+    for (QAction *action : moveRenameLeftContextMenu.actions()) {
+        if (action->objectName()
+            == QStringLiteral("moveQuickAccessLeftContextAction")) {
+            moveRenameLeftAction = action;
+        } else if (action->objectName()
+                   == QStringLiteral("moveQuickAccessRightContextAction")) {
+            moveRenameRightAtEndAction = action;
+        }
+    }
+    if (!require(moveRenameLeftAction && moveRenameLeftAction->isEnabled()
+                     && moveRenameRightAtEndAction
+                     && !moveRenameRightAtEndAction->isEnabled(),
+                 QStringLiteral("quick access context menu exposes reorder actions"))) {
+        return 1;
+    }
+    const int renameIndexBeforeMove =
+        quickAccessBar->actions().indexOf(renamePageAction);
+    moveRenameLeftAction->trigger();
+    processCollapseTestEvents();
+    if (!require(quickAccessBar->actions().indexOf(renamePageAction)
+                     == renameIndexBeforeMove - 1
+                     && quickAccessBar->visibleCount() == 4
+                     && quickAccessStatusPreview->text().contains(
+                         QStringLiteral("Visible 4/4")),
+                 QStringLiteral("quick access context menu moves command left"))) {
+        return 1;
+    }
+    QMenu moveRenameRightContextMenu;
+    populateQuickAccessActionContextMenu(&moveRenameRightContextMenu,
+                                         renamePageAction);
+    QAction *moveRenameRightAction = nullptr;
+    for (QAction *action : moveRenameRightContextMenu.actions()) {
+        if (action->objectName()
+            == QStringLiteral("moveQuickAccessRightContextAction")) {
+            moveRenameRightAction = action;
+            break;
+        }
+    }
+    if (!require(moveRenameRightAction && moveRenameRightAction->isEnabled(),
+                 QStringLiteral("quick access moved command can move right"))) {
+        return 1;
+    }
+    moveRenameRightAction->trigger();
+    processCollapseTestEvents();
+    if (!require(quickAccessBar->actions().indexOf(renamePageAction)
+                     == renameIndexBeforeMove,
+                 QStringLiteral("quick access context menu restores command order"))) {
+        return 1;
+    }
     QMenu removeRenameContextMenu;
     populateQuickAccessActionContextMenu(&removeRenameContextMenu,
                                          renamePageAction);
@@ -1558,6 +1612,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-add-to-qat-preview"));
     const bool removeFromQuickAccessPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-remove-from-qat-preview"));
+    const bool reorderQuickAccessPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-qat-reorder-preview"));
     const bool stylePreviewRequested =
         argumentList.contains(QStringLiteral("--grab-style-preview"));
     const bool collapseTestsRequested =
@@ -1607,6 +1663,7 @@ int main(int argc, char *argv[])
         || quickAccessLabelsPreviewRequested
         || addToQuickAccessPreviewRequested
         || removeFromQuickAccessPreviewRequested
+        || reorderQuickAccessPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
         mainWindow.resize(1180, 560);
@@ -1615,7 +1672,8 @@ int main(int argc, char *argv[])
         || quickAccessAbovePreviewRequested || quickAccessBelowPreviewRequested
         || quickAccessLabelsPreviewRequested
         || addToQuickAccessPreviewRequested
-        || removeFromQuickAccessPreviewRequested) {
+        || removeFromQuickAccessPreviewRequested
+        || reorderQuickAccessPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -2015,6 +2073,12 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_DialogOpenButton),
         QObject::tr("Load Layout"),
         Qt::ToolButtonTextBesideIcon);
+    QAction *reorderQuickAccessAction = customizeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_ArrowRight),
+        QObject::tr("Move QAT Right"),
+        Qt::ToolButtonTextBesideIcon);
+    reorderQuickAccessAction->setObjectName(
+        QStringLiteral("reorderQuickAccessAction"));
 
     QAction *specialistOptionsAction = new QAction(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
@@ -2091,6 +2155,8 @@ int main(int argc, char *argv[])
                                     quickAccessLabelsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), officePopupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), showCustomizeAction);
+    customizeManager->addToCategory(QObject::tr("Actions"),
+                                    reorderQuickAccessAction);
     customizeManager->setPageId(shellPage, QStringLiteral("shell"));
     customizeManager->setGroupId(runtimeGroup, QStringLiteral("runtime"));
     QByteArray savedRibbonState;
@@ -2229,6 +2295,8 @@ int main(int argc, char *argv[])
          quickAccessAboveAction,
          quickAccessBelowAction,
          quickAccessLabelsAction,
+         reorderQuickAccessAction,
+         fullScreenAction,
          &quickAccessActions,
          &quickAccessStatusPreview]() {
         LqRibbon::RibbonQuickAccessBar *quickAccessBar =
@@ -2256,6 +2324,10 @@ int main(int argc, char *argv[])
             quickAccessLabelsAction->blockSignals(true);
         quickAccessLabelsAction->setChecked(labelsVisible);
         quickAccessLabelsAction->blockSignals(oldLabelsBlocked);
+        reorderQuickAccessAction->setEnabled(
+            quickAccessActions.indexOf(fullScreenAction) >= 0
+            && quickAccessActions.indexOf(fullScreenAction)
+                < quickAccessActions.size() - 1);
 
         if (quickAccessStatusPreview) {
             const int visibleCount = visible ? quickAccessBar->visibleCount() : 0;
@@ -2277,9 +2349,63 @@ int main(int argc, char *argv[])
         mainWindow.ribbonBar()->update();
     };
     std::function<void()> installQuickAccessActionContextMenus;
+    auto rebuildQuickAccessOrder =
+        [&mainWindow,
+         &quickAccessActions,
+         &installQuickAccessActionContextMenus,
+         updateQuickAccessPreview]() {
+        LqRibbon::RibbonQuickAccessBar *quickAccessBar =
+            mainWindow.ribbonBar()->quickAccessBar();
+        for (QAction *action : quickAccessActions) {
+            if (action && quickAccessBar->actions().contains(action)) {
+                quickAccessBar->removeAction(action);
+            }
+        }
+        for (QAction *action : quickAccessActions) {
+            if (!action) {
+                continue;
+            }
+            quickAccessBar->addAction(action);
+            quickAccessBar->setActionVisible(action, true);
+        }
+        if (installQuickAccessActionContextMenus) {
+            installQuickAccessActionContextMenus();
+        }
+        mainWindow.ribbonBar()->setQuickAccessBarPosition(
+            mainWindow.ribbonBar()->quickAccessBarPosition());
+        updateQuickAccessPreview();
+    };
+    auto moveQuickAccessAction =
+        [&mainWindow,
+         &quickAccessActions,
+         rebuildQuickAccessOrder](QAction *commandAction, int offset) -> bool {
+        if (!commandAction || offset == 0) {
+            return false;
+        }
+        const int currentIndex = quickAccessActions.indexOf(commandAction);
+        if (currentIndex < 0) {
+            return false;
+        }
+        const int targetIndex =
+            qBound(0, currentIndex + offset, quickAccessActions.size() - 1);
+        if (targetIndex == currentIndex) {
+            return false;
+        }
+        QAction *action = quickAccessActions.takeAt(currentIndex);
+        quickAccessActions.insert(targetIndex, action);
+        rebuildQuickAccessOrder();
+        if (mainWindow.statusBar()) {
+            mainWindow.statusBar()->showMessage(
+                QObject::tr("Moved %1 in Quick Access Toolbar")
+                    .arg(commandAction->text()),
+                2500);
+        }
+        return true;
+    };
     auto populateQuickAccessActionContextMenu =
         [&mainWindow,
          &quickAccessActions,
+         moveQuickAccessAction,
          updateQuickAccessPreview](QMenu *menu, QAction *commandAction) {
         if (!menu || !commandAction || commandAction->isSeparator()) {
             return;
@@ -2301,6 +2427,36 @@ int main(int argc, char *argv[])
         removeFromQuickAccessAction->setObjectName(
             QStringLiteral("removeFromQuickAccessContextAction"));
         removeFromQuickAccessAction->setEnabled(inQuickAccess);
+        const int actionIndex = quickAccessActions.indexOf(commandAction);
+        if (!menu->isEmpty()) {
+            menu->addSeparator();
+        }
+        QAction *moveLeftAction = menu->addAction(
+            mainWindow.style()->standardIcon(QStyle::SP_ArrowLeft),
+            QObject::tr("Move Left in Quick Access Toolbar"));
+        moveLeftAction->setObjectName(
+            QStringLiteral("moveQuickAccessLeftContextAction"));
+        moveLeftAction->setEnabled(inQuickAccess && actionIndex > 0);
+        QObject::connect(moveLeftAction,
+                         &QAction::triggered,
+                         &mainWindow,
+                         [moveQuickAccessAction, commandAction]() {
+            moveQuickAccessAction(commandAction, -1);
+        });
+        QAction *moveRightAction = menu->addAction(
+            mainWindow.style()->standardIcon(QStyle::SP_ArrowRight),
+            QObject::tr("Move Right in Quick Access Toolbar"));
+        moveRightAction->setObjectName(
+            QStringLiteral("moveQuickAccessRightContextAction"));
+        moveRightAction->setEnabled(
+            inQuickAccess && actionIndex >= 0
+            && actionIndex < quickAccessActions.size() - 1);
+        QObject::connect(moveRightAction,
+                         &QAction::triggered,
+                         &mainWindow,
+                         [moveQuickAccessAction, commandAction]() {
+            moveQuickAccessAction(commandAction, 1);
+        });
         QObject::connect(removeFromQuickAccessAction,
                          &QAction::triggered,
                          &mainWindow,
@@ -2379,6 +2535,7 @@ int main(int argc, char *argv[])
          quickAccessAboveAction,
          quickAccessBelowAction,
          quickAccessLabelsAction,
+         reorderQuickAccessAction,
          updateQuickAccessPreview](QMenu *menu) {
         if (!menu) {
             return;
@@ -2390,6 +2547,8 @@ int main(int argc, char *argv[])
         menu->addAction(quickAccessBelowAction);
         menu->addSeparator();
         menu->addAction(quickAccessLabelsAction);
+        menu->addSeparator();
+        menu->addAction(reorderQuickAccessAction);
     };
     installQuickAccessActionContextMenus =
         [&mainWindow, populateQuickAccessActionContextMenu]() {
@@ -2488,6 +2647,12 @@ int main(int argc, char *argv[])
                          ribbonBar->setQuickAccessBarPosition(
                              ribbonBar->quickAccessBarPosition());
                          updateQuickAccessPreview();
+                     });
+    QObject::connect(reorderQuickAccessAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [fullScreenAction, moveQuickAccessAction]() {
+                         moveQuickAccessAction(fullScreenAction, 1);
                      });
 
     QObject::connect(fullScreenAction, &QAction::triggered, [&mainWindow]() {
@@ -2747,6 +2912,7 @@ int main(int argc, char *argv[])
                || quickAccessLabelsPreviewRequested
                || addToQuickAccessPreviewRequested
                || removeFromQuickAccessPreviewRequested
+               || reorderQuickAccessPreviewRequested
                || simplifiedPreviewRequested
                || temporaryPreviewRequested
                || doubleClickPreviewRequested) {
@@ -2797,6 +2963,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(officePopupAction);
     mainWindow.ribbonBar()->registerSearchAction(officeMenuAction);
     mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
+    mainWindow.ribbonBar()->registerSearchAction(reorderQuickAccessAction);
     mainWindow.ribbonBar()->addQuickAccessAction(fullScreenAction);
     mainWindow.ribbonBar()->addQuickAccessAction(connectAction);
     mainWindow.ribbonBar()->addQuickAccessAction(minimizeRibbonAction);
@@ -3022,6 +3189,31 @@ int main(int argc, char *argv[])
             for (QAction *action : menu.actions()) {
                 if (action->objectName()
                     == QStringLiteral("removeFromQuickAccessContextAction")) {
+                    action->trigger();
+                    break;
+                }
+            }
+            quickAccessBelowAction->trigger();
+            quickAccessLabelsAction->setChecked(true);
+            if (mainWindow.statusBar()) {
+                mainWindow.statusBar()->clearMessage();
+            }
+        });
+    }
+    if (reorderQuickAccessPreviewRequested) {
+        QTimer::singleShot(
+            120,
+            &mainWindow,
+            [fullScreenAction,
+             quickAccessBelowAction,
+             quickAccessLabelsAction,
+             &mainWindow,
+             populateQuickAccessActionContextMenu]() {
+            QMenu menu;
+            populateQuickAccessActionContextMenu(&menu, fullScreenAction);
+            for (QAction *action : menu.actions()) {
+                if (action->objectName()
+                    == QStringLiteral("moveQuickAccessRightContextAction")) {
                     action->trigger();
                     break;
                 }

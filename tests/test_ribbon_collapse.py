@@ -497,6 +497,55 @@ def test_example_quick_access_context_menu_removes_command():
     window.close()
 
 
+def test_example_quick_access_context_menu_reorders_command():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    quick_access_bar = window.ribbonBar().quickAccessBar()
+    window.add_action_to_quick_access(window.rename_page_action)
+    _app().processEvents()
+
+    initial_index = quick_access_bar.actions().index(window.rename_page_action)
+    menu = QMenu(window)
+    window.populate_quick_access_action_context_menu(
+        menu, window.rename_page_action
+    )
+    move_left = next(
+        action
+        for action in menu.actions()
+        if action.objectName() == "moveQuickAccessLeftContextAction"
+    )
+    move_right_at_end = next(
+        action
+        for action in menu.actions()
+        if action.objectName() == "moveQuickAccessRightContextAction"
+    )
+    assert move_left.isEnabled()
+    assert not move_right_at_end.isEnabled()
+
+    move_left.trigger()
+    _app().processEvents()
+    assert quick_access_bar.actions().index(window.rename_page_action) == initial_index - 1
+    assert window.quick_access_actions.index(window.rename_page_action) == initial_index - 1
+    assert quick_access_bar.visibleCount() == 4
+    assert "Visible 4/4" in window.quick_access_status_preview.text()
+
+    restore_menu = QMenu(window)
+    window.populate_quick_access_action_context_menu(
+        restore_menu, window.rename_page_action
+    )
+    move_right = next(
+        action
+        for action in restore_menu.actions()
+        if action.objectName() == "moveQuickAccessRightContextAction"
+    )
+    assert move_right.isEnabled()
+    move_right.trigger()
+    _app().processEvents()
+    assert quick_access_bar.actions().index(window.rename_page_action) == initial_index
+    window.close()
+
+
 def test_example_responsive_label_preview_hides_labels_under_stress():
     window = MainWindow()
     window.show()
@@ -634,6 +683,7 @@ def main():
         test_example_quick_access_menu_controls_toolbar_visibility,
         test_example_action_context_menu_adds_command_to_quick_access,
         test_example_quick_access_context_menu_removes_command,
+        test_example_quick_access_context_menu_reorders_command,
         test_example_responsive_label_preview_hides_labels_under_stress,
         test_single_click_collapsed_tab_temporarily_expands,
         test_action_triggers_while_temporarily_expanded,

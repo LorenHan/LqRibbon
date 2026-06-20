@@ -592,6 +592,13 @@ class MainWindow(RibbonMainWindow):
             "Load Layout",
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
+        self.reorder_quick_access_action = self._add_group_action(
+            customize_group,
+            QStyle.StandardPixmap.SP_ArrowRight,
+            "Move QAT Right",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.reorder_quick_access_action.setObjectName("reorderQuickAccessAction")
 
         specialist_options_action = QAction(
             self._icon(QStyle.StandardPixmap.SP_FileDialogInfoView),
@@ -715,6 +722,7 @@ class MainWindow(RibbonMainWindow):
             self.connect_action,
             self.office_popup_action,
             self.show_customize_action,
+            self.reorder_quick_access_action,
         ]:
             self.customize_manager.addToCategory("Actions", action)
         self.customize_manager.setPageId(self.shell_page, "shell")
@@ -753,6 +761,11 @@ class MainWindow(RibbonMainWindow):
         self.show_customize_action.triggered.connect(self.ribbonBar().showCustomizeDialog)
         self.save_state_action.triggered.connect(self.save_layout_state)
         self.load_state_action.triggered.connect(self.load_layout_state)
+        self.reorder_quick_access_action.triggered.connect(
+            lambda _checked=False: self.move_quick_access_action(
+                self.full_screen_action, 1
+            )
+        )
         self.ribbonBar().searchAccepted.connect(
             lambda text: self._message(f"No command: {text}")
         )
@@ -888,6 +901,7 @@ class MainWindow(RibbonMainWindow):
             self.office_popup_action,
             self.office_menu_action,
             self.show_customize_action,
+            self.reorder_quick_access_action,
         ]
         for action in self.search_actions:
             self.ribbonBar().registerSearchAction(action)
@@ -903,6 +917,8 @@ class MainWindow(RibbonMainWindow):
         menu.addAction(self.quick_access_below_action)
         menu.addSeparator()
         menu.addAction(self.quick_access_labels_action)
+        menu.addSeparator()
+        menu.addAction(self.reorder_quick_access_action)
 
     def _configure_action_context_menus(self):
         self.action_context_menu_actions = [
@@ -994,6 +1010,38 @@ class MainWindow(RibbonMainWindow):
                 action
             )
         )
+        action_index = (
+            self.quick_access_actions.index(command_action)
+            if command_action in self.quick_access_actions
+            else -1
+        )
+        menu.addSeparator()
+        move_left_action = menu.addAction(
+            self._icon(QStyle.StandardPixmap.SP_ArrowLeft),
+            "Move Left in Quick Access Toolbar",
+        )
+        move_left_action.setObjectName("moveQuickAccessLeftContextAction")
+        move_left_action.setEnabled(in_quick_access and action_index > 0)
+        move_left_action.triggered.connect(
+            lambda _checked=False, action=command_action: self.move_quick_access_action(
+                action, -1
+            )
+        )
+        move_right_action = menu.addAction(
+            self._icon(QStyle.StandardPixmap.SP_ArrowRight),
+            "Move Right in Quick Access Toolbar",
+        )
+        move_right_action.setObjectName("moveQuickAccessRightContextAction")
+        move_right_action.setEnabled(
+            in_quick_access
+            and action_index >= 0
+            and action_index < len(self.quick_access_actions) - 1
+        )
+        move_right_action.triggered.connect(
+            lambda _checked=False, action=command_action: self.move_quick_access_action(
+                action, 1
+            )
+        )
         return remove_action
 
     def show_quick_access_action_context_menu(self, command_action, global_pos):
@@ -1028,6 +1076,38 @@ class MainWindow(RibbonMainWindow):
         self.statusBar().showMessage(
             f"Removed {command_action.text()} from Quick Access Toolbar", 2500
         )
+
+    def rebuild_quick_access_order(self):
+        ribbon = self.ribbonBar()
+        quick_access_bar = ribbon.quickAccessBar()
+        for action in list(self.quick_access_actions):
+            if action in quick_access_bar.actions():
+                quick_access_bar.removeAction(action)
+        for action in self.quick_access_actions:
+            ribbon.addQuickAccessAction(action)
+            quick_access_bar.setActionVisible(action, True)
+        self._configure_quick_access_context_menus()
+        ribbon.setQuickAccessBarPosition(ribbon.quickAccessBarPosition())
+        self.update_quick_access_preview()
+
+    def move_quick_access_action(self, command_action, offset):
+        if command_action is None or not offset:
+            return False
+        if command_action not in self.quick_access_actions:
+            return False
+        current_index = self.quick_access_actions.index(command_action)
+        target_index = max(
+            0, min(current_index + offset, len(self.quick_access_actions) - 1)
+        )
+        if target_index == current_index:
+            return False
+        action = self.quick_access_actions.pop(current_index)
+        self.quick_access_actions.insert(target_index, action)
+        self.rebuild_quick_access_order()
+        self.statusBar().showMessage(
+            f"Moved {command_action.text()} in Quick Access Toolbar", 2500
+        )
+        return True
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()
@@ -1074,6 +1154,11 @@ class MainWindow(RibbonMainWindow):
         labels_blocked = self.quick_access_labels_action.blockSignals(True)
         self.quick_access_labels_action.setChecked(labels_visible)
         self.quick_access_labels_action.blockSignals(labels_blocked)
+        self.reorder_quick_access_action.setEnabled(
+            self.full_screen_action in self.quick_access_actions
+            and self.quick_access_actions.index(self.full_screen_action)
+            < len(self.quick_access_actions) - 1
+        )
         visible_count = quick_access_bar.visibleCount() if visible else 0
         self.quick_access_status_preview.setText(
             f"QAT: {'Visible' if visible else 'Hidden'} "
