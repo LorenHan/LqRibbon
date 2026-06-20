@@ -58,6 +58,7 @@ QtnRibbonSearchBarSearchString = "Search"
 QtnRibbonSearchBarGetHelpString = "Get Help"
 QtnRibbonSearchBarHelpString = "Help"
 QtnRibbonSearchBarActionsString = "Actions"
+QtnRibbonSearchBarRecentActionsString = "Recently Used"
 QtnRibbonSearchBarSuggestedActionsString = "Suggested Actions"
 QtnRibbonGalleryItemSize = QSize(72, 56)
 QtnRibbonGalleryItemString = "Gallery Item"
@@ -843,7 +844,25 @@ class LqRibbonSearchBar(QLineEdit):
         self._popup.clear()
         normalized = text.strip().lower()
         count = 0
-        for action in self._ordered_popup_actions(normalized):
+        actions = self._ordered_popup_actions(normalized)
+        if not normalized and self.ribbon_bar and hasattr(self.ribbon_bar, "recentSearchActions"):
+            recent_actions = [
+                action for action in self.ribbon_bar.recentSearchActions()
+                if action in actions
+            ]
+            remaining_actions = [
+                action for action in actions if action not in recent_actions
+            ]
+            if recent_actions:
+                self._popup.addSection(QtnRibbonSearchBarRecentActionsString)
+                actions = recent_actions
+                if remaining_actions:
+                    actions = recent_actions + [None] + remaining_actions
+
+        for action in actions:
+            if action is None:
+                self._popup.addSection(QtnRibbonSearchBarActionsString)
+                continue
             self._popup.addAction(action)
             count += 1
             if self._max_search_item_count and count >= self._max_search_item_count:

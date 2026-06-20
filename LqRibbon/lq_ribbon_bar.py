@@ -629,6 +629,9 @@ class LqRibbonBar(QTabWidget):
             return False
         action.trigger()
         self.searchActionTriggered.emit(action)
+        self._recent_search_actions = [
+            recent for recent in self._recent_search_actions if recent is not action
+        ]
         self._recent_search_actions.insert(0, action)
         self._recent_search_actions = self._recent_search_actions[: self._recent_search_limit]
         self.recentSearchActionsChanged.emit()

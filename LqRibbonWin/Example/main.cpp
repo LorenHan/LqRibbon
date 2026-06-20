@@ -406,6 +406,32 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         return 1;
     }
 
+    if (!require(ribbonBar->triggerSearchAction(QStringLiteral("Control Modes"))
+                     && ribbonBar->triggerSearchAction(QStringLiteral("Center Search")),
+                 QStringLiteral("search actions record recently used entries"))) {
+        return 1;
+    }
+    ribbonBar->setSearchText(QString());
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    zeroQueryRows.clear();
+    if (searchPopupView && searchPopupView->model()) {
+        QAbstractItemModel *popupModel = searchPopupView->model();
+        for (int row = 0; row < popupModel->rowCount(); ++row) {
+            zeroQueryRows.append(
+                popupModel->index(row, 0).data(Qt::DisplayRole).toString());
+        }
+    }
+    if (!require(searchPopupView && searchPopupView->isVisible()
+                     && zeroQueryRows.value(0) == QStringLiteral("Recently Used")
+                     && zeroQueryRows.value(1) == QStringLiteral("Center Search")
+                     && zeroQueryRows.value(2) == QStringLiteral("Control Modes")
+                     && zeroQueryRows.value(3) == QStringLiteral("Actions")
+                     && zeroQueryRows.value(4) == QStringLiteral("Settings"),
+                 QStringLiteral("zero-query search groups recent actions"))) {
+        return 1;
+    }
+
     reset();
     doubleClickCollapseTestTab(ribbonBar, firstIndex);
     if (!require(ribbonBar->isRibbonMinimized()
@@ -1843,6 +1869,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-alt-q-search-preview"));
     const bool zeroQuerySearchPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-zero-query-search-preview"));
+    const bool recentSearchPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-recent-search-preview"));
     const bool collapsedPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
     const bool simplifiedPreviewRequested =
@@ -1940,6 +1968,7 @@ int main(int argc, char *argv[])
         || hiddenSearchPreviewRequested
         || altQSearchPreviewRequested
         || zeroQuerySearchPreviewRequested
+        || recentSearchPreviewRequested
         || searchPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
@@ -1957,7 +1986,8 @@ int main(int argc, char *argv[])
         || compactSearchPreviewRequested
         || hiddenSearchPreviewRequested
         || altQSearchPreviewRequested
-        || zeroQuerySearchPreviewRequested) {
+        || zeroQuerySearchPreviewRequested
+        || recentSearchPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -3649,9 +3679,12 @@ int main(int argc, char *argv[])
     if (!strPreviewPath.isEmpty()) {
         QTimer::singleShot(300,
                            &mainWindow,
-                           [&mainWindow, strPreviewPath, zeroQuerySearchPreviewRequested]() {
+                           [&mainWindow,
+                            strPreviewPath,
+                            zeroQuerySearchPreviewRequested,
+                            recentSearchPreviewRequested]() {
             QPixmap preview = mainWindow.grab();
-            if (zeroQuerySearchPreviewRequested) {
+            if (zeroQuerySearchPreviewRequested || recentSearchPreviewRequested) {
                 QListView *searchPopupView =
                     mainWindow.ribbonBar()->findChild<QListView *>(
                         QStringLiteral("lqRibbonSearchPopupView"));
@@ -3697,6 +3730,18 @@ int main(int argc, char *argv[])
         QTimer::singleShot(120,
                            &mainWindow,
                            [focusSearchAction, &mainWindow]() {
+            focusSearchAction->trigger();
+            mainWindow.ribbonBar()->setSearchText(QString());
+            mainWindow.ribbonBar()->searchLineEdit()->setFocus(
+                Qt::OtherFocusReason);
+        });
+    }
+    if (recentSearchPreviewRequested) {
+        QTimer::singleShot(120,
+                           &mainWindow,
+                           [focusSearchAction, &mainWindow]() {
+            mainWindow.ribbonBar()->triggerSearchAction(QStringLiteral("Control Modes"));
+            mainWindow.ribbonBar()->triggerSearchAction(QStringLiteral("Center Search"));
             focusSearchAction->trigger();
             mainWindow.ribbonBar()->setSearchText(QString());
             mainWindow.ribbonBar()->searchLineEdit()->setFocus(

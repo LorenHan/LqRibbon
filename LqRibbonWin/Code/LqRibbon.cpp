@@ -81,6 +81,8 @@ struct RibbonTranslationEntry
 const RibbonTranslationEntry ribbonTranslationTable[] = {
     {"Search", "\xE6\x90\x9C\xE7\xB4\xA2"},
     {"Actions", "\xE6\x93\x8D\xE4\xBD\x9C"},
+    {"Recently Used",
+     "\xE6\x9C\x80\xE8\xBF\x91\xE4\xBD\xBF\xE7\x94\xA8"},
     {"Help", "\xE5\xB8\xAE\xE5\x8A\xA9"},
     {"Get Help with \"%1\"",
      "\xE8\x8E\xB7\xE5\x8F\x96\x20\x22\x25\x31\x22\x20"
@@ -4443,7 +4445,36 @@ void RibbonBar::updateSearchPopup()
     const QList<QAction *> actionList = matchedSearchActions(strText);
     m_searchPopupModel->clear();
 
-    if (!actionList.isEmpty()) {
+    if (!actionList.isEmpty() && strText.isEmpty()) {
+        QList<QAction *> recentActionList;
+        for (const QPointer<QAction> &action : m_recentSearchActionList) {
+            QAction *recentAction = action.data();
+            if (actionList.contains(recentAction)
+                && !recentActionList.contains(recentAction)) {
+                recentActionList.append(recentAction);
+            }
+        }
+
+        QList<QAction *> defaultActionList = actionList;
+        for (QAction *action : recentActionList) {
+            defaultActionList.removeAll(action);
+        }
+
+        if (!recentActionList.isEmpty()) {
+            m_searchPopupModel->appendRow(
+                createSearchHeaderItem(ribbonText("Recently Used")));
+            for (QAction *action : recentActionList) {
+                m_searchPopupModel->appendRow(createSearchActionItem(action));
+            }
+        }
+
+        if (!defaultActionList.isEmpty()) {
+            m_searchPopupModel->appendRow(createSearchHeaderItem(ribbonText("Actions")));
+            for (QAction *action : defaultActionList) {
+                m_searchPopupModel->appendRow(createSearchActionItem(action));
+            }
+        }
+    } else if (!actionList.isEmpty()) {
         m_searchPopupModel->appendRow(createSearchHeaderItem(ribbonText("Actions")));
         for (QAction *action : actionList) {
             m_searchPopupModel->appendRow(createSearchActionItem(action));

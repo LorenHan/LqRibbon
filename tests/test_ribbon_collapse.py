@@ -415,6 +415,36 @@ def test_example_zero_query_search_shows_default_suggestions():
     window.close()
 
 
+def test_example_zero_query_search_groups_recent_actions():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    search = ribbon.searchLineEdit()
+
+    assert ribbon.triggerSearchAction("Control Modes")
+    assert ribbon.triggerSearchAction("Center Search")
+    search.setFocus()
+    search.clear()
+    search.showPopup("")
+    _app().processEvents()
+    popup_rows = [action.text() for action in search._popup.actions()]
+
+    assert [action.text() for action in ribbon.recentSearchActions()[:2]] == [
+        "Center Search",
+        "Control Modes",
+    ]
+    assert popup_rows[:5] == [
+        "Recently Used",
+        "Center Search",
+        "Control Modes",
+        "Actions",
+        "Settings",
+    ]
+    search.closePopup()
+    window.close()
+
+
 def test_example_collapse_state_preview_tracks_modes():
     window = MainWindow()
     window.show()
@@ -919,6 +949,7 @@ def main():
         test_example_hidden_search_action_removes_caption_search_box,
         test_example_alt_q_restores_and_focuses_caption_search,
         test_example_zero_query_search_shows_default_suggestions,
+        test_example_zero_query_search_groups_recent_actions,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,
