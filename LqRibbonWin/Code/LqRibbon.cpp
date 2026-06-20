@@ -2448,7 +2448,6 @@ RibbonBar::RibbonBar(QWidget *parent)
     updateRibbonMetrics();
     tabBar()->setExpanding(false);
     tabBar()->setUsesScrollButtons(true);
-    tabBar()->installEventFilter(this);
     if (qApp) {
         qApp->installEventFilter(this);
     }

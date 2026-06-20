@@ -10,7 +10,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, Qt
+from PySide6.QtGui import QMouseEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel, QStackedWidget, QToolButton
 
@@ -91,12 +92,48 @@ def _click_tab(ribbon, index=0):
 
 
 def _double_click_tab(ribbon, index=0):
-    QTest.mouseDClick(
-        _tab_bar(ribbon),
+    tab_bar = _tab_bar(ribbon)
+    pos = _tab_center(ribbon, index)
+    _send_tab_mouse(
+        tab_bar,
+        pos,
+        QEvent.Type.MouseButtonPress,
         Qt.MouseButton.LeftButton,
-        Qt.KeyboardModifier.NoModifier,
-        _tab_center(ribbon, index),
+        Qt.MouseButton.LeftButton,
     )
+    _send_tab_mouse(
+        tab_bar,
+        pos,
+        QEvent.Type.MouseButtonRelease,
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.NoButton,
+    )
+    _send_tab_mouse(
+        tab_bar,
+        pos,
+        QEvent.Type.MouseButtonDblClick,
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+    )
+    _send_tab_mouse(
+        tab_bar,
+        pos,
+        QEvent.Type.MouseButtonRelease,
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.NoButton,
+    )
+
+
+def _send_tab_mouse(tab_bar, pos, event_type, button, buttons):
+    event = QMouseEvent(
+        event_type,
+        pos,
+        tab_bar.mapToGlobal(pos),
+        button,
+        buttons,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    QApplication.sendEvent(tab_bar, event)
     _app().processEvents()
 
 
@@ -104,6 +141,7 @@ def test_double_click_expanded_tab_collapses():
     window, ribbon, *_ = _window()
     _double_click_tab(ribbon, 0)
     assert ribbon.isRibbonMinimized()
+    assert not _temporary_expanded(ribbon)
     assert not _command_area_visible(ribbon)
     window.close()
 

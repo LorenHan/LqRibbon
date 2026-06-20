@@ -152,7 +152,6 @@ class LqRibbonBar(QTabWidget):
         self._search_bar.returnPressed.connect(self._accept_search_text)
         self.tabBar().setExpanding(False)
         self.tabBar().setUsesScrollButtons(True)
-        self.tabBar().installEventFilter(self)
         app = QApplication.instance()
         if app:
             app.installEventFilter(self)
