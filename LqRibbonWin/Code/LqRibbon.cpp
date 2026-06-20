@@ -3430,11 +3430,15 @@ void RibbonBar::setRibbonMinimized(bool minimized)
         return;
     }
 
+    const bool temporaryWasExpanded = m_ribbonTemporaryExpanded;
     m_ribbonMinimized = minimized;
     m_ribbonTemporaryExpanded = false;
     updateRibbonDisplayState();
     emit ribbonMinimizedChanged(m_ribbonMinimized);
     emit minimizationChanged(m_ribbonMinimized);
+    if (temporaryWasExpanded) {
+        emit ribbonTemporaryExpandedChanged(false);
+    }
 }
 
 ///
@@ -3445,6 +3449,11 @@ void RibbonBar::setRibbonMinimized(bool minimized)
 bool RibbonBar::isRibbonMinimized() const
 {
     return m_ribbonMinimized;
+}
+
+bool RibbonBar::isRibbonTemporaryExpanded() const
+{
+    return m_ribbonTemporaryExpanded;
 }
 
 void RibbonBar::minimize()
@@ -4182,6 +4191,7 @@ void RibbonBar::showTemporaryRibbon()
 
     m_ribbonTemporaryExpanded = true;
     updateRibbonDisplayState();
+    emit ribbonTemporaryExpandedChanged(true);
 }
 
 void RibbonBar::hideTemporaryRibbon()
@@ -4192,6 +4202,7 @@ void RibbonBar::hideTemporaryRibbon()
 
     m_ribbonTemporaryExpanded = false;
     updateRibbonDisplayState();
+    emit ribbonTemporaryExpandedChanged(false);
 }
 
 void RibbonBar::scheduleHideTemporaryRibbon()

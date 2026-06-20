@@ -309,6 +309,10 @@ def test_example_collapse_state_preview_tracks_modes():
     window.display_auto_hide_action.trigger()
     _app().processEvents()
     assert "Collapsed" in preview.text()
+
+    _click_tab(ribbon, 0)
+    assert ribbon.isRibbonTemporaryExpanded()
+    assert "Temporary" in preview.text()
     window.close()
 
 
@@ -317,6 +321,7 @@ def test_single_click_collapsed_tab_temporarily_expands():
     ribbon.setRibbonMinimized(True)
     _click_tab(ribbon, 0)
     assert ribbon.isRibbonMinimized()
+    assert ribbon.isRibbonTemporaryExpanded()
     assert _temporary_expanded(ribbon)
     assert _command_area_visible(ribbon)
     window.close()

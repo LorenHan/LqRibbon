@@ -44,7 +44,7 @@ Default style remains `Office 2016 Blue`.
 | 013 | Ribbon pin and unpin command | Ribbon display menu | Complete |
 | 014 | Ribbon display options menu | Caption control | Complete |
 | 015 | Collapse button state preview | Shell page | Complete |
-| 016 | Temporary ribbon expansion on tab click | Shell page | Planned |
+| 016 | Temporary ribbon expansion on tab click | Shell page | Complete |
 | 017 | Double-click tab minimize behavior | Shell page | Planned |
 | 018 | Compact command row density | Simplified ribbon preview | Planned |
 | 019 | Expanded command row density | Classic ribbon preview | Planned |

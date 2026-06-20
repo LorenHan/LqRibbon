@@ -87,6 +87,8 @@ class LqRibbonBar(QTabWidget):
     currentPageChanged = Signal(QWidget)
     ribbon_minimized_changed = Signal(bool)
     ribbonMinimizedChanged = Signal(bool)
+    ribbon_temporary_expanded_changed = Signal(bool)
+    ribbonTemporaryExpandedChanged = Signal(bool)
     minimization_changed = Signal(bool)
     minimizationChanged = Signal(bool)
     simplified_mode_changed = Signal(bool)
@@ -317,12 +319,16 @@ class LqRibbonBar(QTabWidget):
             return
         self._ribbon_temporary_expanded = True
         self._apply_ribbon_height()
+        self.ribbon_temporary_expanded_changed.emit(True)
+        self.ribbonTemporaryExpandedChanged.emit(True)
 
     def _hide_temporary_ribbon(self):
         if not self._ribbon_temporary_expanded:
             return
         self._ribbon_temporary_expanded = False
         self._apply_ribbon_height()
+        self.ribbon_temporary_expanded_changed.emit(False)
+        self.ribbonTemporaryExpandedChanged.emit(False)
 
     def _schedule_hide_temporary_ribbon(self):
         if self._ribbon_temporary_expanded:
@@ -650,6 +656,7 @@ class LqRibbonBar(QTabWidget):
             if minimized:
                 self._hide_temporary_ribbon()
             return
+        temporary_was_expanded = self._ribbon_temporary_expanded
         self._ribbon_minimized = minimized
         self._ribbon_temporary_expanded = False
         self._apply_ribbon_height()
@@ -657,9 +664,15 @@ class LqRibbonBar(QTabWidget):
         self.ribbonMinimizedChanged.emit(self._ribbon_minimized)
         self.minimization_changed.emit(self._ribbon_minimized)
         self.minimizationChanged.emit(self._ribbon_minimized)
+        if temporary_was_expanded:
+            self.ribbon_temporary_expanded_changed.emit(False)
+            self.ribbonTemporaryExpandedChanged.emit(False)
 
     def isRibbonMinimized(self):
         return self._ribbon_minimized
+
+    def isRibbonTemporaryExpanded(self):
+        return self._ribbon_temporary_expanded
 
     def minimize(self):
         self.setRibbonMinimized(True)

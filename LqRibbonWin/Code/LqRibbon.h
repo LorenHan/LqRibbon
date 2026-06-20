@@ -593,6 +593,7 @@ public:
     /// \param minimized true to collapse command pages, false to expand them.
     ///
     void setRibbonMinimized(bool minimized);
+    bool isRibbonTemporaryExpanded() const;
     void minimize();
     bool isMinimized() const;
     void setMinimized(bool minimized);
@@ -701,6 +702,7 @@ signals:
     /// \param minimized true when the command area is collapsed.
     ///
     void ribbonMinimizedChanged(bool minimized);
+    void ribbonTemporaryExpandedChanged(bool expanded);
     void minimizationChanged(bool minimized);
     void simplifiedModeChanged(bool enabled);
     void pageAboutToBeChanged(RibbonPage *page, bool &changed);

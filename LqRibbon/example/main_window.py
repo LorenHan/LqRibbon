@@ -766,6 +766,9 @@ class MainWindow(RibbonMainWindow):
         self.ribbonBar().ribbonMinimizedChanged.connect(
             lambda _minimized: self.update_collapse_state_preview()
         )
+        self.ribbonBar().ribbonTemporaryExpandedChanged.connect(
+            lambda _expanded: self.update_collapse_state_preview()
+        )
         self.ribbonBar().simplifiedModeChanged.connect(
             lambda _enabled: self.update_collapse_state_preview()
         )
@@ -840,6 +843,8 @@ class MainWindow(RibbonMainWindow):
         ribbon = self.ribbonBar()
         if not ribbon.isMinimizationEnabled():
             state = "Pinned"
+        elif ribbon.isRibbonTemporaryExpanded():
+            state = "Temporary"
         elif ribbon.simplifiedMode():
             state = "Simplified"
         elif ribbon.isRibbonMinimized():

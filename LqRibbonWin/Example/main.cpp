@@ -395,6 +395,13 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("collapse state preview tracks auto hide"))) {
         return 1;
     }
+    clickCollapseTestTab(ribbonBar, firstIndex);
+    if (!require(ribbonBar->isRibbonTemporaryExpanded()
+                     && collapseStatePreview->text().contains(
+                         QStringLiteral("Temporary")),
+                 QStringLiteral("collapse state preview tracks temporary expansion"))) {
+        return 1;
+    }
 
     reset();
     ribbonBar->setRibbonMinimized(true);
@@ -1206,6 +1213,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
     const bool simplifiedPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-simplified-preview"));
+    const bool temporaryPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-temporary-preview"));
     const bool mdiPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-mdi-preview"));
     const bool tabPreviewRequested =
@@ -1253,7 +1262,7 @@ int main(int argc, char *argv[])
     mainWindow.resize(920, 560);
     if (controlsPreviewRequested || galleryPreviewRequested
         || shellPreviewRequested || simplifiedPreviewRequested
-        || stylePreviewRequested) {
+        || temporaryPreviewRequested || stylePreviewRequested) {
         mainWindow.resize(1180, 560);
     }
 
@@ -1690,6 +1699,8 @@ int main(int argc, char *argv[])
         QString stateText;
         if (!bar->isMinimizationEnabled()) {
             stateText = QObject::tr("Pinned");
+        } else if (bar->isRibbonTemporaryExpanded()) {
+            stateText = QObject::tr("Temporary");
         } else if (bar->simplifiedMode()) {
             stateText = QObject::tr("Simplified");
         } else if (bar->isRibbonMinimized()) {
@@ -1701,6 +1712,12 @@ int main(int argc, char *argv[])
     };
     QObject::connect(mainWindow.ribbonBar(),
                      &LqRibbon::RibbonBar::ribbonMinimizedChanged,
+                     collapseStatePreview,
+                     [updateCollapseStatePreview](bool) {
+                         updateCollapseStatePreview();
+                     });
+    QObject::connect(mainWindow.ribbonBar(),
+                     &LqRibbon::RibbonBar::ribbonTemporaryExpandedChanged,
                      collapseStatePreview,
                      [updateCollapseStatePreview](bool) {
                          updateCollapseStatePreview();
@@ -1942,7 +1959,9 @@ int main(int argc, char *argv[])
     const int shellPageIndex = mainWindow.ribbonBar()->indexOf(shellPage);
     if (stylePreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(generalPageIndex);
-    } else if (shellPreviewRequested || simplifiedPreviewRequested) {
+    } else if (shellPreviewRequested
+               || simplifiedPreviewRequested
+               || temporaryPreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(shellPageIndex);
     } else if (galleryPreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(galleryPageIndex);
@@ -2135,6 +2154,14 @@ int main(int argc, char *argv[])
     if (simplifiedPreviewRequested) {
         QTimer::singleShot(120, &mainWindow, [&mainWindow]() {
             mainWindow.ribbonBar()->setSimplifiedMode(true);
+        });
+    }
+
+    if (temporaryPreviewRequested) {
+        QTimer::singleShot(120, &mainWindow, [&mainWindow]() {
+            mainWindow.ribbonBar()->setRibbonMinimized(true);
+            clickCollapseTestTab(mainWindow.ribbonBar(),
+                                 mainWindow.ribbonBar()->currentIndex());
         });
     }
 
