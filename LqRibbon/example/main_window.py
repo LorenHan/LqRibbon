@@ -654,6 +654,11 @@ class MainWindow(RibbonMainWindow):
         )
         self.responsive_labels_status_preview.setMinimumWidth(140)
         status_bar.addWidget(self.responsive_labels_status_preview)
+        status_bar.addWidget(QLabel("|", status_bar))
+        self.quick_access_status_preview = QLabel(status_bar)
+        self.quick_access_status_preview.setObjectName("quickAccessStatusPreview")
+        self.quick_access_status_preview.setMinimumWidth(130)
+        status_bar.addWidget(self.quick_access_status_preview)
 
         switch_group = RibbonStatusBarSwitchGroup(status_bar)
         view_actions = QActionGroup(switch_group)
@@ -807,6 +812,23 @@ class MainWindow(RibbonMainWindow):
         self.update_responsive_label_preview()
 
     def _configure_search_and_quick_access(self):
+        self.quick_access_actions = [
+            self.full_screen_action,
+            self.connect_action,
+            self.minimize_ribbon_action,
+        ]
+        self.show_quick_access_action = QAction(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarNormalButton),
+            "Show Quick Access Toolbar",
+            self,
+        )
+        self.show_quick_access_action.setObjectName("showQuickAccessBarAction")
+        self.show_quick_access_action.setCheckable(True)
+        self.show_quick_access_action.toggled.connect(self.set_quick_access_visible)
+        self.ribbonBar().quickAccessBar().show_customize_menu.connect(
+            self.populate_quick_access_menu
+        )
+
         self.search_actions = [
             self.full_screen_action,
             self.mdi_action,
@@ -825,15 +847,36 @@ class MainWindow(RibbonMainWindow):
             self.move_gallery_action,
             self.toggle_group_action,
             self.width_stress_action,
+            self.show_quick_access_action,
             self.office_popup_action,
             self.office_menu_action,
             self.show_customize_action,
         ]
         for action in self.search_actions:
             self.ribbonBar().registerSearchAction(action)
-        self.ribbonBar().addQuickAccessAction(self.full_screen_action)
-        self.ribbonBar().addQuickAccessAction(self.connect_action)
-        self.ribbonBar().addQuickAccessAction(self.minimize_ribbon_action)
+        for action in self.quick_access_actions:
+            self.ribbonBar().addQuickAccessAction(action)
+        self.update_quick_access_preview()
+
+    def populate_quick_access_menu(self, menu):
+        self.update_quick_access_preview()
+        menu.addAction(self.show_quick_access_action)
+
+    def set_quick_access_visible(self, visible):
+        self.ribbonBar().quickAccessBar().setVisible(bool(visible))
+        self.update_quick_access_preview()
+
+    def update_quick_access_preview(self):
+        quick_access_bar = self.ribbonBar().quickAccessBar()
+        visible = not quick_access_bar.isHidden()
+        blocked = self.show_quick_access_action.blockSignals(True)
+        self.show_quick_access_action.setChecked(visible)
+        self.show_quick_access_action.blockSignals(blocked)
+        visible_count = quick_access_bar.visibleCount() if visible else 0
+        self.quick_access_status_preview.setText(
+            f"QAT: {'Visible' if visible else 'Hidden'} "
+            f"{visible_count}/{len(self.quick_access_actions)}"
+        )
 
     def restore_classic_ribbon(self):
         self.ribbonBar().setRibbonMinimized(False)

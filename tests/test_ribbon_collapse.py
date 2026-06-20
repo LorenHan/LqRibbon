@@ -21,7 +21,7 @@ sys.path.insert(
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QLabel, QStackedWidget, QToolButton
+from PySide6.QtWidgets import QApplication, QLabel, QMenu, QStackedWidget, QToolButton
 
 from LqRibbon import RibbonMainWindow
 from main_window import MainWindow
@@ -357,6 +357,35 @@ def test_example_double_click_preview_tracks_modes():
     window.close()
 
 
+def test_example_quick_access_menu_controls_toolbar_visibility():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    quick_access_bar = window.ribbonBar().quickAccessBar()
+    status = window.quick_access_status_preview
+
+    menu = QMenu(window)
+    window.populate_quick_access_menu(menu)
+    assert window.show_quick_access_action in menu.actions()
+    assert window.show_quick_access_action.isChecked()
+    assert not quick_access_bar.isHidden()
+    assert quick_access_bar.visibleCount() == 3
+    assert "Visible 3/3" in status.text()
+
+    window.show_quick_access_action.trigger()
+    _app().processEvents()
+    assert quick_access_bar.isHidden()
+    assert not window.show_quick_access_action.isChecked()
+    assert "Hidden 0/3" in status.text()
+
+    window.show_quick_access_action.trigger()
+    _app().processEvents()
+    assert not quick_access_bar.isHidden()
+    assert window.show_quick_access_action.isChecked()
+    assert "Visible 3/3" in status.text()
+    window.close()
+
+
 def test_example_responsive_label_preview_hides_labels_under_stress():
     window = MainWindow()
     window.show()
@@ -491,6 +520,7 @@ def main():
         test_example_display_options_menu_controls_ribbon_modes,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
+        test_example_quick_access_menu_controls_toolbar_visibility,
         test_example_responsive_label_preview_hides_labels_under_stress,
         test_single_click_collapsed_tab_temporarily_expands,
         test_action_triggers_while_temporarily_expanded,

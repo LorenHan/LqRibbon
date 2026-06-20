@@ -49,7 +49,7 @@ Default style remains `Office 2016 Blue`.
 | 018 | Compact command row density | Simplified ribbon preview | Complete |
 | 019 | Expanded command row density | Classic ribbon preview | Complete |
 | 020 | Responsive command label hiding | Width stress preview | Complete |
-| 021 | Quick Access Toolbar show/hide | QAT menu | Planned |
+| 021 | Quick Access Toolbar show/hide | QAT menu | Complete |
 | 022 | QAT above-ribbon position | QAT menu | Planned |
 | 023 | QAT below-ribbon position | QAT menu | Planned |
 | 024 | QAT command labels on/off | QAT menu | Planned |
