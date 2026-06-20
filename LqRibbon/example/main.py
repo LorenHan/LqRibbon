@@ -57,6 +57,7 @@ def main():
     preview_path = _option_value(arguments, "--grab-preview")
     search_preview = "--grab-search-preview" in arguments
     compact_search_preview = "--grab-search-compact-preview" in arguments
+    hidden_search_preview = "--grab-search-hidden-preview" in arguments
     collapsed_preview = "--grab-collapsed-preview" in arguments
     simplified_preview = "--grab-simplified-preview" in arguments
     temporary_preview = "--grab-temporary-preview" in arguments
@@ -94,6 +95,7 @@ def main():
     if (
         search_preview
         or compact_search_preview
+        or hidden_search_preview
         or controls_preview
         or gallery_preview
         or shell_preview
@@ -128,6 +130,7 @@ def main():
         or export_quick_access_preview
         or import_quick_access_preview
         or compact_search_preview
+        or hidden_search_preview
     ):
         window.resize(1476, 560)
     if style_name:
@@ -179,6 +182,8 @@ def main():
         QTimer.singleShot(120, window.focus_search_preview)
     if compact_search_preview:
         QTimer.singleShot(120, window.compact_search_action.trigger)
+    if hidden_search_preview:
+        QTimer.singleShot(120, window.hidden_search_action.trigger)
     if collapsed_preview:
         QTimer.singleShot(120, lambda: window.ribbonBar().setRibbonMinimized(True))
     if simplified_preview:

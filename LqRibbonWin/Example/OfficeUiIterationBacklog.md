@@ -61,7 +61,7 @@ Default style remains `Office 2016 Blue`.
 | 030 | Import QAT customization | Customize dialog | Complete |
 | 031 | Centered Microsoft Search box | Caption search | Complete |
 | 032 | Compact search icon mode | Caption search | Complete |
-| 033 | Hidden search mode | Caption search | Planned |
+| 033 | Hidden search mode | Caption search | Complete |
 | 034 | `Alt+Q` focuses search | Keyboard test path | Planned |
 | 035 | Zero-query search suggestions | Search popup | Planned |
 | 036 | Recently used action section | Search popup | Planned |

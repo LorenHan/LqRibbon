@@ -31,6 +31,7 @@ from main_window import (
     QUICK_ACCESS_TOP_POSITION,
     SEARCH_BAR_COMPACT,
     SEARCH_BAR_CENTRAL,
+    SEARCH_BAR_HIDDEN,
 )
 
 
@@ -336,6 +337,31 @@ def test_example_compact_search_action_switches_caption_search_to_icon_mode():
     assert not search.isCompact()
     assert search.geometry().width() > compact_geometry.width()
     assert search.geometry().width() == central_width
+    window.close()
+
+
+def test_example_hidden_search_action_removes_caption_search_box():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    search = ribbon.searchLineEdit()
+
+    window.hidden_search_action.trigger()
+    _app().processEvents()
+    assert ribbon.searchBarAppearance() == SEARCH_BAR_HIDDEN
+    assert window.hidden_search_action.isChecked()
+    assert not window.center_search_action.isChecked()
+    assert not window.compact_search_action.isChecked()
+    assert not search.isVisible()
+    assert not search.isCompact()
+
+    window.center_search_action.trigger()
+    _app().processEvents()
+    assert ribbon.searchBarAppearance() == SEARCH_BAR_CENTRAL
+    assert window.center_search_action.isChecked()
+    assert search.isVisible()
+    assert not search.isCompact()
     window.close()
 
 
@@ -840,6 +866,7 @@ def main():
         test_example_display_options_menu_controls_ribbon_modes,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
+        test_example_hidden_search_action_removes_caption_search_box,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,
