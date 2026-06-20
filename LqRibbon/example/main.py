@@ -7,12 +7,16 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QSettings, QTimer, Qt
 from PySide6.QtGui import QFont, QFontDatabase
 from PySide6.QtWidgets import QApplication
 
 from LqRibbon import RibbonStyle
-from main_window import MainWindow
+from main_window import (
+    MainWindow,
+    save_ribbon_style_choice,
+    saved_ribbon_style_choice,
+)
 import picture_rc  # noqa: F401
 
 
@@ -59,8 +63,18 @@ def main():
     shell_preview = "--grab-shell-preview" in arguments
     style_preview = "--grab-style-preview" in arguments
     style_name = _option_value(arguments, "--style")
+    deterministic_style = bool(preview_path)
+    settings = QSettings()
+    saved_style_name = "" if deterministic_style else saved_ribbon_style_choice(settings)
 
     window = MainWindow()
+    if not deterministic_style:
+        style_combo = window.style_combo_control.widget()
+        style_combo.currentIndexChanged.connect(
+            lambda index: save_ribbon_style_choice(
+                settings, window.style_choice_from_combo_index(index)
+            )
+        )
     if controls_preview or gallery_preview or shell_preview:
         window.resize(1180, 560)
     if style_preview:
@@ -69,6 +83,8 @@ def main():
         window.set_ribbon_style(style_name)
     elif style_preview:
         window.set_ribbon_style(RibbonStyle.Microsoft365Light)
+    elif saved_style_name:
+        window.set_ribbon_style(saved_style_name)
     if mdi_preview or tab_preview:
         window.show_mdi_content(tabbed=tab_preview)
     window.select_preview_page(

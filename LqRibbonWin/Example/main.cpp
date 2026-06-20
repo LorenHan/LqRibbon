@@ -16,10 +16,12 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QSettings>
 #include <QStyle>
 #include <QStackedWidget>
 #include <QTabBar>
 #include <QTableWidget>
+#include <QTemporaryDir>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -29,6 +31,7 @@
 namespace {
 
 constexpr int systemRibbonStyleComboValue = -1;
+const char ribbonStyleSettingsKey[] = "Ribbon/Style";
 
 struct RibbonStylePreviewPalette
 {
@@ -354,6 +357,43 @@ bool isSystemRibbonStyleText(const QString &strText)
         || key == QStringLiteral("systemdefault");
 }
 
+QString ribbonStyleSettingsValue(LqRibbon::RibbonBar::RibbonStyle style)
+{
+    switch (style) {
+    case LqRibbon::RibbonBar::Office2019Colorful:
+        return QStringLiteral("office2019colorful");
+    case LqRibbon::RibbonBar::Microsoft365Light:
+        return QStringLiteral("microsoft365light");
+    case LqRibbon::RibbonBar::Microsoft365Dark:
+        return QStringLiteral("microsoft365dark");
+    case LqRibbon::RibbonBar::Office2016Blue:
+    default:
+        return QStringLiteral("office2016blue");
+    }
+}
+
+QString ribbonStyleChoiceFromComboIndex(const QComboBox *combo, int index)
+{
+    const int value = combo->itemData(index).toInt();
+    if (value == systemRibbonStyleComboValue) {
+        return QStringLiteral("system");
+    }
+    return ribbonStyleSettingsValue(
+        static_cast<LqRibbon::RibbonBar::RibbonStyle>(value));
+}
+
+QString savedRibbonStyleChoice(const QSettings &settings)
+{
+    return settings.value(QString::fromLatin1(ribbonStyleSettingsKey))
+        .toString().trimmed();
+}
+
+void saveRibbonStyleChoice(QSettings &settings, const QString &choice)
+{
+    settings.setValue(QString::fromLatin1(ribbonStyleSettingsKey), choice);
+    settings.sync();
+}
+
 RibbonStylePreviewPalette ribbonStylePreviewPalette(
     LqRibbon::RibbonBar::RibbonStyle style)
 {
@@ -485,21 +525,6 @@ LqRibbon::RibbonBar::RibbonStyle ribbonStyleFromComboIndex(
         : static_cast<LqRibbon::RibbonBar::RibbonStyle>(value);
 }
 
-LqRibbon::RibbonBar::RibbonStyle requestedRibbonStyle(
-    const QStringList &argumentList,
-    LqRibbon::RibbonBar::RibbonStyle fallback =
-        LqRibbon::RibbonBar::Office2016Blue)
-{
-    const int styleIndex = argumentList.indexOf(QStringLiteral("--style"));
-    if (styleIndex >= 0 && styleIndex + 1 < argumentList.count()) {
-        if (isSystemRibbonStyleText(argumentList.at(styleIndex + 1))) {
-            return systemRibbonStyle();
-        }
-        return ribbonStyleFromText(argumentList.at(styleIndex + 1), fallback);
-    }
-    return fallback;
-}
-
 int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                   QComboBox *styleCombo,
                   QWidget *stylePreview)
@@ -526,6 +551,31 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
     if (!require(stylePreview->property("previewStyle").toInt()
                      == static_cast<int>(LqRibbon::RibbonBar::Office2016Blue),
                  QStringLiteral("style preview defaults to Office 2016 Blue"))) {
+        return 1;
+    }
+
+    QTemporaryDir settingsDir;
+    if (!require(settingsDir.isValid(),
+                 QStringLiteral("style settings temp directory exists"))) {
+        return 1;
+    }
+    const QString strSettingsPath =
+        settingsDir.filePath(QStringLiteral("style.ini"));
+    {
+        QSettings settings(strSettingsPath, QSettings::IniFormat);
+        saveRibbonStyleChoice(
+            settings,
+            ribbonStyleSettingsValue(LqRibbon::RibbonBar::Microsoft365Dark));
+    }
+    QSettings savedSettings(strSettingsPath, QSettings::IniFormat);
+    if (!require(savedRibbonStyleChoice(savedSettings)
+                     == QStringLiteral("microsoft365dark"),
+                 QStringLiteral("style choice persists to settings"))) {
+        return 1;
+    }
+    savedSettings.remove(QString::fromLatin1(ribbonStyleSettingsKey));
+    if (!require(savedRibbonStyleChoice(savedSettings).isEmpty(),
+                 QStringLiteral("empty settings keep default style path"))) {
         return 1;
     }
 
@@ -626,6 +676,8 @@ int main(int argc, char *argv[])
     }
 
     QApplication application(argc, argv);
+    application.setApplicationName(QStringLiteral("LqRibbon Example"));
+    application.setOrganizationName(QStringLiteral("LqRibbon"));
     for (const QString &fontPath : {
              QStringLiteral("C:/Windows/Fonts/segoeui.ttf"),
              QStringLiteral("C:/Windows/Fonts/arial.ttf"),
@@ -666,15 +718,31 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--run-collapse-tests"));
     const bool styleTestsRequested =
         argumentList.contains(QStringLiteral("--run-style-tests"));
-    const LqRibbon::RibbonBar::RibbonStyle previewRibbonStyle =
-        requestedRibbonStyle(argumentList,
-                             stylePreviewRequested
-                                 ? LqRibbon::RibbonBar::Microsoft365Light
-                                 : LqRibbon::RibbonBar::Office2016Blue);
+    const bool deterministicStyleRequested =
+        previewRequested || collapseTestsRequested || styleTestsRequested;
+    QSettings settings;
     const int styleArgumentIndex = argumentList.indexOf(QStringLiteral("--style"));
+    const bool hasStyleArgument =
+        styleArgumentIndex >= 0 && styleArgumentIndex + 1 < argumentList.count();
+    const QString strRequestedStyleChoice =
+        hasStyleArgument
+            ? argumentList.at(styleArgumentIndex + 1)
+            : (deterministicStyleRequested ? QString() : savedRibbonStyleChoice(settings));
+    const LqRibbon::RibbonBar::RibbonStyle previewRibbonStyle =
+        strRequestedStyleChoice.isEmpty()
+            ? (stylePreviewRequested
+                   ? LqRibbon::RibbonBar::Microsoft365Light
+                   : LqRibbon::RibbonBar::Office2016Blue)
+            : (isSystemRibbonStyleText(strRequestedStyleChoice)
+                   ? systemRibbonStyle()
+                   : ribbonStyleFromText(
+                         strRequestedStyleChoice,
+                         stylePreviewRequested
+                             ? LqRibbon::RibbonBar::Microsoft365Light
+                             : LqRibbon::RibbonBar::Office2016Blue));
     const bool systemStyleRequested =
-        styleArgumentIndex >= 0 && styleArgumentIndex + 1 < argumentList.count()
-        && isSystemRibbonStyleText(argumentList.at(styleArgumentIndex + 1));
+        isSystemRibbonStyleText(strRequestedStyleChoice);
+    const bool persistStyleChoice = !deterministicStyleRequested;
 
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
@@ -744,11 +812,20 @@ int main(int argc, char *argv[])
                      });
     QObject::connect(styleCombo,
                      QOverload<int>::of(&QComboBox::currentIndexChanged),
-                     [&mainWindow, styleCombo, stylePreview](int index) {
+                     [&mainWindow,
+                      styleCombo,
+                      stylePreview,
+                      &settings,
+                      persistStyleChoice](int index) {
                          const LqRibbon::RibbonBar::RibbonStyle style =
                              ribbonStyleFromComboIndex(styleCombo, index);
                          updateRibbonStylePreview(stylePreview, style);
                          mainWindow.setRibbonStyle(style);
+                         if (persistStyleChoice) {
+                             saveRibbonStyleChoice(
+                                 settings,
+                                 ribbonStyleChoiceFromComboIndex(styleCombo, index));
+                         }
                      });
 
     LqRibbon::RibbonPage *driverPage = mainWindow.ribbonBar()->addPage(QObject::tr("Driver"));

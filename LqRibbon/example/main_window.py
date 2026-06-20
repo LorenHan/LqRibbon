@@ -53,6 +53,27 @@ from LqRibbon import (
 )
 
 SYSTEM_RIBBON_STYLE_VALUE = -1
+RIBBON_STYLE_SETTINGS_KEY = "Ribbon/Style"
+
+
+def ribbon_style_settings_value(style):
+    style = LqStyle.coerce_style(style)
+    names = {
+        RibbonStyle.Office2016Blue: "office2016blue",
+        RibbonStyle.Office2019Colorful: "office2019colorful",
+        RibbonStyle.Microsoft365Light: "microsoft365light",
+        RibbonStyle.Microsoft365Dark: "microsoft365dark",
+    }
+    return names[style]
+
+
+def saved_ribbon_style_choice(settings):
+    return str(settings.value(RIBBON_STYLE_SETTINGS_KEY, "")).strip()
+
+
+def save_ribbon_style_choice(settings, choice):
+    settings.setValue(RIBBON_STYLE_SETTINGS_KEY, choice)
+    settings.sync()
 
 
 class MainWindow(RibbonMainWindow):
@@ -194,6 +215,13 @@ class MainWindow(RibbonMainWindow):
             if value == SYSTEM_RIBBON_STYLE_VALUE
             else LqStyle.coerce_style(value)
         )
+
+    def style_choice_from_combo_index(self, index):
+        style_combo = self.style_combo_control.widget()
+        value = style_combo.itemData(index)
+        if value == SYSTEM_RIBBON_STYLE_VALUE:
+            return "system"
+        return ribbon_style_settings_value(value)
 
     def _update_style_preview(self, style):
         style = LqStyle.coerce_style(style)

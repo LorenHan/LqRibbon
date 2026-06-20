@@ -7,6 +7,7 @@ Run with:
 
 import os
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(
@@ -14,10 +15,17 @@ sys.path.insert(
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "LqRibbon", "example"),
 )
 
+from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QFrame
 
 from LqRibbon import RibbonMainWindow, RibbonStyle
-from main_window import MainWindow, SYSTEM_RIBBON_STYLE_VALUE
+from main_window import (
+    MainWindow,
+    SYSTEM_RIBBON_STYLE_VALUE,
+    ribbon_style_settings_value,
+    save_ribbon_style_choice,
+    saved_ribbon_style_choice,
+)
 
 
 def _app():
@@ -101,6 +109,32 @@ def test_example_style_preview_tracks_combo():
     window.close()
 
 
+def test_example_style_choice_persists_to_settings():
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, "style.ini")
+        settings = QSettings(path, QSettings.Format.IniFormat)
+        assert saved_ribbon_style_choice(settings) == ""
+        save_ribbon_style_choice(
+            settings,
+            ribbon_style_settings_value(RibbonStyle.Microsoft365Dark),
+        )
+
+        reloaded = QSettings(path, QSettings.Format.IniFormat)
+        assert saved_ribbon_style_choice(reloaded) == "microsoft365dark"
+
+        window = MainWindow()
+        window.set_ribbon_style(saved_ribbon_style_choice(reloaded))
+        assert window.ribbonStyle() == RibbonStyle.Microsoft365Dark
+        combo = window.style_combo_control.widget()
+        assert (
+            window.style_choice_from_combo_index(combo.currentIndex())
+            == "microsoft365dark"
+        )
+        system_index = combo.findData(SYSTEM_RIBBON_STYLE_VALUE)
+        assert window.style_choice_from_combo_index(system_index) == "system"
+        window.close()
+
+
 def main():
     _app()
     tests = [
@@ -111,6 +145,7 @@ def main():
         test_example_combo_switches_style,
         test_example_system_combo_follows_palette,
         test_example_style_preview_tracks_combo,
+        test_example_style_choice_persists_to_settings,
     ]
     for test in tests:
         test()
