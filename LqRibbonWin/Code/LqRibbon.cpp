@@ -22,6 +22,7 @@
 #include <QStandardItemModel>
 #include <QStyle>
 #include <QTabBar>
+#include <QTimer>
 #include <QWidgetAction>
 #include <QWindow>
 
@@ -192,6 +193,11 @@ public:
     explicit RibbonWindowButton(ButtonKind buttonKind, QWidget *parent = nullptr);
 
     void setRestoreMode(bool restoreMode);
+    void setThemeColors(const QColor &hoverColor,
+                        const QColor &pressedColor,
+                        const QColor &closeHoverColor,
+                        const QColor &closePressedColor,
+                        const QColor &glyphColor);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -199,6 +205,11 @@ protected:
 private:
     ButtonKind m_buttonKind;
     bool m_restoreMode;
+    QColor m_hoverColor;
+    QColor m_pressedColor;
+    QColor m_closeHoverColor;
+    QColor m_closePressedColor;
+    QColor m_glyphColor;
 };
 
 class RibbonCollapseButton : public QToolButton
@@ -207,12 +218,18 @@ public:
     explicit RibbonCollapseButton(QWidget *parent = nullptr);
 
     void setCollapsed(bool collapsed);
+    void setThemeColors(const QColor &hoverColor,
+                        const QColor &pressedColor,
+                        const QColor &glyphColor);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
     bool m_collapsed;
+    QColor m_hoverColor;
+    QColor m_pressedColor;
+    QColor m_glyphColor;
 };
 
 class RibbonMdiButton : public QToolButton
@@ -277,6 +294,11 @@ RibbonWindowButton::RibbonWindowButton(ButtonKind buttonKind, QWidget *parent)
     : QToolButton(parent)
     , m_buttonKind(buttonKind)
     , m_restoreMode(false)
+    , m_hoverColor(QColor(QStringLiteral("#386caf")))
+    , m_pressedColor(QColor(QStringLiteral("#244d80")))
+    , m_closeHoverColor(QColor(QStringLiteral("#c42b1c")))
+    , m_closePressedColor(QColor(QStringLiteral("#8f1f15")))
+    , m_glyphColor(Qt::white)
 {
     setAutoRaise(true);
     setCursor(Qt::ArrowCursor);
@@ -299,6 +321,20 @@ void RibbonWindowButton::setRestoreMode(bool restoreMode)
     update();
 }
 
+void RibbonWindowButton::setThemeColors(const QColor &hoverColor,
+                                        const QColor &pressedColor,
+                                        const QColor &closeHoverColor,
+                                        const QColor &closePressedColor,
+                                        const QColor &glyphColor)
+{
+    m_hoverColor = hoverColor;
+    m_pressedColor = pressedColor;
+    m_closeHoverColor = closeHoverColor;
+    m_closePressedColor = closePressedColor;
+    m_glyphColor = glyphColor;
+    update();
+}
+
 ///
 /// \brief paintRibbonWindowButton
 /// Paints the glyph for a themed minimize, maximize, restore, or close button.
@@ -310,11 +346,12 @@ void RibbonWindowButton::setRestoreMode(bool restoreMode)
 void paintRibbonWindowButton(QPainter *painter,
                              const QRect &buttonRect,
                              RibbonWindowButton::ButtonKind buttonKind,
-                             bool restoreMode)
+                             bool restoreMode,
+                             const QColor &glyphColor)
 {
     painter->save();
 
-    QPen pen(Qt::white);
+    QPen pen(glyphColor);
     pen.setWidthF(1.3);
     painter->setPen(pen);
     painter->setRenderHint(QPainter::Antialiasing, false);
@@ -401,16 +438,20 @@ void RibbonWindowButton::paintEvent(QPaintEvent *event)
     if (isDown()) {
         painter.fillRect(rect(),
                          m_buttonKind == CloseButton
-                             ? QColor(QStringLiteral("#8f1f15"))
-                             : QColor(QStringLiteral("#244d80")));
+                             ? m_closePressedColor
+                             : m_pressedColor);
     } else if (underMouse()) {
         painter.fillRect(rect(),
                          m_buttonKind == CloseButton
-                             ? QColor(QStringLiteral("#c42b1c"))
-                             : QColor(QStringLiteral("#386caf")));
+                             ? m_closeHoverColor
+                             : m_hoverColor);
     }
 
-    paintRibbonWindowButton(&painter, rect(), m_buttonKind, m_restoreMode);
+    paintRibbonWindowButton(&painter,
+                            rect(),
+                            m_buttonKind,
+                            m_restoreMode,
+                            m_glyphColor);
 }
 
 ///
@@ -421,6 +462,9 @@ void RibbonWindowButton::paintEvent(QPaintEvent *event)
 RibbonCollapseButton::RibbonCollapseButton(QWidget *parent)
     : QToolButton(parent)
     , m_collapsed(false)
+    , m_hoverColor(QColor(QStringLiteral("#e7e7e7")))
+    , m_pressedColor(QColor(QStringLiteral("#d0d0d0")))
+    , m_glyphColor(QColor(QStringLiteral("#333333")))
 {
     setAutoRaise(true);
     setCursor(Qt::ArrowCursor);
@@ -443,6 +487,16 @@ void RibbonCollapseButton::setCollapsed(bool collapsed)
     update();
 }
 
+void RibbonCollapseButton::setThemeColors(const QColor &hoverColor,
+                                          const QColor &pressedColor,
+                                          const QColor &glyphColor)
+{
+    m_hoverColor = hoverColor;
+    m_pressedColor = pressedColor;
+    m_glyphColor = glyphColor;
+    update();
+}
+
 ///
 /// \brief RibbonCollapseButton::paintEvent
 /// Paints the Office-style Ribbon collapse chevron.
@@ -454,12 +508,12 @@ void RibbonCollapseButton::paintEvent(QPaintEvent *event)
 
     QPainter painter(this);
     if (isDown()) {
-        painter.fillRect(rect(), QColor(QStringLiteral("#d0d0d0")));
+        painter.fillRect(rect(), m_pressedColor);
     } else if (underMouse()) {
-        painter.fillRect(rect(), QColor(QStringLiteral("#e7e7e7")));
+        painter.fillRect(rect(), m_hoverColor);
     }
 
-    QPen pen(QColor(QStringLiteral("#333333")));
+    QPen pen(m_glyphColor);
     pen.setWidthF(1.5);
     painter.setPen(pen);
     painter.setRenderHint(QPainter::Antialiasing, true);
@@ -760,13 +814,13 @@ void RibbonMdiTitleBar::updateButtonGeometry()
     m_closeButton->setGeometry(x, y, ribbonMdiButtonWidth, ribbonMdiButtonHeight);
 }
 
-const char ribbonStyleSheet[] =
+const char ribbonStyleSheetTemplate[] =
     "LqRibbon--RibbonBar {"
-    "    background: #f3f3f3;"
+    "    background: $ribbonBg;"
     "}"
     "QTabWidget::pane {"
     "    border: none;"
-    "    background: #f3f3f3;"
+    "    background: $ribbonBg;"
     "}"
     "QTabBar {"
     "    background: transparent;"
@@ -775,50 +829,51 @@ const char ribbonStyleSheet[] =
     "    min-width: 46px;"
     "    min-height: 21px;"
     "    padding: 2px 10px 1px 10px;"
-    "    color: #ffffff;"
+    "    color: $captionText;"
     "    background: transparent;"
     "    border: none;"
     "}"
     "QTabBar::tab:selected {"
-    "    background: #ffffff;"
-    "    color: #124078;"
-    "    border-left: 1px solid #c8c8c8;"
-    "    border-right: 1px solid #c8c8c8;"
-    "    border-top: 1px solid #c8c8c8;"
+    "    background: $selectedTabBg;"
+    "    color: $selectedTabText;"
+    "    border-left: 1px solid $border;"
+    "    border-right: 1px solid $border;"
+    "    border-top: 1px solid $border;"
     "}"
     "QTabBar::tab:hover:!selected {"
-    "    background: #386caf;"
+    "    background: $captionHover;"
     "}"
     "QLineEdit#lqRibbonSearchEdit {"
     "    min-height: 18px;"
     "    padding: 0px 22px 0px 6px;"
-    "    border: 1px solid #b7cbe6;"
+    "    border: 1px solid $searchBorder;"
     "    border-radius: 1px;"
-    "    background: #ffffff;"
-    "    selection-background-color: #2b579a;"
+    "    background: $fieldBg;"
+    "    color: $text;"
+    "    selection-background-color: $accent;"
     "}"
     "QLineEdit#lqRibbonSearchEdit:focus {"
-    "    border-color: #5f95d0;"
+    "    border-color: $focus;"
     "}"
     "QAbstractItemView#lqRibbonSearchSuggestionPopup {"
-    "    border: 1px solid #9eb6d8;"
-    "    background: #ffffff;"
-    "    selection-background-color: #dcecff;"
-    "    selection-color: #202020;"
+    "    border: 1px solid $searchBorder;"
+    "    background: $fieldBg;"
+    "    selection-background-color: $popupSelection;"
+    "    selection-color: $text;"
     "}"
     "QListView#lqRibbonSearchPopupView {"
-    "    border: 1px solid #8c8c8c;"
-    "    background: #f4f4f4;"
+    "    border: 1px solid $border;"
+    "    background: $popupBg;"
     "    outline: 0px;"
     "}"
     "QListView#lqRibbonSearchPopupView::item {"
     "    min-height: 22px;"
     "    padding: 1px 6px;"
-    "    color: #202020;"
+    "    color: $text;"
     "}"
     "QListView#lqRibbonSearchPopupView::item:selected {"
-    "    background: #e8f2ff;"
-    "    color: #202020;"
+    "    background: $popupSelection;"
+    "    color: $text;"
     "}"
     "QToolBar#lqRibbonQuickAccessBar {"
     "    background: transparent;"
@@ -826,14 +881,14 @@ const char ribbonStyleSheet[] =
     "    spacing: 1px;"
     "}"
     "QToolBar#lqRibbonQuickAccessBar QToolButton {"
-    "    border: 1px solid #6f9fd0;"
+    "    border: 1px solid $quickBorder;"
     "    border-radius: 2px;"
     "    padding: 2px;"
-    "    background: #2f63a3;"
+    "    background: $quickBg;"
     "}"
     "QToolBar#lqRibbonQuickAccessBar QToolButton:hover {"
-    "    background: #386caf;"
-    "    border-color: #b7cbe6;"
+    "    background: $captionHover;"
+    "    border-color: $searchBorder;"
     "}"
     "QToolBar#lqRibbonTitleButtonBar {"
     "    background: transparent;"
@@ -851,8 +906,8 @@ const char ribbonStyleSheet[] =
     "    background: transparent;"
     "}"
     "QToolBar#lqRibbonTitleButtonBar QToolButton:hover {"
-    "    background: #386caf;"
-    "    border-color: #b7cbe6;"
+    "    background: $captionHover;"
+    "    border-color: $searchBorder;"
     "}"
     "LqRibbon--RibbonGroup {"
     "    background: transparent;"
@@ -861,7 +916,7 @@ const char ribbonStyleSheet[] =
     "    margin: 0px;"
     "}"
     "LqRibbon--RibbonGroup QLabel#lqRibbonGroupTitle {"
-    "    color: #202020;"
+    "    color: $text;"
     "    font-size: 11px;"
     "    padding: 0px 4px 3px 4px;"
     "}"
@@ -869,16 +924,16 @@ const char ribbonStyleSheet[] =
     "    border: 1px solid transparent;"
     "    border-radius: 1px;"
     "    padding: 1px 2px;"
-    "    color: #202020;"
+    "    color: $text;"
     "    background: transparent;"
     "}"
     "LqRibbon--RibbonGroup QToolButton:hover {"
-    "    background: #8cc8f7;"
-    "    border-color: #8cc8f7;"
+    "    background: $groupHover;"
+    "    border-color: $groupHover;"
     "}"
     "LqRibbon--RibbonGroup QToolButton:pressed {"
-    "    background: #c5ddfa;"
-    "    border-color: #5f95d0;"
+    "    background: $groupPressed;"
+    "    border-color: $focus;"
     "}"
     "LqRibbon--RibbonGroup QToolButton::menu-button {"
     "    border: none;"
@@ -891,9 +946,174 @@ const char ribbonStyleSheet[] =
     "    right: 3px;"
     "}"
     "QMenu::item:selected {"
-    "    background: #8cc8f7;"
-    "    color: #202020;"
+    "    background: $groupHover;"
+    "    color: $text;"
     "}";
+
+struct RibbonStylePalette
+{
+    QString accent;
+    QString captionBackground;
+    QString captionHover;
+    QString captionPressed;
+    QString captionText;
+    QString closeHover;
+    QString closePressed;
+    QString selectedTabBackground;
+    QString selectedTabText;
+    QString ribbonBackground;
+    QString fieldBackground;
+    QString popupBackground;
+    QString text;
+    QString border;
+    QString searchBorder;
+    QString focus;
+    QString popupSelection;
+    QString groupHover;
+    QString groupPressed;
+    QString quickBackground;
+    QString quickBorder;
+};
+
+RibbonStylePalette ribbonStylePalette(LqRibbon::RibbonBar::RibbonStyle style)
+{
+    switch (style) {
+    case LqRibbon::RibbonBar::Office2019Colorful:
+        return {
+            QStringLiteral("#185abd"),
+            QStringLiteral("#185abd"),
+            QStringLiteral("#2f6fca"),
+            QStringLiteral("#124078"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#c42b1c"),
+            QStringLiteral("#8f1f15"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#124078"),
+            QStringLiteral("#f3f2f1"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#f7f7f7"),
+            QStringLiteral("#202020"),
+            QStringLiteral("#c8c8c8"),
+            QStringLiteral("#b7cbe6"),
+            QStringLiteral("#5f95d0"),
+            QStringLiteral("#e8f2ff"),
+            QStringLiteral("#deecf9"),
+            QStringLiteral("#c7e0f4"),
+            QStringLiteral("#2466b1"),
+            QStringLiteral("#8fb9ec")
+        };
+    case LqRibbon::RibbonBar::Microsoft365Light:
+        return {
+            QStringLiteral("#0f6cbd"),
+            QStringLiteral("#f8f8f8"),
+            QStringLiteral("#e5f1fb"),
+            QStringLiteral("#cfe4fa"),
+            QStringLiteral("#242424"),
+            QStringLiteral("#c42b1c"),
+            QStringLiteral("#8f1f15"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#0f6cbd"),
+            QStringLiteral("#fbfbfb"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#242424"),
+            QStringLiteral("#d1d1d1"),
+            QStringLiteral("#c7c7c7"),
+            QStringLiteral("#0f6cbd"),
+            QStringLiteral("#e5f1fb"),
+            QStringLiteral("#e5f1fb"),
+            QStringLiteral("#cfe4fa"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#d1d1d1")
+        };
+    case LqRibbon::RibbonBar::Microsoft365Dark:
+        return {
+            QStringLiteral("#60cdff"),
+            QStringLiteral("#202020"),
+            QStringLiteral("#3a3a3a"),
+            QStringLiteral("#4a4a4a"),
+            QStringLiteral("#f3f2f1"),
+            QStringLiteral("#c42b1c"),
+            QStringLiteral("#8f1f15"),
+            QStringLiteral("#2d2d2d"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#1f1f1f"),
+            QStringLiteral("#2d2d2d"),
+            QStringLiteral("#2d2d2d"),
+            QStringLiteral("#f3f2f1"),
+            QStringLiteral("#525252"),
+            QStringLiteral("#5f5f5f"),
+            QStringLiteral("#60cdff"),
+            QStringLiteral("#3b3a39"),
+            QStringLiteral("#3a3a3a"),
+            QStringLiteral("#4a4a4a"),
+            QStringLiteral("#2d2d2d"),
+            QStringLiteral("#525252")
+        };
+    case LqRibbon::RibbonBar::Office2016Blue:
+    default:
+        return {
+            QStringLiteral("#2b579a"),
+            QStringLiteral("#2b579a"),
+            QStringLiteral("#386caf"),
+            QStringLiteral("#244d80"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#c42b1c"),
+            QStringLiteral("#8f1f15"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#124078"),
+            QStringLiteral("#f3f3f3"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#f4f4f4"),
+            QStringLiteral("#202020"),
+            QStringLiteral("#c8c8c8"),
+            QStringLiteral("#b7cbe6"),
+            QStringLiteral("#5f95d0"),
+            QStringLiteral("#e8f2ff"),
+            QStringLiteral("#8cc8f7"),
+            QStringLiteral("#c5ddfa"),
+            QStringLiteral("#2f63a3"),
+            QStringLiteral("#6f9fd0")
+        };
+    }
+}
+
+QString buildRibbonStyleSheet(const RibbonStylePalette &palette)
+{
+    QString styleSheet = QString::fromLatin1(ribbonStyleSheetTemplate);
+    struct Replacement
+    {
+        const char *token;
+        const QString *value;
+    };
+
+    const Replacement replacements[] = {
+        {"$accent", &palette.accent},
+        {"$captionText", &palette.captionText},
+        {"$captionHover", &palette.captionHover},
+        {"$selectedTabBg", &palette.selectedTabBackground},
+        {"$selectedTabText", &palette.selectedTabText},
+        {"$ribbonBg", &palette.ribbonBackground},
+        {"$fieldBg", &palette.fieldBackground},
+        {"$popupBg", &palette.popupBackground},
+        {"$text", &palette.text},
+        {"$border", &palette.border},
+        {"$searchBorder", &palette.searchBorder},
+        {"$focus", &palette.focus},
+        {"$popupSelection", &palette.popupSelection},
+        {"$groupHover", &palette.groupHover},
+        {"$groupPressed", &palette.groupPressed},
+        {"$quickBg", &palette.quickBackground},
+        {"$quickBorder", &palette.quickBorder},
+    };
+
+    for (const Replacement &replacement : replacements) {
+        styleSheet.replace(QLatin1String(replacement.token),
+                           *replacement.value);
+    }
+
+    return styleSheet;
+}
 
 const char ribbonMdiAreaStyleSheet[] =
     "QMdiArea {"
@@ -1791,7 +2011,11 @@ void RibbonGroup::rememberActionWidget(QAction *action, QWidget *widget)
         emit actionTriggered(action);
         if (RibbonBar *bar = ribbonBar()) {
             if (bar->isRibbonMinimized()) {
-                bar->setRibbonMinimized(true);
+                QTimer::singleShot(0, bar, [bar]() {
+                    if (bar->isRibbonMinimized()) {
+                        bar->setRibbonMinimized(true);
+                    }
+                });
             }
         }
     }, Qt::UniqueConnection);
@@ -2204,6 +2428,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_quickAccessBarPosition(TopPosition)
     , m_tabBarPosition(TopPosition)
     , m_searchBarAppearance(SearchBarCentral)
+    , m_ribbonStyle(Office2016Blue)
     , m_logoAlignment(Qt::AlignLeft)
     , m_keyTipsEnabled(false)
     , m_keyTipsComplement(false)
@@ -3012,6 +3237,38 @@ RibbonBar::BarPosition RibbonBar::tabBarPosition() const
     return m_tabBarPosition;
 }
 
+void RibbonBar::setRibbonStyle(RibbonStyle style)
+{
+    if (m_ribbonStyle == style) {
+        return;
+    }
+
+    m_ribbonStyle = style;
+    updateStyleSheet();
+    update();
+    emit ribbonStyleChanged(m_ribbonStyle);
+}
+
+RibbonBar::RibbonStyle RibbonBar::ribbonStyle() const
+{
+    return m_ribbonStyle;
+}
+
+QString RibbonBar::ribbonStyleName(RibbonStyle style)
+{
+    switch (style) {
+    case Office2019Colorful:
+        return QStringLiteral("Office 2019 Colorful");
+    case Microsoft365Light:
+        return QStringLiteral("Microsoft 365 Light");
+    case Microsoft365Dark:
+        return QStringLiteral("Microsoft 365 Dark");
+    case Office2016Blue:
+    default:
+        return QStringLiteral("Office 2016 Blue");
+    }
+}
+
 ///
 /// \brief RibbonBar::addQuickAccessAction
 /// Creates and adds an action to the quick access toolbar.
@@ -3546,14 +3803,14 @@ bool RibbonBar::eventFilter(QObject *object, QEvent *event)
 
     if (m_ribbonTemporaryExpanded) {
         switch (event->type()) {
-        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonRelease:
             if (!isRibbonRelatedObject(object)) {
-                hideTemporaryRibbon();
+                scheduleHideTemporaryRibbon();
             }
             break;
         case QEvent::FocusIn:
             if (object && !isRibbonRelatedObject(object)) {
-                hideTemporaryRibbon();
+                scheduleHideTemporaryRibbon();
             }
             break;
         case QEvent::WindowDeactivate:
@@ -3617,13 +3874,14 @@ void RibbonBar::paintEvent(QPaintEvent *event)
         return;
     }
 
+    const RibbonStylePalette palette = ribbonStylePalette(m_ribbonStyle);
     QPainter painter(this);
     const int titleHeight = ribbonCaptionHeight + ribbonTabHeight;
     painter.fillRect(0,
                      0,
                      width(),
                      titleHeight,
-                     QColor(QStringLiteral("#2b579a")));
+                     QColor(palette.captionBackground));
 
     QWidget *topLevelWidget = window();
     if (!topLevelWidget) {
@@ -3644,7 +3902,7 @@ void RibbonBar::paintEvent(QPaintEvent *event)
         : width() - windowControlWidth() - 12;
     const int titleWidth = qMax(0, titleRight - titleLeft);
     if (titleWidth > 0) {
-        painter.setPen(Qt::white);
+        painter.setPen(QColor(palette.captionText));
         painter.drawText(QRect(titleLeft,
                                ribbonCaptionTopMargin,
                                titleWidth,
@@ -3899,6 +4157,17 @@ void RibbonBar::hideTemporaryRibbon()
 
     m_ribbonTemporaryExpanded = false;
     updateRibbonDisplayState();
+}
+
+void RibbonBar::scheduleHideTemporaryRibbon()
+{
+    if (!m_ribbonTemporaryExpanded) {
+        return;
+    }
+
+    QTimer::singleShot(0, this, [this]() {
+        hideTemporaryRibbon();
+    });
 }
 
 bool RibbonBar::isRibbonRelatedObject(QObject *object) const
@@ -4512,7 +4781,30 @@ QString RibbonBar::searchActionText(QAction *action) const
 ///
 void RibbonBar::updateStyleSheet()
 {
-    setStyleSheet(QString::fromLatin1(ribbonStyleSheet));
+    const RibbonStylePalette palette = ribbonStylePalette(m_ribbonStyle);
+    setStyleSheet(buildRibbonStyleSheet(palette));
+    static_cast<RibbonWindowButton *>(m_minimizeButton)
+        ->setThemeColors(QColor(palette.captionHover),
+                         QColor(palette.captionPressed),
+                         QColor(palette.closeHover),
+                         QColor(palette.closePressed),
+                         QColor(palette.captionText));
+    static_cast<RibbonWindowButton *>(m_maximizeButton)
+        ->setThemeColors(QColor(palette.captionHover),
+                         QColor(palette.captionPressed),
+                         QColor(palette.closeHover),
+                         QColor(palette.closePressed),
+                         QColor(palette.captionText));
+    static_cast<RibbonWindowButton *>(m_closeButton)
+        ->setThemeColors(QColor(palette.captionHover),
+                         QColor(palette.captionPressed),
+                         QColor(palette.closeHover),
+                         QColor(palette.closePressed),
+                         QColor(palette.captionText));
+    static_cast<RibbonCollapseButton *>(m_collapseButton)
+        ->setThemeColors(QColor(palette.groupHover),
+                         QColor(palette.groupPressed),
+                         QColor(palette.text));
 }
 
 ///
@@ -4713,6 +5005,16 @@ void RibbonMainWindow::setFrameThemeEnabled(bool enabled)
 bool RibbonMainWindow::isFrameThemeEnabled() const
 {
     return m_ribbonBar->isFrameThemeEnabled();
+}
+
+void RibbonMainWindow::setRibbonStyle(RibbonBar::RibbonStyle style)
+{
+    m_ribbonBar->setRibbonStyle(style);
+}
+
+RibbonBar::RibbonStyle RibbonMainWindow::ribbonStyle() const
+{
+    return m_ribbonBar->ribbonStyle();
 }
 
 ///

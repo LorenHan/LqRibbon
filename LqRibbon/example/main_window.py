@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from LqRibbon import (
+    LqStyle,
     OfficePopupMenu,
     OfficePopupWindow,
     PopupColorButton,
@@ -44,6 +45,7 @@ from LqRibbon import (
     RibbonSpinBoxControl,
     RibbonStatusBar,
     RibbonStatusBarSwitchGroup,
+    RibbonStyle,
     RibbonSystemMenu,
     RibbonToolBarControl,
 )
@@ -82,6 +84,7 @@ class MainWindow(RibbonMainWindow):
             "Tab Mode",
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
+        self._create_style_switch_group()
 
         self.driver_page = ribbon.addPage("Driver")
         communication_group = self.driver_page.addGroup("Communication")
@@ -126,6 +129,20 @@ class MainWindow(RibbonMainWindow):
         ribbon.setSearchVisible(True)
         ribbon.setSearchPlaceholderText("Search commands")
         ribbon.setRecentSearchLimit(5)
+
+    def _create_style_switch_group(self):
+        style_group = self.general_page.addGroup("Style")
+        self.style_combo_control = RibbonComboBoxControl(style_group)
+        style_combo = self.style_combo_control.widget()
+        style_combo.setObjectName("lqRibbonStyleCombo")
+        for style in RibbonStyle:
+            style_combo.addItem(LqStyle.ribbon_style_name(style), int(style))
+        style_group.addWidget(self.style_combo_control)
+        style_combo.currentIndexChanged.connect(self._apply_selected_ribbon_style)
+
+    def _apply_selected_ribbon_style(self, index):
+        style_combo = self.style_combo_control.widget()
+        self.setRibbonStyle(style_combo.itemData(index))
 
     def _create_controls_page(self):
         selector_group = self.controls_page.addGroup("Selectors")
@@ -508,8 +525,10 @@ class MainWindow(RibbonMainWindow):
         self.setCentralWidget(mdi_area)
         self.mdi_area = mdi_area
 
-    def select_preview_page(self, controls=False, gallery=False, shell=False):
-        if shell:
+    def select_preview_page(self, controls=False, gallery=False, shell=False, style=False):
+        if style:
+            page = self.general_page
+        elif shell:
             page = self.shell_page
         elif gallery:
             page = self.gallery_page
@@ -518,6 +537,14 @@ class MainWindow(RibbonMainWindow):
         else:
             page = self.driver_page
         self.ribbonBar().setCurrentPageIndex(self.ribbonBar().pageIndex(page))
+
+    def set_ribbon_style(self, style):
+        style = LqStyle.coerce_style(style)
+        self.setRibbonStyle(style)
+        style_combo = self.style_combo_control.widget()
+        index = style_combo.findData(int(style))
+        if index >= 0:
+            style_combo.setCurrentIndex(index)
 
     def focus_search_preview(self):
         self.ribbonBar().searchLineEdit().setFocus()

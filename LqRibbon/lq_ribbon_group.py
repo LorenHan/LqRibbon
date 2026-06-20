@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QWidget, QSizePolicy, QMenu, QFrame, QWidgetAction,
     QLabel, QToolButton
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QIcon
 from .lq_ribbon_extras import CallableString, CallableList
 
@@ -297,7 +297,7 @@ class LqRibbonGroup(QGroupBox):
         self.actionTriggered.emit(action)
         ribbon_bar = self.ribbonBar()
         if ribbon_bar and ribbon_bar.isRibbonMinimized():
-            ribbon_bar.setRibbonMinimized(True)
+            QTimer.singleShot(0, lambda rb=ribbon_bar: rb.setRibbonMinimized(True))
 
         # Propagate to parent window
         parent = self.parent()

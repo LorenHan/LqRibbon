@@ -5,8 +5,9 @@ LqRibbonBar - Ribbon bar container that holds ribbon pages
 from PySide6.QtWidgets import (
     QApplication, QTabWidget, QWidget, QHBoxLayout, QMenu, QStackedWidget, QToolButton
 )
-from PySide6.QtCore import Qt, Signal, QEvent, QSize
+from PySide6.QtCore import Qt, Signal, QEvent, QSize, QTimer
 from PySide6.QtGui import QAction, QIcon, QPainter, QColor, QPen, QPixmap
+from .lq_styles import LqStyle, RibbonStyle, _coerce_style
 from .lq_ribbon_extras import (
     CallableList,
     LqRibbonCustomizeDialog,
@@ -83,6 +84,7 @@ class LqRibbonBar(QTabWidget):
     simplified_mode_changed = Signal(bool)
     simplifiedModeChanged = Signal(bool)
     frameThemeChanged = Signal(bool)
+    ribbonStyleChanged = Signal(int)
     searchTextChanged = Signal(str)
     searchAccepted = Signal(str)
     searchSuggestionActivated = Signal(str)
@@ -112,6 +114,7 @@ class LqRibbonBar(QTabWidget):
         self._quick_access_position = 1
         self._tab_bar_position = 1
         self._search_bar_appearance = 1
+        self._ribbon_style = RibbonStyle.Office2016Blue
         self._title_background = QPixmap()
         self._logo_pixmap = QPixmap()
         self._logo_alignment = Qt.AlignmentFlag.AlignLeft
@@ -168,8 +171,15 @@ class LqRibbonBar(QTabWidget):
         """Paint the themed title and tab background."""
         super().paintEvent(event)
 
+        palette = LqStyle.palette(self._ribbon_style)
         painter = QPainter(self)
-        painter.fillRect(0, 0, self.width(), RIBBON_COLLAPSED_HEIGHT, QColor("#2b579a"))
+        painter.fillRect(
+            0,
+            0,
+            self.width(),
+            RIBBON_COLLAPSED_HEIGHT,
+            QColor(palette["caption_bg"]),
+        )
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -206,14 +216,14 @@ class LqRibbonBar(QTabWidget):
 
         if self._ribbon_temporary_expanded:
             event_type = event.type()
-            if event_type == QEvent.Type.MouseButtonPress:
+            if event_type == QEvent.Type.MouseButtonRelease:
                 widget = obj if isinstance(obj, QWidget) else None
                 if widget is None or not self._is_ribbon_related_widget(widget):
-                    self._hide_temporary_ribbon()
+                    self._schedule_hide_temporary_ribbon()
             elif event_type == QEvent.Type.FocusIn:
                 widget = obj if isinstance(obj, QWidget) else None
                 if widget is not None and not self._is_ribbon_related_widget(widget):
-                    self._hide_temporary_ribbon()
+                    self._schedule_hide_temporary_ribbon()
             elif event_type in (
                 QEvent.Type.WindowDeactivate,
                 QEvent.Type.ApplicationDeactivate,
@@ -222,41 +232,7 @@ class LqRibbonBar(QTabWidget):
         return super().eventFilter(obj, event)
 
     def _style_sheet(self):
-        return """
-        LqRibbonBar, QTabWidget::pane {
-            background: #f3f3f3;
-            border: none;
-        }
-        QTabBar {
-            background: transparent;
-        }
-        QTabBar::tab {
-            min-width: 46px;
-            min-height: 21px;
-            padding: 2px 10px 1px 10px;
-            color: #ffffff;
-            background: transparent;
-            border: none;
-            font-size: 12px;
-        }
-        QTabBar::tab:selected {
-            background: #ffffff;
-            color: #124078;
-            border-left: 1px solid #c8c8c8;
-            border-right: 1px solid #c8c8c8;
-            border-top: 1px solid #c8c8c8;
-        }
-        QTabBar::tab:hover:!selected {
-            background: #386caf;
-        }
-        QLineEdit#lqRibbonSearchEdit {
-            min-height: 18px;
-            padding: 0px 22px 0px 6px;
-            border: 1px solid #b7cbe6;
-            border-radius: 1px;
-            background: #ffffff;
-        }
-        """
+        return LqStyle.get_ribbon_style(self._ribbon_style)
 
     def _update_layout(self):
         tab_bar = self.tabBar()
@@ -319,6 +295,10 @@ class LqRibbonBar(QTabWidget):
             return
         self._ribbon_temporary_expanded = False
         self._apply_ribbon_height()
+
+    def _schedule_hide_temporary_ribbon(self):
+        if self._ribbon_temporary_expanded:
+            QTimer.singleShot(0, self._hide_temporary_ribbon)
 
     def _is_ribbon_related_widget(self, widget):
         current = widget
@@ -730,6 +710,23 @@ class LqRibbonBar(QTabWidget):
 
     def tabBarPosition(self):
         return self._tab_bar_position
+
+    def setRibbonStyle(self, style):
+        style = _coerce_style(style)
+        if self._ribbon_style == style:
+            return
+        self._ribbon_style = style
+        self.setStyleSheet(self._style_sheet())
+        self._update_layout()
+        self.update()
+        self.ribbonStyleChanged.emit(int(style))
+
+    def ribbonStyle(self):
+        return self._ribbon_style
+
+    @staticmethod
+    def ribbonStyleName(style):
+        return LqStyle.ribbon_style_name(style)
 
     def setSearchBarAppearance(self, appearance):
         self._search_bar_appearance = appearance

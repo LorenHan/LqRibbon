@@ -10,7 +10,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 
 from .lq_ribbon_bar import LqRibbonBar
-from .lq_styles import LqStyle
+from .lq_styles import LqStyle, _coerce_style
 
 
 class LqRibbonWindow(QMainWindow):
@@ -120,8 +120,8 @@ class LqRibbonWindow(QMainWindow):
 
 
     def apply_styles(self):
-        """Apply the blue flat style"""
-        self.setStyleSheet(LqStyle.get_full_style())
+        """Apply the active Ribbon style."""
+        self.setStyleSheet(LqStyle.get_full_style(self.ribbon_bar.ribbonStyle()))
 
     def on_action_triggered(self, action_name):
         """Handle action trigger and display in the main area"""
@@ -169,6 +169,14 @@ class LqRibbonWindow(QMainWindow):
 
     def isFrameThemeEnabled(self):
         return self.ribbon_bar.isFrameThemeEnabled()
+
+    def setRibbonStyle(self, style):
+        style = _coerce_style(style)
+        self.ribbon_bar.setRibbonStyle(style)
+        self.apply_styles()
+
+    def ribbonStyle(self):
+        return self.ribbon_bar.ribbonStyle()
 
     def setNativeFrameEnabled(self, enabled):
         self._native_frame_enabled = bool(enabled)

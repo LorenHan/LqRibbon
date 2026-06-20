@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QActionGroup>
 #include <QBuffer>
+#include <QComboBox>
 #include <QDate>
 #include <QDebug>
 #include <QFormLayout>
@@ -135,12 +136,26 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow)
         Qt::ToolButtonTextUnderIcon);
 
     QStringList hits;
+    bool firstActionSawCommandArea = false;
+    bool secondActionSawCommandArea = false;
     QObject::connect(firstAction, &QAction::triggered, [&hits]() {
         hits << QStringLiteral("apply");
     });
+    QObject::connect(firstAction,
+                     &QAction::triggered,
+                     [&firstActionSawCommandArea, ribbonBar]() {
+                         firstActionSawCommandArea =
+                             collapseTestCommandAreaVisible(ribbonBar);
+                     });
     QObject::connect(secondAction, &QAction::triggered, [&hits]() {
         hits << QStringLiteral("connect");
     });
+    QObject::connect(secondAction,
+                     &QAction::triggered,
+                     [&secondActionSawCommandArea, ribbonBar]() {
+                         secondActionSawCommandArea =
+                             collapseTestCommandAreaVisible(ribbonBar);
+                     });
 
     const int firstIndex = ribbonBar->pageIndex(firstPage);
     const int secondIndex = ribbonBar->pageIndex(secondPage);
@@ -152,6 +167,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow)
 
     auto reset = [&]() {
         hits.clear();
+        firstActionSawCommandArea = false;
+        secondActionSawCommandArea = false;
         ribbonBar->setMinimizationEnabled(true);
         ribbonBar->setCurrentPageIndex(firstIndex);
         ribbonBar->setRibbonMinimized(false);
@@ -212,6 +229,10 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow)
                  QStringLiteral("action triggers while temporarily expanded"))) {
         return 1;
     }
+    if (!require(firstActionSawCommandArea,
+                 QStringLiteral("action callback sees command area"))) {
+        return 1;
+    }
     if (!require(ribbonBar->isRibbonMinimized()
                      && !collapseTestCommandAreaVisible(ribbonBar),
                  QStringLiteral("action hides temporary expansion"))) {
@@ -258,6 +279,10 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow)
                  QStringLiteral("other page action triggers while expanded"))) {
         return 1;
     }
+    if (!require(secondActionSawCommandArea,
+                 QStringLiteral("other page action callback sees command area"))) {
+        return 1;
+    }
 
     reset();
     ribbonBar->setMinimizationEnabled(false);
@@ -266,6 +291,118 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow)
                      && collapseTestCommandAreaVisible(ribbonBar),
                  QStringLiteral("minimization disabled blocks collapse"))) {
         return 1;
+    }
+
+    return 0;
+}
+
+LqRibbon::RibbonBar::RibbonStyle ribbonStyleFromText(
+    const QString &strText,
+    LqRibbon::RibbonBar::RibbonStyle fallback =
+        LqRibbon::RibbonBar::Office2016Blue)
+{
+    const QString key = strText.trimmed().toLower().remove(QLatin1Char('-'))
+        .remove(QLatin1Char('_')).remove(QLatin1Char(' '));
+    if (key == QStringLiteral("office2019colorful")
+        || key == QStringLiteral("colorful")) {
+        return LqRibbon::RibbonBar::Office2019Colorful;
+    }
+    if (key == QStringLiteral("microsoft365light")
+        || key == QStringLiteral("m365light")
+        || key == QStringLiteral("light")) {
+        return LqRibbon::RibbonBar::Microsoft365Light;
+    }
+    if (key == QStringLiteral("microsoft365dark")
+        || key == QStringLiteral("m365dark")
+        || key == QStringLiteral("dark")) {
+        return LqRibbon::RibbonBar::Microsoft365Dark;
+    }
+    if (key == QStringLiteral("office2016blue")
+        || key == QStringLiteral("blue")) {
+        return LqRibbon::RibbonBar::Office2016Blue;
+    }
+    return fallback;
+}
+
+LqRibbon::RibbonBar::RibbonStyle requestedRibbonStyle(
+    const QStringList &argumentList,
+    LqRibbon::RibbonBar::RibbonStyle fallback =
+        LqRibbon::RibbonBar::Office2016Blue)
+{
+    const int styleIndex = argumentList.indexOf(QStringLiteral("--style"));
+    if (styleIndex >= 0 && styleIndex + 1 < argumentList.count()) {
+        return ribbonStyleFromText(argumentList.at(styleIndex + 1), fallback);
+    }
+    return fallback;
+}
+
+int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
+                  QComboBox *styleCombo)
+{
+    LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
+    auto require = [](bool condition, const QString &name) {
+        if (!condition) {
+            qWarning().noquote() << "FAIL" << name;
+            return false;
+        }
+        qInfo().noquote() << "PASS" << name;
+        return true;
+    };
+
+    if (!require(ribbonBar->ribbonStyle()
+                     == LqRibbon::RibbonBar::Office2016Blue,
+                 QStringLiteral("default style is Office 2016 Blue"))) {
+        return 1;
+    }
+
+    const LqRibbon::RibbonBar::RibbonStyle styles[] = {
+        LqRibbon::RibbonBar::Office2016Blue,
+        LqRibbon::RibbonBar::Office2019Colorful,
+        LqRibbon::RibbonBar::Microsoft365Light,
+        LqRibbon::RibbonBar::Microsoft365Dark
+    };
+
+    for (LqRibbon::RibbonBar::RibbonStyle style : styles) {
+        mainWindow.setRibbonStyle(style);
+        if (!require(ribbonBar->ribbonStyle() == style,
+                     QStringLiteral("set style %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        if (!require(ribbonBar->styleSheet().contains(
+                         style == LqRibbon::RibbonBar::Office2016Blue
+                             ? QStringLiteral("#2b579a")
+                             : QStringLiteral("#")),
+                     QStringLiteral("stylesheet generated for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+    }
+
+    int changedCount = 0;
+    QObject::connect(ribbonBar,
+                     &LqRibbon::RibbonBar::ribbonStyleChanged,
+                     ribbonBar,
+                     [&changedCount](LqRibbon::RibbonBar::RibbonStyle) {
+                         ++changedCount;
+                     });
+    mainWindow.setRibbonStyle(LqRibbon::RibbonBar::Office2016Blue);
+    const int afterChange = changedCount;
+    mainWindow.setRibbonStyle(LqRibbon::RibbonBar::Office2016Blue);
+    if (!require(changedCount == afterChange,
+                 QStringLiteral("reapplying same style emits no duplicate"))) {
+        return 1;
+    }
+
+    if (styleCombo) {
+        const int darkIndex = styleCombo->findData(
+            static_cast<int>(LqRibbon::RibbonBar::Microsoft365Dark));
+        styleCombo->setCurrentIndex(darkIndex);
+        if (!require(ribbonBar->ribbonStyle()
+                         == LqRibbon::RibbonBar::Microsoft365Dark,
+                     QStringLiteral("example combo switches style"))) {
+            return 1;
+        }
     }
 
     return 0;
@@ -310,14 +447,23 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-gallery-preview"));
     const bool shellPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-shell-preview"));
+    const bool stylePreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-style-preview"));
     const bool collapseTestsRequested =
         argumentList.contains(QStringLiteral("--run-collapse-tests"));
+    const bool styleTestsRequested =
+        argumentList.contains(QStringLiteral("--run-style-tests"));
+    const LqRibbon::RibbonBar::RibbonStyle previewRibbonStyle =
+        requestedRibbonStyle(argumentList,
+                             stylePreviewRequested
+                                 ? LqRibbon::RibbonBar::Microsoft365Light
+                                 : LqRibbon::RibbonBar::Office2016Blue);
 
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
     mainWindow.resize(920, 560);
     if (controlsPreviewRequested || galleryPreviewRequested
-        || shellPreviewRequested) {
+        || shellPreviewRequested || stylePreviewRequested) {
         mainWindow.resize(1180, 560);
     }
 
@@ -338,6 +484,32 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogListView),
         QObject::tr("Tab Mode"),
         Qt::ToolButtonTextBesideIcon);
+
+    LqRibbon::RibbonGroup *styleSwitchGroup =
+        generalPage->addGroup(QObject::tr("Style"));
+    LqRibbon::RibbonComboBoxControl *styleComboControl =
+        new LqRibbon::RibbonComboBoxControl(styleSwitchGroup);
+    QComboBox *styleCombo = styleComboControl->widget();
+    styleCombo->setObjectName(QStringLiteral("lqRibbonStyleCombo"));
+    const LqRibbon::RibbonBar::RibbonStyle styleItems[] = {
+        LqRibbon::RibbonBar::Office2016Blue,
+        LqRibbon::RibbonBar::Office2019Colorful,
+        LqRibbon::RibbonBar::Microsoft365Light,
+        LqRibbon::RibbonBar::Microsoft365Dark
+    };
+    for (LqRibbon::RibbonBar::RibbonStyle style : styleItems) {
+        styleCombo->addItem(LqRibbon::RibbonBar::ribbonStyleName(style),
+                            static_cast<int>(style));
+    }
+    styleSwitchGroup->addWidget(styleComboControl);
+    QObject::connect(styleCombo,
+                     QOverload<int>::of(&QComboBox::currentIndexChanged),
+                     [&mainWindow, styleCombo](int index) {
+                         const LqRibbon::RibbonBar::RibbonStyle style =
+                             static_cast<LqRibbon::RibbonBar::RibbonStyle>(
+                                 styleCombo->itemData(index).toInt());
+                         mainWindow.setRibbonStyle(style);
+                     });
 
     LqRibbon::RibbonPage *driverPage = mainWindow.ribbonBar()->addPage(QObject::tr("Driver"));
     LqRibbon::RibbonGroup *communicationGroup = driverPage->addGroup(QObject::tr("Communication"));
@@ -852,10 +1024,13 @@ int main(int argc, char *argv[])
     QObject::connect(zoomSlider, &LqRibbon::RibbonSliderPane::valueChanged,
                      progressBar, &LqRibbon::RibbonProgressBar::setValueSafe);
 
+    const int generalPageIndex = mainWindow.ribbonBar()->indexOf(generalPage);
     const int controlsPageIndex = mainWindow.ribbonBar()->indexOf(controlsPage);
     const int galleryPageIndex = mainWindow.ribbonBar()->indexOf(galleryPage);
     const int shellPageIndex = mainWindow.ribbonBar()->indexOf(shellPage);
-    if (shellPreviewRequested) {
+    if (stylePreviewRequested) {
+        mainWindow.ribbonBar()->setCurrentPageIndex(generalPageIndex);
+    } else if (shellPreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(shellPageIndex);
     } else if (galleryPreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(galleryPageIndex);
@@ -865,6 +1040,12 @@ int main(int argc, char *argv[])
         mainWindow.ribbonBar()->setCurrentPageIndex(1);
     }
     mainWindow.setFrameThemeEnabled(true);
+    const int styleComboIndex =
+        styleCombo->findData(static_cast<int>(previewRibbonStyle));
+    if (styleComboIndex >= 0) {
+        styleCombo->setCurrentIndex(styleComboIndex);
+    }
+    mainWindow.setRibbonStyle(previewRibbonStyle);
     mainWindow.ribbonBar()->setSearchVisible(true);
     mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
     mainWindow.ribbonBar()->setRecentSearchLimit(5);
@@ -917,6 +1098,13 @@ int main(int argc, char *argv[])
     if (collapseTestsRequested) {
         QTimer::singleShot(0, &mainWindow, [&mainWindow]() {
             qApp->exit(runCollapseTests(mainWindow));
+        });
+        return application.exec();
+    }
+
+    if (styleTestsRequested) {
+        QTimer::singleShot(0, &mainWindow, [&mainWindow, styleCombo]() {
+            qApp->exit(runStyleTests(mainWindow, styleCombo));
         });
         return application.exec();
     }

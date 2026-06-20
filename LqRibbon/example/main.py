@@ -11,6 +11,7 @@ from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QFont, QFontDatabase
 from PySide6.QtWidgets import QApplication
 
+from LqRibbon import RibbonStyle
 from main_window import MainWindow
 import picture_rc  # noqa: F401
 
@@ -56,16 +57,25 @@ def main():
     controls_preview = "--grab-controls-preview" in arguments
     gallery_preview = "--grab-gallery-preview" in arguments
     shell_preview = "--grab-shell-preview" in arguments
+    style_preview = "--grab-style-preview" in arguments
+    style_name = _option_value(arguments, "--style")
 
     window = MainWindow()
     if controls_preview or gallery_preview or shell_preview:
         window.resize(1180, 560)
+    if style_preview:
+        window.resize(1180, 560)
+    if style_name:
+        window.set_ribbon_style(style_name)
+    elif style_preview:
+        window.set_ribbon_style(RibbonStyle.Microsoft365Light)
     if mdi_preview or tab_preview:
         window.show_mdi_content(tabbed=tab_preview)
     window.select_preview_page(
         controls=controls_preview,
         gallery=gallery_preview,
         shell=shell_preview,
+        style=style_preview,
     )
     window.show()
 

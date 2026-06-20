@@ -9,7 +9,7 @@ from .lq_ribbon_group import LqRibbonGroup
 from .lq_ribbon_button import LqRibbonButton
 from . import lq_ribbon_extras as _extras
 from .lq_ribbon_extras import *
-from .lq_styles import LqStyle
+from .lq_styles import LqStyle, RibbonStyle
 from .lq_icon_generator import LqIconGenerator
 
 RibbonMainWindow = LqRibbonWindow
@@ -33,6 +33,7 @@ __all__ = [
     "RibbonGroup",
     "RibbonButton",
     "LqStyle",
+    "RibbonStyle",
     "LqIconGenerator"
 ] + [
     name for name in dir(_extras)

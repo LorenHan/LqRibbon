@@ -139,12 +139,15 @@ def test_single_click_collapsed_tab_temporarily_expands():
 
 def test_action_triggers_while_temporarily_expanded():
     window, ribbon, action, _, action_hits = _window()
+    action_saw_command_area = []
+    action.triggered.connect(lambda: action_saw_command_area.append(_command_area_visible(ribbon)))
     ribbon.setRibbonMinimized(True)
     _click_tab(ribbon, 0)
     button = _action_button(ribbon, action)
     QTest.mouseClick(button, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, button.rect().center())
     _app().processEvents()
     assert action_hits == ["apply"]
+    assert action_saw_command_area == [True]
     window.close()
 
 

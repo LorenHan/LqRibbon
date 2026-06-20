@@ -321,6 +321,7 @@ class RibbonBar : public QTabWidget
     Q_OBJECT
     Q_ENUMS(BarPosition)
     Q_ENUMS(SearchBarAppearance)
+    Q_ENUMS(RibbonStyle)
 
 public:
     enum BarPosition
@@ -334,6 +335,14 @@ public:
         SearchBarCentral = 1,
         SearchBarCompact,
         SearchBarHidden
+    };
+
+    enum RibbonStyle
+    {
+        Office2016Blue = 1,
+        Office2019Colorful,
+        Microsoft365Light,
+        Microsoft365Dark
     };
 
     ///
@@ -538,6 +547,9 @@ public:
     SearchBarAppearance searchBarAppearance() const;
     void setTabBarPosition(BarPosition position);
     BarPosition tabBarPosition() const;
+    void setRibbonStyle(RibbonStyle style);
+    RibbonStyle ribbonStyle() const;
+    static QString ribbonStyleName(RibbonStyle style);
     ///
     /// \brief RibbonBar::addQuickAccessAction
     /// Creates and adds an action to the quick access toolbar.
@@ -696,6 +708,7 @@ signals:
     void keyTipsShowed(bool showed);
     void showRibbonContextMenu(QMenu *menu, QContextMenuEvent *event);
     void frameThemeChanged(bool enabled);
+    void ribbonStyleChanged(RibbonStyle style);
 
 protected:
     bool event(QEvent *event) override;
@@ -741,6 +754,7 @@ private:
     bool isRibbonCommandAreaVisible() const;
     void showTemporaryRibbon();
     void hideTemporaryRibbon();
+    void scheduleHideTemporaryRibbon();
     bool isRibbonRelatedObject(QObject *object) const;
 
 private:
@@ -784,6 +798,7 @@ private:
     BarPosition m_quickAccessBarPosition;
     BarPosition m_tabBarPosition;
     SearchBarAppearance m_searchBarAppearance;
+    RibbonStyle m_ribbonStyle;
     QPixmap m_logoPixmap;
     Qt::AlignmentFlag m_logoAlignment;
     QPixmap m_titleBackground;
@@ -889,6 +904,8 @@ public:
     /// \return true when frame painting is active.
     ///
     bool isFrameThemeEnabled() const;
+    void setRibbonStyle(RibbonBar::RibbonStyle style);
+    RibbonBar::RibbonStyle ribbonStyle() const;
 
 protected:
     bool eventFilter(QObject *object, QEvent *event) override;
