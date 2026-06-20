@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
+from shiboken6 import isValid as _qt_object_is_valid
 
 from .lq_ribbon_bar import LqRibbonBar
 from .lq_styles import LqStyle, _coerce_style
@@ -126,8 +127,12 @@ class LqRibbonWindow(QMainWindow):
     def on_action_triggered(self, action_name):
         """Handle action trigger and display in the main area"""
         message = f"Action triggered: {action_name}"
-        self.display_area.append(message)
-        self.status_bar.showMessage(f"Executed: {action_name}", 3000)
+        display_area = getattr(self, "display_area", None)
+        if display_area is not None and _qt_object_is_valid(display_area):
+            display_area.append(message)
+        status_bar = getattr(self, "status_bar", None)
+        if status_bar is not None and _qt_object_is_valid(status_bar):
+            status_bar.showMessage(f"Executed: {action_name}", 3000)
 
     def get_ribbon_bar(self):
         """Get the ribbon bar instance"""

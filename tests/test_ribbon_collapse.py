@@ -546,6 +546,40 @@ def test_example_quick_access_context_menu_reorders_command():
     window.close()
 
 
+def test_example_quick_access_menu_resets_commands():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    quick_access_bar = window.ribbonBar().quickAccessBar()
+
+    window.add_action_to_quick_access(window.rename_page_action)
+    window.move_quick_access_action(window.rename_page_action, -1)
+    _app().processEvents()
+    assert window.rename_page_action in quick_access_bar.actions()
+    assert quick_access_bar.visibleCount() == 4
+
+    menu = QMenu(window)
+    window.populate_quick_access_menu(menu)
+    reset_action = next(
+        action
+        for action in menu.actions()
+        if action.objectName() == "resetQuickAccessAction"
+    )
+    reset_action.trigger()
+    _app().processEvents()
+    visible_actions = [
+        action
+        for action in quick_access_bar.actions()
+        if action != quick_access_bar.actionCustomizeButton()
+    ]
+    assert visible_actions == window.default_quick_access_actions
+    assert window.quick_access_actions == window.default_quick_access_actions
+    assert window.rename_page_action not in quick_access_bar.actions()
+    assert quick_access_bar.visibleCount() == 3
+    assert "Visible 3/3" in window.quick_access_status_preview.text()
+    window.close()
+
+
 def test_example_responsive_label_preview_hides_labels_under_stress():
     window = MainWindow()
     window.show()
@@ -684,6 +718,7 @@ def main():
         test_example_action_context_menu_adds_command_to_quick_access,
         test_example_quick_access_context_menu_removes_command,
         test_example_quick_access_context_menu_reorders_command,
+        test_example_quick_access_menu_resets_commands,
         test_example_responsive_label_preview_hides_labels_under_stress,
         test_single_click_collapsed_tab_temporarily_expands,
         test_action_triggers_while_temporarily_expanded,

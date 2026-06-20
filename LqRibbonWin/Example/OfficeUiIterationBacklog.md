@@ -56,7 +56,7 @@ Default style remains `Office 2016 Blue`.
 | 025 | Add command to QAT from context menu | Action context menu | Complete |
 | 026 | Remove command from QAT | QAT context menu | Complete |
 | 027 | Reorder QAT commands | Customize dialog | Complete |
-| 028 | Reset QAT to default | Customize dialog | Planned |
+| 028 | Reset QAT to default | Customize dialog | Complete |
 | 029 | Export QAT customization | Customize dialog | Planned |
 | 030 | Import QAT customization | Customize dialog | Planned |
 | 031 | Centered Microsoft Search box | Caption search | Planned |

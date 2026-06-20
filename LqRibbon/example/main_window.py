@@ -599,6 +599,13 @@ class MainWindow(RibbonMainWindow):
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
         self.reorder_quick_access_action.setObjectName("reorderQuickAccessAction")
+        self.reset_quick_access_action = self._add_group_action(
+            customize_group,
+            QStyle.StandardPixmap.SP_DialogResetButton,
+            "Reset QAT",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.reset_quick_access_action.setObjectName("resetQuickAccessAction")
 
         specialist_options_action = QAction(
             self._icon(QStyle.StandardPixmap.SP_FileDialogInfoView),
@@ -723,6 +730,7 @@ class MainWindow(RibbonMainWindow):
             self.office_popup_action,
             self.show_customize_action,
             self.reorder_quick_access_action,
+            self.reset_quick_access_action,
         ]:
             self.customize_manager.addToCategory("Actions", action)
         self.customize_manager.setPageId(self.shell_page, "shell")
@@ -765,6 +773,9 @@ class MainWindow(RibbonMainWindow):
             lambda _checked=False: self.move_quick_access_action(
                 self.full_screen_action, 1
             )
+        )
+        self.reset_quick_access_action.triggered.connect(
+            self.reset_quick_access_actions
         )
         self.ribbonBar().searchAccepted.connect(
             lambda text: self._message(f"No command: {text}")
@@ -829,11 +840,12 @@ class MainWindow(RibbonMainWindow):
         self.update_responsive_label_preview()
 
     def _configure_search_and_quick_access(self):
-        self.quick_access_actions = [
+        self.default_quick_access_actions = [
             self.full_screen_action,
             self.connect_action,
             self.minimize_ribbon_action,
         ]
+        self.quick_access_actions = list(self.default_quick_access_actions)
         self.show_quick_access_action = QAction(
             self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarNormalButton),
             "Show Quick Access Toolbar",
@@ -902,6 +914,7 @@ class MainWindow(RibbonMainWindow):
             self.office_menu_action,
             self.show_customize_action,
             self.reorder_quick_access_action,
+            self.reset_quick_access_action,
         ]
         for action in self.search_actions:
             self.ribbonBar().registerSearchAction(action)
@@ -919,6 +932,7 @@ class MainWindow(RibbonMainWindow):
         menu.addAction(self.quick_access_labels_action)
         menu.addSeparator()
         menu.addAction(self.reorder_quick_access_action)
+        menu.addAction(self.reset_quick_access_action)
 
     def _configure_action_context_menus(self):
         self.action_context_menu_actions = [
@@ -1080,8 +1094,8 @@ class MainWindow(RibbonMainWindow):
     def rebuild_quick_access_order(self):
         ribbon = self.ribbonBar()
         quick_access_bar = ribbon.quickAccessBar()
-        for action in list(self.quick_access_actions):
-            if action in quick_access_bar.actions():
+        for action in list(quick_access_bar.actions()):
+            if action != quick_access_bar.actionCustomizeButton():
                 quick_access_bar.removeAction(action)
         for action in self.quick_access_actions:
             ribbon.addQuickAccessAction(action)
@@ -1108,6 +1122,11 @@ class MainWindow(RibbonMainWindow):
             f"Moved {command_action.text()} in Quick Access Toolbar", 2500
         )
         return True
+
+    def reset_quick_access_actions(self):
+        self.quick_access_actions = list(self.default_quick_access_actions)
+        self.rebuild_quick_access_order()
+        self.statusBar().showMessage("Quick Access Toolbar reset to default", 2500)
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()
