@@ -7,7 +7,7 @@ not copied implementation.
 | Area | Reference capability | LqRibbon status | Verification entry |
 | --- | --- | --- | --- |
 | Main window | Ribbon host, central widget, themed frame, native gestures | Partial | `main.cpp`, `--grab-preview`, `--grab-mdi-preview` |
-| Ribbon bar | Pages, current page, minimized mode, title background, tab moving, elide mode | Partial | `main.cpp`, `--grab-collapsed-preview` |
+| Ribbon bar | Pages, current page, minimized mode, simplified one-line mode, title background, tab moving, elide mode | Partial | `main.cpp`, `--grab-collapsed-preview`, `--grab-simplified-preview`, `--run-collapse-tests` |
 | Quick access | Toolbar actions, customization entry points, top/bottom placement | Partial | `main.cpp`, preview screenshot |
 | Title widgets | Caption-row buttons and custom title controls | Implemented | `main.cpp`, preview screenshot |
 | Pages | Add/insert/remove pages, visible/enabled state, contextual page groups | Missing contextual groups | Planned example tab coverage |
@@ -51,7 +51,7 @@ Status rules:
 | --- | --- | --- | --- |
 | `QtnRibbonDef.h` | Shared constants, list typedefs, version/custom text | Built-in text exists for search/frame strings; version and customize constants are missing | Partial |
 | `QtnRibbonMainWindow.h` | Ribbon host, replaceable Ribbon bar, central widget overloads | `RibbonMainWindow` hosts a bar and central widget; replaceable bar and style central widget overload are missing | Partial |
-| `QtnRibbonBar.h` | Menu-bar based Ribbon root, page management, title groups, backstage, search, simplify mode, customization | `RibbonBar` covers add page, current page, search, minimize, frame theme, quick access, title buttons; missing backstage, system button, contextual/title groups, simplify mode, movable tabs, customize manager | Partial |
+| `QtnRibbonBar.h` | Menu-bar based Ribbon root, page management, title groups, backstage, search, simplify mode, customization | `RibbonBar` covers add page, current page, search, minimize, simplify mode, frame theme, quick access, title buttons; missing backstage, system button, contextual/title groups, movable tabs, customize manager | Partial |
 | `QtnRibbonPage.h` | Page group management, contextual metadata, visibility/enabled state | `RibbonPage` covers title and append group; missing insert/remove groups and contextual integration | Partial |
 | `QtnRibbonGroup.h` | Group controls, option button, size reduction, scrolling | `RibbonGroup` covers title, actions, widgets, large/small rows; missing option button, size definitions, reduced popup, group scrolling | Partial |
 | `QtnRibbonButton.h` | Dedicated word-wrapped Ribbon button | `RibbonButton` covers word wrap, large/small icon, simplified mode, and action changes | Implemented |
@@ -95,4 +95,4 @@ or proprietary style engines.
 The Python example mirrors the C++ style switcher with the same style names,
 system follow mode, live preview swatch, persisted theme choice, Fluent rounded
 tab geometry, softer Fluent border tokens, Fluent hover/pressed timing preview,
-and default `Office 2016 Blue` behavior.
+simplified one-line ribbon display, and default `Office 2016 Blue` behavior.

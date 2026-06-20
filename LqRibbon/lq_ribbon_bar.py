@@ -25,6 +25,7 @@ RIBBON_CAPTION_HEIGHT = 36
 RIBBON_TAB_HEIGHT = 24
 RIBBON_BAR_HEIGHT = 158
 RIBBON_COLLAPSED_HEIGHT = RIBBON_CAPTION_HEIGHT + RIBBON_TAB_HEIGHT
+RIBBON_SIMPLIFIED_HEIGHT = RIBBON_COLLAPSED_HEIGHT + 48
 RIBBON_COLLAPSE_BUTTON_WIDTH = 32
 RIBBON_COLLAPSE_BUTTON_HEIGHT = 24
 
@@ -271,11 +272,10 @@ class LqRibbonBar(QTabWidget):
         return not self._ribbon_minimized or self._ribbon_temporary_expanded
 
     def _apply_ribbon_height(self):
-        height = (
-            RIBBON_BAR_HEIGHT
-            if self._is_command_area_visible()
-            else RIBBON_COLLAPSED_HEIGHT
-        )
+        if self._is_command_area_visible():
+            height = RIBBON_SIMPLIFIED_HEIGHT if self._simplified_mode else RIBBON_BAR_HEIGHT
+        else:
+            height = RIBBON_COLLAPSED_HEIGHT
         self.setFixedHeight(height)
         self._update_layout()
 
@@ -659,8 +659,14 @@ class LqRibbonBar(QTabWidget):
     def setSimplifiedMode(self, enabled):
         if enabled and not self._simplified_mode_enabled:
             return
-        self._simplified_mode = bool(enabled)
+        enabled = bool(enabled)
+        if self._simplified_mode == enabled:
+            return
+        self._simplified_mode = enabled
+        if enabled:
+            self.setRibbonMinimized(False)
         self._simplified_action.setChecked(self._simplified_mode)
+        self._apply_ribbon_height()
         self.simplified_mode_changed.emit(self._simplified_mode)
         self.simplifiedModeChanged.emit(self._simplified_mode)
 

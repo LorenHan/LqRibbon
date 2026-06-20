@@ -39,7 +39,7 @@ Default style remains `Office 2016 Blue`.
 | 008 | Fluent rounded tab geometry | Style preview page | Complete |
 | 009 | Fluent softer border model | Style preview page | Complete |
 | 010 | Fluent hover and pressed state timing | Style preview page | Complete |
-| 011 | Simplified one-line ribbon | Ribbon display toggle | Planned |
+| 011 | Simplified one-line ribbon | Ribbon display toggle | Complete |
 | 012 | Classic multi-line ribbon restore | Ribbon display toggle | Planned |
 | 013 | Ribbon pin and unpin command | Ribbon display menu | Planned |
 | 014 | Ribbon display options menu | Caption control | Planned |

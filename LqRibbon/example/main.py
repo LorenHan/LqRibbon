@@ -56,6 +56,7 @@ def main():
     preview_path = _option_value(arguments, "--grab-preview")
     search_preview = "--grab-search-preview" in arguments
     collapsed_preview = "--grab-collapsed-preview" in arguments
+    simplified_preview = "--grab-simplified-preview" in arguments
     mdi_preview = "--grab-mdi-preview" in arguments
     tab_preview = "--grab-tab-preview" in arguments
     controls_preview = "--grab-controls-preview" in arguments
@@ -75,7 +76,7 @@ def main():
                 settings, window.style_choice_from_combo_index(index)
             )
         )
-    if controls_preview or gallery_preview or shell_preview:
+    if controls_preview or gallery_preview or shell_preview or simplified_preview:
         window.resize(1180, 560)
     if style_preview:
         window.resize(1180, 560)
@@ -90,7 +91,7 @@ def main():
     window.select_preview_page(
         controls=controls_preview,
         gallery=gallery_preview,
-        shell=shell_preview,
+        shell=shell_preview or simplified_preview,
         style=style_preview,
     )
     window.show()
@@ -99,6 +100,8 @@ def main():
         QTimer.singleShot(120, window.focus_search_preview)
     if collapsed_preview:
         QTimer.singleShot(120, lambda: window.ribbonBar().setRibbonMinimized(True))
+    if simplified_preview:
+        QTimer.singleShot(120, lambda: window.ribbonBar().setSimplifiedMode(True))
     if preview_path:
         QTimer.singleShot(300, lambda: (window.grab().save(preview_path), app.quit()))
 

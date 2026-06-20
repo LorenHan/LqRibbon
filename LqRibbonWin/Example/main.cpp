@@ -211,6 +211,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow)
         secondActionSawCommandArea = false;
         ribbonBar->setMinimizationEnabled(true);
         ribbonBar->setCurrentPageIndex(firstIndex);
+        ribbonBar->setSimplifiedMode(false);
         ribbonBar->setRibbonMinimized(false);
         processCollapseTestEvents();
     };
@@ -246,6 +247,27 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow)
     if (!require(ribbonBar->isRibbonMinimized()
                      && !collapseTestCommandAreaVisible(ribbonBar),
                  QStringLiteral("programmatic collapse hides command area"))) {
+        return 1;
+    }
+
+    reset();
+    const int fullRibbonHeight = ribbonBar->height();
+    ribbonBar->setSimplifiedMode(true);
+    processCollapseTestEvents();
+    if (!require(ribbonBar->simplifiedMode()
+                     && ribbonBar->simplifiedAction()->isChecked()
+                     && !ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar)
+                     && ribbonBar->height() < fullRibbonHeight,
+                 QStringLiteral("simplified mode keeps one-line command area"))) {
+        return 1;
+    }
+    ribbonBar->setSimplifiedMode(false);
+    processCollapseTestEvents();
+    if (!require(!ribbonBar->simplifiedMode()
+                     && !ribbonBar->simplifiedAction()->isChecked()
+                     && ribbonBar->height() >= fullRibbonHeight,
+                 QStringLiteral("classic mode restores full command area"))) {
         return 1;
     }
 
@@ -1057,6 +1079,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-search-preview"));
     const bool collapsedPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
+    const bool simplifiedPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-simplified-preview"));
     const bool mdiPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-mdi-preview"));
     const bool tabPreviewRequested =
@@ -1103,7 +1127,8 @@ int main(int argc, char *argv[])
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
     mainWindow.resize(920, 560);
     if (controlsPreviewRequested || galleryPreviewRequested
-        || shellPreviewRequested || stylePreviewRequested) {
+        || shellPreviewRequested || simplifiedPreviewRequested
+        || stylePreviewRequested) {
         mainWindow.resize(1180, 560);
     }
 
@@ -1722,7 +1747,7 @@ int main(int argc, char *argv[])
     const int shellPageIndex = mainWindow.ribbonBar()->indexOf(shellPage);
     if (stylePreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(generalPageIndex);
-    } else if (shellPreviewRequested) {
+    } else if (shellPreviewRequested || simplifiedPreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(shellPageIndex);
     } else if (galleryPreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(galleryPageIndex);
@@ -1831,6 +1856,12 @@ int main(int argc, char *argv[])
     if (collapsedPreviewRequested) {
         QTimer::singleShot(120, &mainWindow, [&mainWindow]() {
             mainWindow.ribbonBar()->setRibbonMinimized(true);
+        });
+    }
+
+    if (simplifiedPreviewRequested) {
+        QTimer::singleShot(120, &mainWindow, [&mainWindow]() {
+            mainWindow.ribbonBar()->setSimplifiedMode(true);
         });
     }
 

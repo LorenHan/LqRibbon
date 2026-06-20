@@ -49,6 +49,7 @@ const int ribbonCaptionHeight = 36;
 const int ribbonCaptionTopMargin = 3;
 const int ribbonTabHeight = 24;
 const int ribbonDefaultBarHeight = 158;
+const int ribbonSimplifiedBarHeight = ribbonCaptionHeight + ribbonTabHeight + 48;
 const int ribbonWindowButtonWidth = 46;
 const int ribbonWindowButtonHeight = 30;
 const int ribbonCollapseButtonWidth = 32;
@@ -3511,13 +3512,9 @@ void RibbonBar::setSimplifiedMode(bool enabled)
     m_simplifiedAction->setChecked(enabled);
     if (enabled) {
         setRibbonMinimized(false);
-        setMaximumHeight(ribbonCaptionHeight + ribbonTabHeight + 48);
-    } else {
-        setMaximumHeight(QWIDGETSIZE_MAX);
-        updateRibbonMetrics();
     }
+    updateRibbonDisplayState();
     emit simplifiedModeChanged(enabled);
-    updateGeometry();
 }
 
 bool RibbonBar::simplifiedModeEnabled() const
@@ -4148,7 +4145,8 @@ void RibbonBar::updateTitleButtonGeometry()
 void RibbonBar::updateRibbonMetrics()
 {
     const int barHeight = isRibbonCommandAreaVisible()
-        ? ribbonBarHeight(this)
+        ? (m_simplifiedMode ? ribbonSimplifiedBarHeight
+                            : ribbonBarHeight(this))
         : (m_frameThemeEnabled
                ? ribbonCaptionHeight + ribbonTabHeight
                : tabBar()->sizeHint().height());
