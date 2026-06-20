@@ -412,7 +412,7 @@ RibbonStylePreviewPalette ribbonStylePreviewPalette(
             QStringLiteral("#fbfbfb"),
             QStringLiteral("#ffffff"),
             QStringLiteral("#242424"),
-            QStringLiteral("#d1d1d1")
+            QStringLiteral("#e5e5e5")
         };
     case LqRibbon::RibbonBar::Microsoft365Dark:
         return {
@@ -420,7 +420,7 @@ RibbonStylePreviewPalette ribbonStylePreviewPalette(
             QStringLiteral("#1f1f1f"),
             QStringLiteral("#2d2d2d"),
             QStringLiteral("#f3f2f1"),
-            QStringLiteral("#525252")
+            QStringLiteral("#3a3a3a")
         };
     case LqRibbon::RibbonBar::Office2016Blue:
     default:
@@ -615,6 +615,35 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                 : QStringLiteral("border-radius: 0px;");
         if (!require(ribbonBar->styleSheet().contains(strExpectedTabRadius),
                      QStringLiteral("tab radius generated for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        const bool isMicrosoft365 =
+            style == LqRibbon::RibbonBar::Microsoft365Light
+            || style == LqRibbon::RibbonBar::Microsoft365Dark;
+        const QString strExpectedTabBorder =
+            isMicrosoft365
+                ? (style == LqRibbon::RibbonBar::Microsoft365Dark
+                       ? QStringLiteral("#3a3a3a")
+                       : QStringLiteral("#e5e5e5"))
+                : QStringLiteral("#c8c8c8");
+        if (!require(ribbonBar->styleSheet().contains(
+                         QStringLiteral("border-left: 1px solid %1;")
+                             .arg(strExpectedTabBorder)),
+                     QStringLiteral("soft tab border generated for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        const QString strExpectedCommandBorder =
+            isMicrosoft365
+                ? strExpectedTabBorder
+                : (style == LqRibbon::RibbonBar::Office2019Colorful
+                       ? QStringLiteral("#deecf9")
+                       : QStringLiteral("#8cc8f7"));
+        if (!require(ribbonBar->styleSheet().contains(
+                         QStringLiteral("border-color: %1;")
+                             .arg(strExpectedCommandBorder)),
+                     QStringLiteral("soft command border generated for %1")
                          .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
             return 1;
         }

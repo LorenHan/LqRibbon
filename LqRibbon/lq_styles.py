@@ -60,6 +60,10 @@ _STYLE_PALETTES = {
         "window_bg": "#f5f5f5",
         "status_text": "#ffffff",
         "tab_radius": "0px",
+        "tab_border": "#c8c8c8",
+        "control_border": "#b7cbe6",
+        "command_hover_border": "#8cc8f7",
+        "command_pressed_border": "#5f95d0",
     },
     RibbonStyle.Office2019Colorful: {
         "accent": "#185abd",
@@ -82,6 +86,10 @@ _STYLE_PALETTES = {
         "window_bg": "#f5f5f5",
         "status_text": "#ffffff",
         "tab_radius": "0px",
+        "tab_border": "#c8c8c8",
+        "control_border": "#b7cbe6",
+        "command_hover_border": "#deecf9",
+        "command_pressed_border": "#5f95d0",
     },
     RibbonStyle.Microsoft365Light: {
         "accent": "#0f6cbd",
@@ -100,10 +108,14 @@ _STYLE_PALETTES = {
         "group_hover": "#e5f1fb",
         "group_pressed": "#cfe4fa",
         "quick_bg": "#ffffff",
-        "quick_border": "#d1d1d1",
+        "quick_border": "#e5e5e5",
         "window_bg": "#ffffff",
         "status_text": "#242424",
         "tab_radius": "6px 6px 0px 0px",
+        "tab_border": "#e5e5e5",
+        "control_border": "#e5e5e5",
+        "command_hover_border": "#e5e5e5",
+        "command_pressed_border": "#c7c7c7",
     },
     RibbonStyle.Microsoft365Dark: {
         "accent": "#60cdff",
@@ -122,10 +134,14 @@ _STYLE_PALETTES = {
         "group_hover": "#3a3a3a",
         "group_pressed": "#4a4a4a",
         "quick_bg": "#2d2d2d",
-        "quick_border": "#525252",
+        "quick_border": "#3a3a3a",
         "window_bg": "#1f1f1f",
         "status_text": "#f3f2f1",
         "tab_radius": "6px 6px 0px 0px",
+        "tab_border": "#3a3a3a",
+        "control_border": "#3a3a3a",
+        "command_hover_border": "#3a3a3a",
+        "command_pressed_border": "#5f5f5f",
     },
 }
 
@@ -175,9 +191,9 @@ class LqStyle:
         QTabBar::tab:selected {{
             background: {p["selected_tab_bg"]};
             color: {p["selected_tab_text"]};
-            border-left: 1px solid {p["border"]};
-            border-right: 1px solid {p["border"]};
-            border-top: 1px solid {p["border"]};
+            border-left: 1px solid {p["tab_border"]};
+            border-right: 1px solid {p["tab_border"]};
+            border-top: 1px solid {p["tab_border"]};
             border-radius: {p["tab_radius"]};
         }}
         QTabBar::tab:hover:!selected {{
@@ -187,7 +203,7 @@ class LqStyle:
         QLineEdit#lqRibbonSearchEdit {{
             min-height: 18px;
             padding: 0px 22px 0px 6px;
-            border: 1px solid {p["search_border"]};
+            border: 1px solid {p["control_border"]};
             border-radius: 1px;
             background: {p["field_bg"]};
             color: {p["text"]};
@@ -286,12 +302,12 @@ class LqStyle:
         }}
         QToolButton:hover {{
             background-color: {p["group_hover"]};
-            border: 1px solid {p["group_hover"]};
+            border-color: {p["command_hover_border"]};
             border-radius: 0px;
         }}
         QToolButton:pressed {{
             background-color: {p["group_pressed"]};
-            border: 1px solid {p["focus"]};
+            border-color: {p["command_pressed_border"]};
             border-radius: 0px;
         }}
         QMenu::item:selected {{

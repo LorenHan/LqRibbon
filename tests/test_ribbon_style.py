@@ -79,6 +79,29 @@ def test_fluent_tab_radius_applies_to_m365_only():
     assert "border-radius: 6px 6px 0px 0px;" in dark_style
 
 
+def test_fluent_soft_borders_apply_to_m365_only():
+    blue_palette = LqStyle.palette(RibbonStyle.Office2016Blue)
+    light_palette = LqStyle.palette(RibbonStyle.Microsoft365Light)
+    dark_palette = LqStyle.palette(RibbonStyle.Microsoft365Dark)
+    assert blue_palette["tab_border"] == blue_palette["border"]
+    assert blue_palette["command_hover_border"] == blue_palette["group_hover"]
+    assert light_palette["tab_border"] == "#e5e5e5"
+    assert light_palette["control_border"] == "#e5e5e5"
+    assert light_palette["command_hover_border"] == "#e5e5e5"
+    assert dark_palette["tab_border"] == "#3a3a3a"
+    assert dark_palette["control_border"] == "#3a3a3a"
+    assert dark_palette["command_hover_border"] == "#3a3a3a"
+
+    light_style = LqStyle.get_full_style(RibbonStyle.Microsoft365Light)
+    dark_style = LqStyle.get_full_style(RibbonStyle.Microsoft365Dark)
+    assert "border-left: 1px solid #e5e5e5;" in light_style
+    assert "border: 1px solid #e5e5e5;" in light_style
+    assert "border-color: #e5e5e5;" in light_style
+    assert "border-left: 1px solid #3a3a3a;" in dark_style
+    assert "border: 1px solid #3a3a3a;" in dark_style
+    assert "border-color: #3a3a3a;" in dark_style
+
+
 def test_example_combo_switches_style():
     window = MainWindow()
     combo = window.style_combo_control.widget()
@@ -112,6 +135,7 @@ def test_example_style_preview_tracks_combo():
     combo.setCurrentIndex(dark_index)
     assert preview.property("previewStyle") == int(RibbonStyle.Microsoft365Dark)
     assert accent.property("previewColor") == "#60cdff"
+    assert "#3a3a3a" in accent.styleSheet()
     system_index = combo.findData(SYSTEM_RIBBON_STYLE_VALUE)
     combo.setCurrentIndex(system_index)
     assert preview.property("previewStyle") == int(window.system_ribbon_style())
@@ -152,6 +176,7 @@ def main():
         test_reapplying_same_style_emits_no_duplicate,
         test_window_style_pass_through_updates_full_stylesheet,
         test_fluent_tab_radius_applies_to_m365_only,
+        test_fluent_soft_borders_apply_to_m365_only,
         test_example_combo_switches_style,
         test_example_system_combo_follows_palette,
         test_example_style_preview_tracks_combo,

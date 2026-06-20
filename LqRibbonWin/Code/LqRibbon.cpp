@@ -836,9 +836,9 @@ const char ribbonStyleSheetTemplate[] =
     "QTabBar::tab:selected {"
     "    background: $selectedTabBg;"
     "    color: $selectedTabText;"
-    "    border-left: 1px solid $border;"
-    "    border-right: 1px solid $border;"
-    "    border-top: 1px solid $border;"
+    "    border-left: 1px solid $selectedTabBorder;"
+    "    border-right: 1px solid $selectedTabBorder;"
+    "    border-top: 1px solid $selectedTabBorder;"
     "    border-radius: $tabRadius;"
     "}"
     "QTabBar::tab:hover:!selected {"
@@ -848,7 +848,7 @@ const char ribbonStyleSheetTemplate[] =
     "QLineEdit#lqRibbonSearchEdit {"
     "    min-height: 18px;"
     "    padding: 0px 22px 0px 6px;"
-    "    border: 1px solid $searchBorder;"
+    "    border: 1px solid $controlBorder;"
     "    border-radius: 1px;"
     "    background: $fieldBg;"
     "    color: $text;"
@@ -858,13 +858,13 @@ const char ribbonStyleSheetTemplate[] =
     "    border-color: $focus;"
     "}"
     "QAbstractItemView#lqRibbonSearchSuggestionPopup {"
-    "    border: 1px solid $searchBorder;"
+    "    border: 1px solid $controlBorder;"
     "    background: $fieldBg;"
     "    selection-background-color: $popupSelection;"
     "    selection-color: $text;"
     "}"
     "QListView#lqRibbonSearchPopupView {"
-    "    border: 1px solid $border;"
+    "    border: 1px solid $controlBorder;"
     "    background: $popupBg;"
     "    outline: 0px;"
     "}"
@@ -890,7 +890,7 @@ const char ribbonStyleSheetTemplate[] =
     "}"
     "QToolBar#lqRibbonQuickAccessBar QToolButton:hover {"
     "    background: $captionHover;"
-    "    border-color: $searchBorder;"
+    "    border-color: $controlBorder;"
     "}"
     "QToolBar#lqRibbonTitleButtonBar {"
     "    background: transparent;"
@@ -909,7 +909,7 @@ const char ribbonStyleSheetTemplate[] =
     "}"
     "QToolBar#lqRibbonTitleButtonBar QToolButton:hover {"
     "    background: $captionHover;"
-    "    border-color: $searchBorder;"
+    "    border-color: $controlBorder;"
     "}"
     "LqRibbon--RibbonGroup {"
     "    background: transparent;"
@@ -931,11 +931,11 @@ const char ribbonStyleSheetTemplate[] =
     "}"
     "LqRibbon--RibbonGroup QToolButton:hover {"
     "    background: $groupHover;"
-    "    border-color: $groupHover;"
+    "    border-color: $commandHoverBorder;"
     "}"
     "LqRibbon--RibbonGroup QToolButton:pressed {"
     "    background: $groupPressed;"
-    "    border-color: $focus;"
+    "    border-color: $commandPressedBorder;"
     "}"
     "LqRibbon--RibbonGroup QToolButton::menu-button {"
     "    border: none;"
@@ -967,8 +967,6 @@ struct RibbonStylePalette
     QString fieldBackground;
     QString popupBackground;
     QString text;
-    QString border;
-    QString searchBorder;
     QString focus;
     QString popupSelection;
     QString groupHover;
@@ -976,6 +974,10 @@ struct RibbonStylePalette
     QString quickBackground;
     QString quickBorder;
     QString tabRadius;
+    QString selectedTabBorder;
+    QString controlBorder;
+    QString commandHoverBorder;
+    QString commandPressedBorder;
 };
 
 RibbonStylePalette ribbonStylePalette(LqRibbon::RibbonBar::RibbonStyle style)
@@ -996,15 +998,17 @@ RibbonStylePalette ribbonStylePalette(LqRibbon::RibbonBar::RibbonStyle style)
             QStringLiteral("#ffffff"),
             QStringLiteral("#f7f7f7"),
             QStringLiteral("#202020"),
-            QStringLiteral("#c8c8c8"),
-            QStringLiteral("#b7cbe6"),
             QStringLiteral("#5f95d0"),
             QStringLiteral("#e8f2ff"),
             QStringLiteral("#deecf9"),
             QStringLiteral("#c7e0f4"),
             QStringLiteral("#2466b1"),
             QStringLiteral("#8fb9ec"),
-            QStringLiteral("0px")
+            QStringLiteral("0px"),
+            QStringLiteral("#c8c8c8"),
+            QStringLiteral("#b7cbe6"),
+            QStringLiteral("#deecf9"),
+            QStringLiteral("#5f95d0")
         };
     case LqRibbon::RibbonBar::Microsoft365Light:
         return {
@@ -1021,15 +1025,17 @@ RibbonStylePalette ribbonStylePalette(LqRibbon::RibbonBar::RibbonStyle style)
             QStringLiteral("#ffffff"),
             QStringLiteral("#ffffff"),
             QStringLiteral("#242424"),
-            QStringLiteral("#d1d1d1"),
-            QStringLiteral("#c7c7c7"),
             QStringLiteral("#0f6cbd"),
             QStringLiteral("#e5f1fb"),
             QStringLiteral("#e5f1fb"),
             QStringLiteral("#cfe4fa"),
             QStringLiteral("#ffffff"),
-            QStringLiteral("#d1d1d1"),
-            QStringLiteral("6px 6px 0px 0px")
+            QStringLiteral("#e5e5e5"),
+            QStringLiteral("6px 6px 0px 0px"),
+            QStringLiteral("#e5e5e5"),
+            QStringLiteral("#e5e5e5"),
+            QStringLiteral("#e5e5e5"),
+            QStringLiteral("#c7c7c7")
         };
     case LqRibbon::RibbonBar::Microsoft365Dark:
         return {
@@ -1046,15 +1052,17 @@ RibbonStylePalette ribbonStylePalette(LqRibbon::RibbonBar::RibbonStyle style)
             QStringLiteral("#2d2d2d"),
             QStringLiteral("#2d2d2d"),
             QStringLiteral("#f3f2f1"),
-            QStringLiteral("#525252"),
-            QStringLiteral("#5f5f5f"),
             QStringLiteral("#60cdff"),
             QStringLiteral("#3b3a39"),
             QStringLiteral("#3a3a3a"),
             QStringLiteral("#4a4a4a"),
             QStringLiteral("#2d2d2d"),
-            QStringLiteral("#525252"),
-            QStringLiteral("6px 6px 0px 0px")
+            QStringLiteral("#3a3a3a"),
+            QStringLiteral("6px 6px 0px 0px"),
+            QStringLiteral("#3a3a3a"),
+            QStringLiteral("#3a3a3a"),
+            QStringLiteral("#3a3a3a"),
+            QStringLiteral("#5f5f5f")
         };
     case LqRibbon::RibbonBar::Office2016Blue:
     default:
@@ -1072,15 +1080,17 @@ RibbonStylePalette ribbonStylePalette(LqRibbon::RibbonBar::RibbonStyle style)
             QStringLiteral("#ffffff"),
             QStringLiteral("#f4f4f4"),
             QStringLiteral("#202020"),
-            QStringLiteral("#c8c8c8"),
-            QStringLiteral("#b7cbe6"),
             QStringLiteral("#5f95d0"),
             QStringLiteral("#e8f2ff"),
             QStringLiteral("#8cc8f7"),
             QStringLiteral("#c5ddfa"),
             QStringLiteral("#2f63a3"),
             QStringLiteral("#6f9fd0"),
-            QStringLiteral("0px")
+            QStringLiteral("0px"),
+            QStringLiteral("#c8c8c8"),
+            QStringLiteral("#b7cbe6"),
+            QStringLiteral("#8cc8f7"),
+            QStringLiteral("#5f95d0")
         };
     }
 }
@@ -1104,8 +1114,6 @@ QString buildRibbonStyleSheet(const RibbonStylePalette &palette)
         {"$fieldBg", &palette.fieldBackground},
         {"$popupBg", &palette.popupBackground},
         {"$text", &palette.text},
-        {"$border", &palette.border},
-        {"$searchBorder", &palette.searchBorder},
         {"$focus", &palette.focus},
         {"$popupSelection", &palette.popupSelection},
         {"$groupHover", &palette.groupHover},
@@ -1113,6 +1121,10 @@ QString buildRibbonStyleSheet(const RibbonStylePalette &palette)
         {"$quickBg", &palette.quickBackground},
         {"$quickBorder", &palette.quickBorder},
         {"$tabRadius", &palette.tabRadius},
+        {"$selectedTabBorder", &palette.selectedTabBorder},
+        {"$controlBorder", &palette.controlBorder},
+        {"$commandHoverBorder", &palette.commandHoverBorder},
+        {"$commandPressedBorder", &palette.commandPressedBorder},
     };
 
     for (const Replacement &replacement : replacements) {

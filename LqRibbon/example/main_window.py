@@ -239,7 +239,7 @@ class MainWindow(RibbonMainWindow):
                 continue
             color = palette[palette_key]
             swatch.setProperty("previewColor", color)
-            border = palette["border"]
+            border = palette["control_border"]
             swatch.setStyleSheet(
                 f"QFrame {{ background: {color}; border: 1px solid {border}; }}"
             )

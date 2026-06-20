@@ -37,7 +37,7 @@ Default style remains `Office 2016 Blue`.
 | 006 | Theme live preview before apply | Preview swatch panel | Complete |
 | 007 | Persisted Office theme choice | Save/load example settings | Complete |
 | 008 | Fluent rounded tab geometry | Style preview page | Complete |
-| 009 | Fluent softer border model | Style preview page | Planned |
+| 009 | Fluent softer border model | Style preview page | Complete |
 | 010 | Fluent hover and pressed state timing | Style preview page | Planned |
 | 011 | Simplified one-line ribbon | Ribbon display toggle | Planned |
 | 012 | Classic multi-line ribbon restore | Ribbon display toggle | Planned |

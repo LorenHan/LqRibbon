@@ -21,7 +21,7 @@ not copied implementation.
 | Status bar | Permanent area, switch group, sliders, progress | Complete | `--grab-preview` status area |
 | Workspace | Scroll area, MDI-aware workspace, tab/subwindow polish | Implemented basic API | `--grab-mdi-preview`, `--grab-tab-preview` |
 | Customization | Customize manager/page/dialog, save and restore layout | Implemented basic API | Planned customization example |
-| Style | Office-like metrics, colors, theme hooks, high-DPI behavior | Basic style switching, system follow mode, live preview swatch, persisted theme choice, and Fluent rounded tab geometry implemented | `--grab-style-preview`, `--run-style-tests` |
+| Style | Office-like metrics, colors, theme hooks, high-DPI behavior | Basic style switching, system follow mode, live preview swatch, persisted theme choice, Fluent rounded tab geometry, and softer Fluent border tokens implemented | `--grab-style-preview`, `--run-style-tests` |
 
 ## Current Gap Summary
 
@@ -94,4 +94,5 @@ or proprietary style engines.
 
 The Python example mirrors the C++ style switcher with the same style names,
 system follow mode, live preview swatch, persisted theme choice, Fluent rounded
-tab geometry, and default `Office 2016 Blue` behavior.
+tab geometry, softer Fluent border tokens, and default `Office 2016 Blue`
+behavior.
