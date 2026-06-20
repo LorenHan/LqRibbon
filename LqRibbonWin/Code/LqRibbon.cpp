@@ -873,8 +873,8 @@ const char ribbonStyleSheet[] =
     "    background: transparent;"
     "}"
     "LqRibbon--RibbonGroup QToolButton:hover {"
-    "    background: #dcecff;"
-    "    border-color: #80a9dc;"
+    "    background: #8cc8f7;"
+    "    border-color: #8cc8f7;"
     "}"
     "LqRibbon--RibbonGroup QToolButton:pressed {"
     "    background: #c5ddfa;"
@@ -889,6 +889,10 @@ const char ribbonStyleSheet[] =
     "    subcontrol-origin: padding;"
     "    subcontrol-position: center right;"
     "    right: 3px;"
+    "}"
+    "QMenu::item:selected {"
+    "    background: #8cc8f7;"
+    "    color: #202020;"
     "}";
 
 const char ribbonMdiAreaStyleSheet[] =

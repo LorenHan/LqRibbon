@@ -161,9 +161,14 @@ class LqStyle:
 
         /* Hover Effect (Office2016 flat highlight) */
         QToolButton:hover {
-            background-color: #DCEBFF;
-            border: 1px solid #80A9DC;
+            background-color: #8CC8F7;
+            border: 1px solid #8CC8F7;
             border-radius: 0px;
+        }
+
+        QMenu::item:selected {
+            background-color: #8CC8F7;
+            color: #202020;
         }
 
         /* Pressed Effect */
