@@ -4,6 +4,7 @@
 #include <QComboBox>
 #include <QDate>
 #include <QDebug>
+#include <QEventLoop>
 #include <QFormLayout>
 #include <QFontDatabase>
 #include <QFrame>
@@ -40,6 +41,28 @@ struct RibbonStylePreviewPalette
     QString field;
     QString text;
     QString border;
+};
+
+struct RibbonStateTiming
+{
+    int hoverDurationMs;
+    int pressedHoldMs;
+};
+
+struct RibbonStyleStatePalette
+{
+    QString normal;
+    QString hover;
+    QString pressed;
+    QString text;
+    QString border;
+};
+
+enum class FluentPreviewPhase
+{
+    Normal,
+    Hover,
+    Pressed
 };
 
 void processCollapseTestEvents()
@@ -394,6 +417,72 @@ void saveRibbonStyleChoice(QSettings &settings, const QString &choice)
     settings.sync();
 }
 
+QString fluentPreviewPhaseName(FluentPreviewPhase phase)
+{
+    switch (phase) {
+    case FluentPreviewPhase::Hover:
+        return QStringLiteral("hover");
+    case FluentPreviewPhase::Pressed:
+        return QStringLiteral("pressed");
+    case FluentPreviewPhase::Normal:
+    default:
+        return QStringLiteral("normal");
+    }
+}
+
+RibbonStateTiming ribbonStateTiming(LqRibbon::RibbonBar::RibbonStyle style)
+{
+    switch (style) {
+    case LqRibbon::RibbonBar::Microsoft365Light:
+    case LqRibbon::RibbonBar::Microsoft365Dark:
+        return {120, 80};
+    case LqRibbon::RibbonBar::Office2019Colorful:
+    case LqRibbon::RibbonBar::Office2016Blue:
+    default:
+        return {0, 0};
+    }
+}
+
+RibbonStyleStatePalette ribbonStyleStatePalette(
+    LqRibbon::RibbonBar::RibbonStyle style)
+{
+    switch (style) {
+    case LqRibbon::RibbonBar::Office2019Colorful:
+        return {
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#deecf9"),
+            QStringLiteral("#c7e0f4"),
+            QStringLiteral("#202020"),
+            QStringLiteral("#c8c8c8")
+        };
+    case LqRibbon::RibbonBar::Microsoft365Light:
+        return {
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#e5f1fb"),
+            QStringLiteral("#cfe4fa"),
+            QStringLiteral("#242424"),
+            QStringLiteral("#e5e5e5")
+        };
+    case LqRibbon::RibbonBar::Microsoft365Dark:
+        return {
+            QStringLiteral("#2d2d2d"),
+            QStringLiteral("#3a3a3a"),
+            QStringLiteral("#4a4a4a"),
+            QStringLiteral("#f3f2f1"),
+            QStringLiteral("#3a3a3a")
+        };
+    case LqRibbon::RibbonBar::Office2016Blue:
+    default:
+        return {
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#8cc8f7"),
+            QStringLiteral("#c5ddfa"),
+            QStringLiteral("#202020"),
+            QStringLiteral("#c8c8c8")
+        };
+    }
+}
+
 RibbonStylePreviewPalette ribbonStylePreviewPalette(
     LqRibbon::RibbonBar::RibbonStyle style)
 {
@@ -433,6 +522,171 @@ RibbonStylePreviewPalette ribbonStylePreviewPalette(
         };
     }
 }
+
+class FluentStateTimingPreview : public QToolButton
+{
+public:
+    explicit FluentStateTimingPreview(QWidget *parent = nullptr)
+        : QToolButton(parent)
+    {
+        setObjectName(QStringLiteral("lqRibbonStateTimingPreview"));
+        setFixedSize(30, 24);
+        setFocusPolicy(Qt::NoFocus);
+        setIconSize(QSize(14, 14));
+        setToolTip(QObject::tr("Hover and press timing preview"));
+        m_hoverTimer.setSingleShot(true);
+        m_pressedResetTimer.setSingleShot(true);
+        QObject::connect(&m_hoverTimer, &QTimer::timeout, this, [this]() {
+            setPreviewPhase(FluentPreviewPhase::Hover);
+        });
+        QObject::connect(&m_pressedResetTimer, &QTimer::timeout, this, [this]() {
+            restoreAfterPressed();
+        });
+        applyRibbonStyle(LqRibbon::RibbonBar::Office2016Blue);
+    }
+
+    void applyRibbonStyle(LqRibbon::RibbonBar::RibbonStyle style)
+    {
+        m_style = style;
+        m_timing = ribbonStateTiming(style);
+        setProperty("previewStyle", static_cast<int>(style));
+        setProperty("hoverDurationMs", m_timing.hoverDurationMs);
+        setProperty("pressedHoldMs", m_timing.pressedHoldMs);
+        updatePreviewStyleSheet();
+    }
+
+    int hoverDurationMs() const
+    {
+        return m_timing.hoverDurationMs;
+    }
+
+    int pressedHoldMs() const
+    {
+        return m_timing.pressedHoldMs;
+    }
+
+    QString stateName() const
+    {
+        return fluentPreviewPhaseName(m_phase);
+    }
+
+    void beginHoverPreview()
+    {
+        m_hovered = true;
+        m_pressedResetTimer.stop();
+        if (m_phase == FluentPreviewPhase::Pressed) {
+            return;
+        }
+        if (m_timing.hoverDurationMs > 0) {
+            m_hoverTimer.start(m_timing.hoverDurationMs);
+        } else {
+            setPreviewPhase(FluentPreviewPhase::Hover);
+        }
+    }
+
+    void leavePreview()
+    {
+        m_hovered = false;
+        m_hoverTimer.stop();
+        m_pressedResetTimer.stop();
+        setPreviewPhase(FluentPreviewPhase::Normal);
+    }
+
+    void beginPressedPreview()
+    {
+        m_hoverTimer.stop();
+        m_pressedResetTimer.stop();
+        setPreviewPhase(FluentPreviewPhase::Pressed);
+    }
+
+    void endPressedPreview()
+    {
+        if (m_phase != FluentPreviewPhase::Pressed) {
+            return;
+        }
+        if (m_timing.pressedHoldMs > 0) {
+            m_pressedResetTimer.start(m_timing.pressedHoldMs);
+        } else {
+            restoreAfterPressed();
+        }
+    }
+
+protected:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    void enterEvent(QEnterEvent *event) override
+#else
+    void enterEvent(QEvent *event) override
+#endif
+    {
+        beginHoverPreview();
+        QToolButton::enterEvent(event);
+    }
+
+    void leaveEvent(QEvent *event) override
+    {
+        leavePreview();
+        QToolButton::leaveEvent(event);
+    }
+
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        beginPressedPreview();
+        QToolButton::mousePressEvent(event);
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        QToolButton::mouseReleaseEvent(event);
+        endPressedPreview();
+    }
+
+private:
+    void restoreAfterPressed()
+    {
+        setPreviewPhase(m_hovered ? FluentPreviewPhase::Hover
+                                  : FluentPreviewPhase::Normal);
+    }
+
+    void setPreviewPhase(FluentPreviewPhase phase)
+    {
+        if (m_phase == phase) {
+            return;
+        }
+        m_phase = phase;
+        setProperty("statePhase", fluentPreviewPhaseName(m_phase));
+        updatePreviewStyleSheet();
+    }
+
+    void updatePreviewStyleSheet()
+    {
+        const RibbonStyleStatePalette palette = ribbonStyleStatePalette(m_style);
+        const QString strBackground =
+            m_phase == FluentPreviewPhase::Pressed
+                ? palette.pressed
+                : m_phase == FluentPreviewPhase::Hover
+                    ? palette.hover
+                    : palette.normal;
+        setProperty("statePhase", fluentPreviewPhaseName(m_phase));
+        setStyleSheet(
+            QStringLiteral(
+                "QToolButton#lqRibbonStateTimingPreview {"
+                "background: %1;"
+                "border: 1px solid %2;"
+                "border-radius: 3px;"
+                "padding: 0px;"
+                "color: %3;"
+                "}")
+                .arg(strBackground, palette.border, palette.text));
+    }
+
+    LqRibbon::RibbonBar::RibbonStyle m_style =
+        LqRibbon::RibbonBar::Office2016Blue;
+    RibbonStateTiming m_timing = {0, 0};
+    FluentPreviewPhase m_phase = FluentPreviewPhase::Normal;
+    bool m_hovered = false;
+    QTimer m_hoverTimer;
+    QTimer m_pressedResetTimer;
+};
 
 QString ribbonStylePreviewSwatchSheet(const QString &color,
                                       const QString &border)
@@ -515,6 +769,15 @@ void updateRibbonStylePreview(QWidget *preview,
                                palette.border);
 }
 
+void updateFluentStateTimingPreview(FluentStateTimingPreview *preview,
+                                    LqRibbon::RibbonBar::RibbonStyle style)
+{
+    if (!preview) {
+        return;
+    }
+    preview->applyRibbonStyle(style);
+}
+
 LqRibbon::RibbonBar::RibbonStyle ribbonStyleFromComboIndex(
     const QComboBox *combo,
     int index)
@@ -525,9 +788,17 @@ LqRibbon::RibbonBar::RibbonStyle ribbonStyleFromComboIndex(
         : static_cast<LqRibbon::RibbonBar::RibbonStyle>(value);
 }
 
+void waitForStylePreviewTimer(int durationMs)
+{
+    QEventLoop loop;
+    QTimer::singleShot(durationMs, &loop, &QEventLoop::quit);
+    loop.exec();
+}
+
 int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                   QComboBox *styleCombo,
-                  QWidget *stylePreview)
+                  QWidget *stylePreview,
+                  FluentStateTimingPreview *stateTimingPreview)
 {
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     auto require = [](bool condition, const QString &name) {
@@ -551,6 +822,15 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
     if (!require(stylePreview->property("previewStyle").toInt()
                      == static_cast<int>(LqRibbon::RibbonBar::Office2016Blue),
                  QStringLiteral("style preview defaults to Office 2016 Blue"))) {
+        return 1;
+    }
+    if (!require(stateTimingPreview != nullptr,
+                 QStringLiteral("example exposes state timing preview"))) {
+        return 1;
+    }
+    if (!require(stateTimingPreview->hoverDurationMs() == 0
+                     && stateTimingPreview->pressedHoldMs() == 0,
+                 QStringLiteral("legacy themes use immediate state timing"))) {
         return 1;
     }
 
@@ -594,6 +874,7 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
             return 1;
         }
         updateRibbonStylePreview(stylePreview, style);
+        updateFluentStateTimingPreview(stateTimingPreview, style);
         if (!require(stylePreview->property("previewStyle").toInt()
                          == static_cast<int>(style),
                      QStringLiteral("preview swatch updates for %1")
@@ -647,7 +928,42 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                          .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
             return 1;
         }
+        const RibbonStateTiming expectedTiming = ribbonStateTiming(style);
+        if (!require(stateTimingPreview->property("hoverDurationMs").toInt()
+                         == expectedTiming.hoverDurationMs
+                     && stateTimingPreview->property("pressedHoldMs").toInt()
+                         == expectedTiming.pressedHoldMs,
+                     QStringLiteral("state timing tokens generated for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
     }
+
+    updateFluentStateTimingPreview(stateTimingPreview,
+                                   LqRibbon::RibbonBar::Microsoft365Light);
+    stateTimingPreview->leavePreview();
+    stateTimingPreview->beginHoverPreview();
+    if (!require(stateTimingPreview->stateName() == QStringLiteral("normal"),
+                 QStringLiteral("Fluent hover waits before activation"))) {
+        return 1;
+    }
+    waitForStylePreviewTimer(stateTimingPreview->hoverDurationMs() + 30);
+    if (!require(stateTimingPreview->stateName() == QStringLiteral("hover"),
+                 QStringLiteral("Fluent hover activates after timing"))) {
+        return 1;
+    }
+    stateTimingPreview->beginPressedPreview();
+    stateTimingPreview->endPressedPreview();
+    if (!require(stateTimingPreview->stateName() == QStringLiteral("pressed"),
+                 QStringLiteral("Fluent pressed state holds after release"))) {
+        return 1;
+    }
+    waitForStylePreviewTimer(stateTimingPreview->pressedHoldMs() + 30);
+    if (!require(stateTimingPreview->stateName() == QStringLiteral("hover"),
+                 QStringLiteral("Fluent pressed state restores after timing"))) {
+        return 1;
+    }
+    stateTimingPreview->leavePreview();
 
     int changedCount = 0;
     QObject::connect(ribbonBar,
@@ -839,26 +1155,46 @@ int main(int argc, char *argv[])
                             QObject::tr("Follow current system light/dark palette"),
                             Qt::ToolTipRole);
     styleSwitchGroup->addWidget(styleComboControl);
-    QWidget *stylePreview = createRibbonStylePreview(styleSwitchGroup);
+    QWidget *stylePreviewRow = new QWidget(styleSwitchGroup);
+    stylePreviewRow->setObjectName(QStringLiteral("lqRibbonStylePreviewRow"));
+    stylePreviewRow->setFixedSize(164, 24);
+    stylePreviewRow->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    QHBoxLayout *stylePreviewRowLayout = new QHBoxLayout(stylePreviewRow);
+    stylePreviewRowLayout->setContentsMargins(0, 0, 0, 0);
+    stylePreviewRowLayout->setSpacing(4);
+    QWidget *stylePreview = createRibbonStylePreview(stylePreviewRow);
+    FluentStateTimingPreview *stateTimingPreview =
+        new FluentStateTimingPreview(stylePreviewRow);
+    stateTimingPreview->setIcon(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton));
     updateRibbonStylePreview(stylePreview, LqRibbon::RibbonBar::Office2016Blue);
-    styleSwitchGroup->addWidget(stylePreview);
+    updateFluentStateTimingPreview(stateTimingPreview,
+                                   LqRibbon::RibbonBar::Office2016Blue);
+    stylePreviewRowLayout->addWidget(stylePreview);
+    stylePreviewRowLayout->addWidget(stateTimingPreview);
+    styleSwitchGroup->addWidget(stylePreviewRow);
     QObject::connect(styleCombo,
                      QOverload<int>::of(&QComboBox::highlighted),
-                     [styleCombo, stylePreview](int index) {
-                         updateRibbonStylePreview(
-                             stylePreview,
-                             ribbonStyleFromComboIndex(styleCombo, index));
+                     [styleCombo, stylePreview, stateTimingPreview](int index) {
+                         const LqRibbon::RibbonBar::RibbonStyle style =
+                             ribbonStyleFromComboIndex(styleCombo, index);
+                         updateRibbonStylePreview(stylePreview, style);
+                         updateFluentStateTimingPreview(stateTimingPreview,
+                                                        style);
                      });
     QObject::connect(styleCombo,
                      QOverload<int>::of(&QComboBox::currentIndexChanged),
                      [&mainWindow,
                       styleCombo,
                       stylePreview,
+                      stateTimingPreview,
                       &settings,
                       persistStyleChoice](int index) {
                          const LqRibbon::RibbonBar::RibbonStyle style =
                              ribbonStyleFromComboIndex(styleCombo, index);
                          updateRibbonStylePreview(stylePreview, style);
+                         updateFluentStateTimingPreview(stateTimingPreview,
+                                                        style);
                          mainWindow.setRibbonStyle(style);
                          if (persistStyleChoice) {
                              saveRibbonStyleChoice(
@@ -1464,8 +1800,16 @@ int main(int argc, char *argv[])
     }
 
     if (styleTestsRequested) {
-        QTimer::singleShot(0, &mainWindow, [&mainWindow, styleCombo, stylePreview]() {
-            qApp->exit(runStyleTests(mainWindow, styleCombo, stylePreview));
+        QTimer::singleShot(0,
+                           &mainWindow,
+                           [&mainWindow,
+                            styleCombo,
+                            stylePreview,
+                            stateTimingPreview]() {
+            qApp->exit(runStyleTests(mainWindow,
+                                     styleCombo,
+                                     stylePreview,
+                                     stateTimingPreview));
         });
         return application.exec();
     }

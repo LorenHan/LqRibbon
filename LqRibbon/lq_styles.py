@@ -64,6 +64,8 @@ _STYLE_PALETTES = {
         "control_border": "#b7cbe6",
         "command_hover_border": "#8cc8f7",
         "command_pressed_border": "#5f95d0",
+        "hover_duration_ms": 0,
+        "pressed_hold_ms": 0,
     },
     RibbonStyle.Office2019Colorful: {
         "accent": "#185abd",
@@ -90,6 +92,8 @@ _STYLE_PALETTES = {
         "control_border": "#b7cbe6",
         "command_hover_border": "#deecf9",
         "command_pressed_border": "#5f95d0",
+        "hover_duration_ms": 0,
+        "pressed_hold_ms": 0,
     },
     RibbonStyle.Microsoft365Light: {
         "accent": "#0f6cbd",
@@ -116,6 +120,8 @@ _STYLE_PALETTES = {
         "control_border": "#e5e5e5",
         "command_hover_border": "#e5e5e5",
         "command_pressed_border": "#c7c7c7",
+        "hover_duration_ms": 120,
+        "pressed_hold_ms": 80,
     },
     RibbonStyle.Microsoft365Dark: {
         "accent": "#60cdff",
@@ -142,6 +148,8 @@ _STYLE_PALETTES = {
         "control_border": "#3a3a3a",
         "command_hover_border": "#3a3a3a",
         "command_pressed_border": "#5f5f5f",
+        "hover_duration_ms": 120,
+        "pressed_hold_ms": 80,
     },
 }
 

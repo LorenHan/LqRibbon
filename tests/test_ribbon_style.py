@@ -16,6 +16,7 @@ sys.path.insert(
 )
 
 from PySide6.QtCore import QSettings
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QFrame
 
 from LqRibbon import LqStyle, RibbonMainWindow, RibbonStyle
@@ -102,6 +103,18 @@ def test_fluent_soft_borders_apply_to_m365_only():
     assert "border-color: #3a3a3a;" in dark_style
 
 
+def test_fluent_state_timing_tokens_apply_to_m365_only():
+    blue_palette = LqStyle.palette(RibbonStyle.Office2016Blue)
+    light_palette = LqStyle.palette(RibbonStyle.Microsoft365Light)
+    dark_palette = LqStyle.palette(RibbonStyle.Microsoft365Dark)
+    assert blue_palette["hover_duration_ms"] == 0
+    assert blue_palette["pressed_hold_ms"] == 0
+    assert light_palette["hover_duration_ms"] == 120
+    assert light_palette["pressed_hold_ms"] == 80
+    assert dark_palette["hover_duration_ms"] == 120
+    assert dark_palette["pressed_hold_ms"] == 80
+
+
 def test_example_combo_switches_style():
     window = MainWindow()
     combo = window.style_combo_control.widget()
@@ -142,6 +155,34 @@ def test_example_style_preview_tracks_combo():
     window.close()
 
 
+def test_example_state_timing_preview_tracks_style():
+    window = MainWindow()
+    preview = window.state_timing_preview
+    assert preview.property("previewStyle") == int(RibbonStyle.Office2016Blue)
+    assert preview.property("hoverDurationMs") == 0
+    assert preview.property("pressedHoldMs") == 0
+
+    window.set_ribbon_style(RibbonStyle.Microsoft365Light)
+    assert preview.property("previewStyle") == int(RibbonStyle.Microsoft365Light)
+    assert preview.property("hoverDurationMs") == 120
+    assert preview.property("pressedHoldMs") == 80
+
+    preview.leave_preview()
+    preview.begin_hover_preview()
+    assert preview.property("statePhase") == "normal"
+    QTest.qWait(preview.property("hoverDurationMs") + 30)
+    assert preview.property("statePhase") == "hover"
+
+    preview.begin_pressed_preview()
+    preview.end_pressed_preview()
+    assert preview.property("statePhase") == "pressed"
+    QTest.qWait(preview.property("pressedHoldMs") + 30)
+    assert preview.property("statePhase") == "hover"
+    preview.leave_preview()
+    assert preview.property("statePhase") == "normal"
+    window.close()
+
+
 def test_example_style_choice_persists_to_settings():
     with tempfile.TemporaryDirectory() as directory:
         path = os.path.join(directory, "style.ini")
@@ -177,9 +218,11 @@ def main():
         test_window_style_pass_through_updates_full_stylesheet,
         test_fluent_tab_radius_applies_to_m365_only,
         test_fluent_soft_borders_apply_to_m365_only,
+        test_fluent_state_timing_tokens_apply_to_m365_only,
         test_example_combo_switches_style,
         test_example_system_combo_follows_palette,
         test_example_style_preview_tracks_combo,
+        test_example_state_timing_preview_tracks_style,
         test_example_style_choice_persists_to_settings,
     ]
     for test in tests:

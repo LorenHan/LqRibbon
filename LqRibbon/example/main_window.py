@@ -4,7 +4,7 @@ MainWindow - feature parity demo for the C++ example.
 
 import io
 
-from PySide6.QtCore import QDate, QPoint, QSize, Qt
+from PySide6.QtCore import QDate, QPoint, QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QColor
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -74,6 +74,112 @@ def saved_ribbon_style_choice(settings):
 def save_ribbon_style_choice(settings, choice):
     settings.setValue(RIBBON_STYLE_SETTINGS_KEY, choice)
     settings.sync()
+
+
+class FluentStateTimingPreview(QToolButton):
+    """Interactive style swatch for Fluent hover and pressed timing."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("lqRibbonStateTimingPreview")
+        self.setFixedSize(30, 24)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setIconSize(QSize(14, 14))
+        self.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton)
+        )
+        self.setToolTip("Hover and press timing preview")
+        self._style = RibbonStyle.Office2016Blue
+        self._phase = "normal"
+        self._hovered = False
+        self._hover_timer = QTimer(self)
+        self._hover_timer.setSingleShot(True)
+        self._hover_timer.timeout.connect(lambda: self._set_phase("hover"))
+        self._pressed_reset_timer = QTimer(self)
+        self._pressed_reset_timer.setSingleShot(True)
+        self._pressed_reset_timer.timeout.connect(self._restore_after_pressed)
+        self.apply_ribbon_style(RibbonStyle.Office2016Blue)
+
+    def apply_ribbon_style(self, style):
+        self._style = LqStyle.coerce_style(style)
+        palette = LqStyle.palette(self._style)
+        self.setProperty("previewStyle", int(self._style))
+        self.setProperty("hoverDurationMs", palette["hover_duration_ms"])
+        self.setProperty("pressedHoldMs", palette["pressed_hold_ms"])
+        self._update_style_sheet()
+
+    def begin_hover_preview(self):
+        self._hovered = True
+        self._pressed_reset_timer.stop()
+        if self._phase == "pressed":
+            return
+        hover_ms = int(self.property("hoverDurationMs"))
+        if hover_ms > 0:
+            self._hover_timer.start(hover_ms)
+        else:
+            self._set_phase("hover")
+
+    def leave_preview(self):
+        self._hovered = False
+        self._hover_timer.stop()
+        self._pressed_reset_timer.stop()
+        self._set_phase("normal")
+
+    def begin_pressed_preview(self):
+        self._hover_timer.stop()
+        self._pressed_reset_timer.stop()
+        self._set_phase("pressed")
+
+    def end_pressed_preview(self):
+        if self._phase != "pressed":
+            return
+        pressed_ms = int(self.property("pressedHoldMs"))
+        if pressed_ms > 0:
+            self._pressed_reset_timer.start(pressed_ms)
+        else:
+            self._restore_after_pressed()
+
+    def enterEvent(self, event):
+        self.begin_hover_preview()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.leave_preview()
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event):
+        self.begin_pressed_preview()
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        self.end_pressed_preview()
+
+    def _restore_after_pressed(self):
+        self._set_phase("hover" if self._hovered else "normal")
+
+    def _set_phase(self, phase):
+        if self._phase == phase:
+            return
+        self._phase = phase
+        self.setProperty("statePhase", phase)
+        self._update_style_sheet()
+
+    def _update_style_sheet(self):
+        palette = LqStyle.palette(self._style)
+        backgrounds = {
+            "normal": palette["field_bg"],
+            "hover": palette["group_hover"],
+            "pressed": palette["group_pressed"],
+        }
+        self.setProperty("statePhase", self._phase)
+        self.setStyleSheet(
+            "QToolButton#lqRibbonStateTimingPreview "
+            f"{{ background: {backgrounds[self._phase]}; "
+            f"border: 1px solid {palette['control_border']}; "
+            "border-radius: 3px; padding: 0px; "
+            f"color: {palette['text']}; }}"
+        )
 
 
 class MainWindow(RibbonMainWindow):
@@ -183,8 +289,10 @@ class MainWindow(RibbonMainWindow):
         )
         style_group.addWidget(self.style_combo_control)
         self.style_preview_widget = self._create_style_preview_widget(style_group)
+        self.state_timing_preview = FluentStateTimingPreview(style_group)
         self._update_style_preview(RibbonStyle.Office2016Blue)
         style_group.addWidget(self.style_preview_widget)
+        style_group.addWidget(self.state_timing_preview)
         style_combo.highlighted.connect(self._preview_selected_ribbon_style)
         style_combo.currentIndexChanged.connect(self._apply_selected_ribbon_style)
 
@@ -243,6 +351,7 @@ class MainWindow(RibbonMainWindow):
             swatch.setStyleSheet(
                 f"QFrame {{ background: {color}; border: 1px solid {border}; }}"
             )
+        self.state_timing_preview.apply_ribbon_style(style)
 
     def _preview_selected_ribbon_style(self, index):
         self._update_style_preview(self._style_from_combo_index(index))
