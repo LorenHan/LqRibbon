@@ -2,21 +2,276 @@
 #include <QActionGroup>
 #include <QBuffer>
 #include <QDate>
+#include <QDebug>
 #include <QFormLayout>
 #include <QFontDatabase>
 #include <QLabel>
+#include <QMouseEvent>
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QStyle>
+#include <QStackedWidget>
+#include <QTabBar>
 #include <QTableWidget>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
 #include "LqRibbon.h"
+
+namespace {
+
+void processCollapseTestEvents()
+{
+    qApp->processEvents(QEventLoop::AllEvents, 50);
+}
+
+QTabBar *collapseTestTabBar(LqRibbon::RibbonBar *ribbonBar)
+{
+    return ribbonBar->findChild<QTabBar *>();
+}
+
+QStackedWidget *collapseTestStack(LqRibbon::RibbonBar *ribbonBar)
+{
+    return ribbonBar->findChild<QStackedWidget *>();
+}
+
+bool collapseTestCommandAreaVisible(LqRibbon::RibbonBar *ribbonBar)
+{
+    QStackedWidget *stack = collapseTestStack(ribbonBar);
+    return stack && stack->isVisible() && stack->height() > 0;
+}
+
+void sendCollapseTestMouse(QWidget *widget,
+                           QEvent::Type type,
+                           const QPoint &pos,
+                           Qt::MouseButton button,
+                           Qt::MouseButtons buttons)
+{
+    QMouseEvent event(type,
+                      pos,
+                      widget->mapToGlobal(pos),
+                      button,
+                      buttons,
+                      Qt::NoModifier);
+    QApplication::sendEvent(widget, &event);
+    processCollapseTestEvents();
+}
+
+void clickCollapseTestWidget(QWidget *widget, const QPoint &pos)
+{
+    sendCollapseTestMouse(widget,
+                          QEvent::MouseButtonPress,
+                          pos,
+                          Qt::LeftButton,
+                          Qt::LeftButton);
+    sendCollapseTestMouse(widget,
+                          QEvent::MouseButtonRelease,
+                          pos,
+                          Qt::LeftButton,
+                          Qt::NoButton);
+}
+
+void clickCollapseTestTab(LqRibbon::RibbonBar *ribbonBar, int index)
+{
+    QTabBar *tabBar = collapseTestTabBar(ribbonBar);
+    clickCollapseTestWidget(tabBar, tabBar->tabRect(index).center());
+}
+
+void doubleClickCollapseTestTab(LqRibbon::RibbonBar *ribbonBar, int index)
+{
+    QTabBar *tabBar = collapseTestTabBar(ribbonBar);
+    const QPoint pos = tabBar->tabRect(index).center();
+    clickCollapseTestWidget(tabBar, pos);
+    sendCollapseTestMouse(tabBar,
+                          QEvent::MouseButtonDblClick,
+                          pos,
+                          Qt::LeftButton,
+                          Qt::LeftButton);
+    sendCollapseTestMouse(tabBar,
+                          QEvent::MouseButtonRelease,
+                          pos,
+                          Qt::LeftButton,
+                          Qt::NoButton);
+}
+
+QToolButton *collapseTestActionButton(LqRibbon::RibbonBar *ribbonBar,
+                                      QAction *action)
+{
+    const QList<QToolButton *> buttons = ribbonBar->findChildren<QToolButton *>();
+    for (QToolButton *button : buttons) {
+        if (button->defaultAction() == action) {
+            return button;
+        }
+    }
+    return nullptr;
+}
+
+int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow)
+{
+    LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
+    ribbonBar->setMinimizationEnabled(true);
+    mainWindow.setFrameThemeEnabled(true);
+
+    LqRibbon::RibbonPage *firstPage =
+        ribbonBar->addPage(QStringLiteral("Collapse Test A"));
+    LqRibbon::RibbonGroup *firstGroup =
+        firstPage->addGroup(QStringLiteral("Actions"));
+    QAction *firstAction = firstGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
+        QStringLiteral("Apply"),
+        Qt::ToolButtonTextUnderIcon);
+
+    LqRibbon::RibbonPage *secondPage =
+        ribbonBar->addPage(QStringLiteral("Collapse Test B"));
+    LqRibbon::RibbonGroup *secondGroup =
+        secondPage->addGroup(QStringLiteral("Actions"));
+    QAction *secondAction = secondGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
+        QStringLiteral("Connect"),
+        Qt::ToolButtonTextUnderIcon);
+
+    QStringList hits;
+    QObject::connect(firstAction, &QAction::triggered, [&hits]() {
+        hits << QStringLiteral("apply");
+    });
+    QObject::connect(secondAction, &QAction::triggered, [&hits]() {
+        hits << QStringLiteral("connect");
+    });
+
+    const int firstIndex = ribbonBar->pageIndex(firstPage);
+    const int secondIndex = ribbonBar->pageIndex(secondPage);
+    QLabel *content = new QLabel(QStringLiteral("collapse test content"));
+    content->setAlignment(Qt::AlignCenter);
+    mainWindow.setCentralWidget(content);
+    mainWindow.show();
+    processCollapseTestEvents();
+
+    auto reset = [&]() {
+        hits.clear();
+        ribbonBar->setMinimizationEnabled(true);
+        ribbonBar->setCurrentPageIndex(firstIndex);
+        ribbonBar->setRibbonMinimized(false);
+        processCollapseTestEvents();
+    };
+
+    auto require = [](bool condition, const QString &name) {
+        if (!condition) {
+            qWarning().noquote() << "FAIL" << name;
+            return false;
+        }
+        qInfo().noquote() << "PASS" << name;
+        return true;
+    };
+
+    reset();
+    doubleClickCollapseTestTab(ribbonBar, firstIndex);
+    if (!require(ribbonBar->isRibbonMinimized()
+                     && !collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("double click expanded tab collapses"))) {
+        return 1;
+    }
+
+    reset();
+    ribbonBar->setRibbonMinimized(true);
+    doubleClickCollapseTestTab(ribbonBar, firstIndex);
+    if (!require(!ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("double click collapsed tab restores"))) {
+        return 1;
+    }
+
+    reset();
+    ribbonBar->setRibbonMinimized(true);
+    if (!require(ribbonBar->isRibbonMinimized()
+                     && !collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("programmatic collapse hides command area"))) {
+        return 1;
+    }
+
+    reset();
+    ribbonBar->setRibbonMinimized(true);
+    clickCollapseTestTab(ribbonBar, firstIndex);
+    if (!require(ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("single click collapsed tab temporarily expands"))) {
+        return 1;
+    }
+
+    QToolButton *firstButton = collapseTestActionButton(ribbonBar, firstAction);
+    if (!require(firstButton != nullptr,
+                 QStringLiteral("first action button exists"))) {
+        return 1;
+    }
+    hits.clear();
+    clickCollapseTestWidget(firstButton, firstButton->rect().center());
+    if (!require(hits == QStringList{QStringLiteral("apply")},
+                 QStringLiteral("action triggers while temporarily expanded"))) {
+        return 1;
+    }
+    if (!require(ribbonBar->isRibbonMinimized()
+                     && !collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("action hides temporary expansion"))) {
+        return 1;
+    }
+
+    reset();
+    ribbonBar->setRibbonMinimized(true);
+    clickCollapseTestTab(ribbonBar, firstIndex);
+    clickCollapseTestWidget(content, content->rect().center());
+    if (!require(ribbonBar->isRibbonMinimized()
+                     && !collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("outside click hides temporary expansion"))) {
+        return 1;
+    }
+
+    reset();
+    ribbonBar->setRibbonMinimized(true);
+    clickCollapseTestTab(ribbonBar, firstIndex);
+    doubleClickCollapseTestTab(ribbonBar, firstIndex);
+    if (!require(!ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("double click temporary tab restores permanently"))) {
+        return 1;
+    }
+
+    reset();
+    ribbonBar->setRibbonMinimized(true);
+    clickCollapseTestTab(ribbonBar, secondIndex);
+    if (!require(ribbonBar->currentIndex() == secondIndex
+                     && ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("collapsed click other page selects and expands"))) {
+        return 1;
+    }
+    QToolButton *secondButton = collapseTestActionButton(ribbonBar, secondAction);
+    if (!require(secondButton != nullptr,
+                 QStringLiteral("second action button exists"))) {
+        return 1;
+    }
+    hits.clear();
+    clickCollapseTestWidget(secondButton, secondButton->rect().center());
+    if (!require(hits == QStringList{QStringLiteral("connect")},
+                 QStringLiteral("other page action triggers while expanded"))) {
+        return 1;
+    }
+
+    reset();
+    ribbonBar->setMinimizationEnabled(false);
+    doubleClickCollapseTestTab(ribbonBar, firstIndex);
+    if (!require(!ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("minimization disabled blocks collapse"))) {
+        return 1;
+    }
+
+    return 0;
+}
+
+} // namespace
 
 int main(int argc, char *argv[])
 {
@@ -55,6 +310,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-gallery-preview"));
     const bool shellPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-shell-preview"));
+    const bool collapseTestsRequested =
+        argumentList.contains(QStringLiteral("--run-collapse-tests"));
 
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
@@ -656,6 +913,13 @@ int main(int argc, char *argv[])
                      });
 
     mainWindow.show();
+
+    if (collapseTestsRequested) {
+        QTimer::singleShot(0, &mainWindow, [&mainWindow]() {
+            qApp->exit(runCollapseTests(mainWindow));
+        });
+        return application.exec();
+    }
 
     if (!strPreviewPath.isEmpty()) {
         QTimer::singleShot(300, &mainWindow, [&mainWindow, strPreviewPath]() {
