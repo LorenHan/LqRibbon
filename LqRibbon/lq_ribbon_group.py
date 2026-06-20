@@ -225,7 +225,6 @@ class LqRibbonGroup(QGroupBox):
         """
         self.main_layout.addWidget(widget)
         action = QWidgetAction(self)
-        action.setDefaultWidget(widget)
         self.actions.append(action)
         self._action_widgets[action] = widget
         return action
