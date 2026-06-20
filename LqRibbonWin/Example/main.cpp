@@ -151,7 +151,8 @@ QToolButton *collapseTestActionButton(LqRibbon::RibbonBar *ribbonBar,
     return nullptr;
 }
 
-int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow)
+int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
+                     QAction *classicRibbonAction)
 {
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     ribbonBar->setMinimizationEnabled(true);
@@ -268,6 +269,19 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow)
                      && !ribbonBar->simplifiedAction()->isChecked()
                      && ribbonBar->height() >= fullRibbonHeight,
                  QStringLiteral("classic mode restores full command area"))) {
+        return 1;
+    }
+
+    reset();
+    ribbonBar->setSimplifiedMode(true);
+    ribbonBar->setRibbonMinimized(true);
+    classicRibbonAction->trigger();
+    processCollapseTestEvents();
+    if (!require(!ribbonBar->simplifiedMode()
+                     && !ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar)
+                     && ribbonBar->height() >= fullRibbonHeight,
+                 QStringLiteral("classic command restores multi-line ribbon"))) {
         return 1;
     }
 
@@ -1418,6 +1432,10 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_ArrowUp));
     windowGroup->addAction(simplifiedRibbonAction,
                            Qt::ToolButtonTextBesideIcon);
+    QAction *classicRibbonAction = windowGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_ArrowDown),
+        QObject::tr("Classic Ribbon"),
+        Qt::ToolButtonTextBesideIcon);
 
     LqRibbon::RibbonGroup *runtimeGroup =
         shellPage->addGroup(QObject::tr("Runtime"));
@@ -1532,6 +1550,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), shellPage);
     customizeManager->addToCategory(QObject::tr("Actions"), fullScreenAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), classicRibbonAction);
     customizeManager->addToCategory(QObject::tr("Actions"), officePopupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), showCustomizeAction);
     customizeManager->setPageId(shellPage, QStringLiteral("shell"));
@@ -1578,6 +1597,11 @@ int main(int argc, char *argv[])
     QObject::connect(restoreRibbonAction, &QAction::triggered,
                      [&mainWindow]() {
                          mainWindow.ribbonBar()->setRibbonMinimized(false);
+                     });
+    QObject::connect(classicRibbonAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.ribbonBar()->setRibbonMinimized(false);
+                         mainWindow.ribbonBar()->setSimplifiedMode(false);
                      });
     QObject::connect(toggleFrameAction, &QAction::toggled,
                      [&mainWindow](bool checked) {
@@ -1780,6 +1804,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(driverAction);
     mainWindow.ribbonBar()->registerSearchAction(minimizeRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(restoreRibbonAction);
+    mainWindow.ribbonBar()->registerSearchAction(classicRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(addPageAction);
     mainWindow.ribbonBar()->registerSearchAction(renamePageAction);
     mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
@@ -1818,8 +1843,10 @@ int main(int argc, char *argv[])
     mainWindow.show();
 
     if (collapseTestsRequested) {
-        QTimer::singleShot(0, &mainWindow, [&mainWindow]() {
-            qApp->exit(runCollapseTests(mainWindow));
+        QTimer::singleShot(0,
+                           &mainWindow,
+                           [&mainWindow, classicRibbonAction]() {
+            qApp->exit(runCollapseTests(mainWindow, classicRibbonAction));
         });
         return application.exec();
     }

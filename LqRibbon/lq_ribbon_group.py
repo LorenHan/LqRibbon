@@ -297,7 +297,12 @@ class LqRibbonGroup(QGroupBox):
         self.actionTriggered.emit(action)
         ribbon_bar = self.ribbonBar()
         if ribbon_bar and ribbon_bar.isRibbonMinimized():
-            QTimer.singleShot(0, lambda rb=ribbon_bar: rb.setRibbonMinimized(True))
+            QTimer.singleShot(
+                0,
+                lambda rb=ribbon_bar: rb.setRibbonMinimized(True)
+                if rb.isRibbonMinimized()
+                else None,
+            )
 
         # Propagate to parent window
         parent = self.parent()

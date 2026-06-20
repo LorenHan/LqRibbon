@@ -7,7 +7,7 @@ not copied implementation.
 | Area | Reference capability | LqRibbon status | Verification entry |
 | --- | --- | --- | --- |
 | Main window | Ribbon host, central widget, themed frame, native gestures | Partial | `main.cpp`, `--grab-preview`, `--grab-mdi-preview` |
-| Ribbon bar | Pages, current page, minimized mode, simplified one-line mode, title background, tab moving, elide mode | Partial | `main.cpp`, `--grab-collapsed-preview`, `--grab-simplified-preview`, `--run-collapse-tests` |
+| Ribbon bar | Pages, current page, minimized mode, simplified one-line mode, classic multi-line restore, title background, tab moving, elide mode | Partial | `main.cpp`, `--grab-collapsed-preview`, `--grab-simplified-preview`, `--run-collapse-tests` |
 | Quick access | Toolbar actions, customization entry points, top/bottom placement | Partial | `main.cpp`, preview screenshot |
 | Title widgets | Caption-row buttons and custom title controls | Implemented | `main.cpp`, preview screenshot |
 | Pages | Add/insert/remove pages, visible/enabled state, contextual page groups | Missing contextual groups | Planned example tab coverage |
@@ -95,4 +95,5 @@ or proprietary style engines.
 The Python example mirrors the C++ style switcher with the same style names,
 system follow mode, live preview swatch, persisted theme choice, Fluent rounded
 tab geometry, softer Fluent border tokens, Fluent hover/pressed timing preview,
-simplified one-line ribbon display, and default `Office 2016 Blue` behavior.
+simplified one-line ribbon display, classic multi-line restore, and default
+`Office 2016 Blue` behavior.

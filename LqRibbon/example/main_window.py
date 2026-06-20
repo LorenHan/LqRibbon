@@ -490,6 +490,12 @@ class MainWindow(RibbonMainWindow):
         window_group.addAction(
             self.simplified_ribbon_action, Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
+        self.classic_ribbon_action = self._add_group_action(
+            window_group,
+            QStyle.StandardPixmap.SP_ArrowDown,
+            "Classic Ribbon",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
 
         self.runtime_group = self.shell_page.addGroup("Runtime")
         self.add_page_action = self._add_group_action(
@@ -672,6 +678,7 @@ class MainWindow(RibbonMainWindow):
         self.restore_ribbon_action.triggered.connect(
             lambda: self.ribbonBar().setRibbonMinimized(False)
         )
+        self.classic_ribbon_action.triggered.connect(self.restore_classic_ribbon)
         self.toggle_frame_action.toggled.connect(self.setFrameThemeEnabled)
         self.add_page_action.triggered.connect(self.add_runtime_page)
         self.rename_page_action.triggered.connect(self.rename_driver_page)
@@ -713,6 +720,7 @@ class MainWindow(RibbonMainWindow):
             self.driver_action,
             self.minimize_ribbon_action,
             self.restore_ribbon_action,
+            self.classic_ribbon_action,
             self.add_page_action,
             self.rename_page_action,
             self.move_gallery_action,
@@ -726,6 +734,10 @@ class MainWindow(RibbonMainWindow):
         self.ribbonBar().addQuickAccessAction(self.full_screen_action)
         self.ribbonBar().addQuickAccessAction(self.connect_action)
         self.ribbonBar().addQuickAccessAction(self.minimize_ribbon_action)
+
+    def restore_classic_ribbon(self):
+        self.ribbonBar().setRibbonMinimized(False)
+        self.ribbonBar().setSimplifiedMode(False)
 
     def install_default_content(self):
         content = QLabel("LqRibbon PySide6 example")
