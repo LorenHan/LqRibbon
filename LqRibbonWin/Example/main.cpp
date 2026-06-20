@@ -608,6 +608,16 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                          .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
             return 1;
         }
+        const QString strExpectedTabRadius =
+            (style == LqRibbon::RibbonBar::Microsoft365Light
+             || style == LqRibbon::RibbonBar::Microsoft365Dark)
+                ? QStringLiteral("border-radius: 6px 6px 0px 0px;")
+                : QStringLiteral("border-radius: 0px;");
+        if (!require(ribbonBar->styleSheet().contains(strExpectedTabRadius),
+                     QStringLiteral("tab radius generated for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
     }
 
     int changedCount = 0;

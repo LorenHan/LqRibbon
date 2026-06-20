@@ -59,6 +59,7 @@ _STYLE_PALETTES = {
         "quick_border": "#6f9fd0",
         "window_bg": "#f5f5f5",
         "status_text": "#ffffff",
+        "tab_radius": "0px",
     },
     RibbonStyle.Office2019Colorful: {
         "accent": "#185abd",
@@ -80,6 +81,7 @@ _STYLE_PALETTES = {
         "quick_border": "#8fb9ec",
         "window_bg": "#f5f5f5",
         "status_text": "#ffffff",
+        "tab_radius": "0px",
     },
     RibbonStyle.Microsoft365Light: {
         "accent": "#0f6cbd",
@@ -101,6 +103,7 @@ _STYLE_PALETTES = {
         "quick_border": "#d1d1d1",
         "window_bg": "#ffffff",
         "status_text": "#242424",
+        "tab_radius": "6px 6px 0px 0px",
     },
     RibbonStyle.Microsoft365Dark: {
         "accent": "#60cdff",
@@ -122,6 +125,7 @@ _STYLE_PALETTES = {
         "quick_border": "#525252",
         "window_bg": "#1f1f1f",
         "status_text": "#f3f2f1",
+        "tab_radius": "6px 6px 0px 0px",
     },
 }
 
@@ -174,9 +178,11 @@ class LqStyle:
             border-left: 1px solid {p["border"]};
             border-right: 1px solid {p["border"]};
             border-top: 1px solid {p["border"]};
+            border-radius: {p["tab_radius"]};
         }}
         QTabBar::tab:hover:!selected {{
             background: {p["caption_hover"]};
+            border-radius: {p["tab_radius"]};
         }}
         QLineEdit#lqRibbonSearchEdit {{
             min-height: 18px;

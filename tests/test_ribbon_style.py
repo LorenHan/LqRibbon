@@ -18,7 +18,7 @@ sys.path.insert(
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QFrame
 
-from LqRibbon import RibbonMainWindow, RibbonStyle
+from LqRibbon import LqStyle, RibbonMainWindow, RibbonStyle
 from main_window import (
     MainWindow,
     SYSTEM_RIBBON_STYLE_VALUE,
@@ -68,6 +68,15 @@ def test_window_style_pass_through_updates_full_stylesheet():
     assert window.ribbonStyle() == RibbonStyle.Microsoft365Dark
     assert "#1f1f1f" in window.styleSheet()
     window.close()
+
+
+def test_fluent_tab_radius_applies_to_m365_only():
+    blue_style = LqStyle.get_ribbon_style(RibbonStyle.Office2016Blue)
+    light_style = LqStyle.get_ribbon_style(RibbonStyle.Microsoft365Light)
+    dark_style = LqStyle.get_ribbon_style(RibbonStyle.Microsoft365Dark)
+    assert "border-radius: 0px;" in blue_style
+    assert "border-radius: 6px 6px 0px 0px;" in light_style
+    assert "border-radius: 6px 6px 0px 0px;" in dark_style
 
 
 def test_example_combo_switches_style():
@@ -142,6 +151,7 @@ def main():
         test_bar_style_switch_updates_stylesheet,
         test_reapplying_same_style_emits_no_duplicate,
         test_window_style_pass_through_updates_full_stylesheet,
+        test_fluent_tab_radius_applies_to_m365_only,
         test_example_combo_switches_style,
         test_example_system_combo_follows_palette,
         test_example_style_preview_tracks_combo,
