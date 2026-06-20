@@ -454,13 +454,13 @@ void RibbonCollapseButton::paintEvent(QPaintEvent *event)
 
     QPainter painter(this);
     if (isDown()) {
-        painter.fillRect(rect(), QColor(QStringLiteral("#244d80")));
+        painter.fillRect(rect(), QColor(QStringLiteral("#d0d0d0")));
     } else if (underMouse()) {
-        painter.fillRect(rect(), QColor(QStringLiteral("#386caf")));
+        painter.fillRect(rect(), QColor(QStringLiteral("#e7e7e7")));
     }
 
-    QPen pen(Qt::white);
-    pen.setWidthF(1.7);
+    QPen pen(QColor(QStringLiteral("#333333")));
+    pen.setWidthF(1.5);
     painter.setPen(pen);
     painter.setRenderHint(QPainter::Antialiasing, true);
 
@@ -781,7 +781,7 @@ const char ribbonStyleSheet[] =
     "}"
     "QTabBar::tab:selected {"
     "    background: #ffffff;"
-    "    color: #1f1f1f;"
+    "    color: #124078;"
     "    border-left: 1px solid #c8c8c8;"
     "    border-right: 1px solid #c8c8c8;"
     "    border-top: 1px solid #c8c8c8;"
@@ -857,12 +857,11 @@ const char ribbonStyleSheet[] =
     "LqRibbon--RibbonGroup {"
     "    background: transparent;"
     "    border: none;"
-    "    border-right: 1px solid #d6d6d6;"
     "    border-radius: 0px;"
     "    margin: 0px;"
     "}"
     "LqRibbon--RibbonGroup QLabel#lqRibbonGroupTitle {"
-    "    color: #676767;"
+    "    color: #202020;"
     "    font-size: 11px;"
     "    padding: 0px 4px 3px 4px;"
     "}"
@@ -1916,7 +1915,7 @@ RibbonPage::RibbonPage(const QString &strTitle, QWidget *parent)
     , m_contextColor()
 {
     m_groupLayout->setContentsMargins(0, 0, 0, 0);
-    m_groupLayout->setSpacing(0);
+    m_groupLayout->setSpacing(4);
     m_groupLayout->addStretch(1);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
@@ -2060,6 +2059,30 @@ const RibbonGroupList &RibbonPage::groups() const
     return m_groupList;
 }
 
+void RibbonPage::paintEvent(QPaintEvent *event)
+{
+    QWidget::paintEvent(event);
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, false);
+
+    const int top = 5;
+    const int bottom = qMax(top, height() - 4);
+    for (int index = 0; index < m_groupList.count(); ++index) {
+        RibbonGroup *group = m_groupList.at(index);
+        if (!group || !group->isVisible()) {
+            continue;
+        }
+
+        const int x = group->geometry().right()
+            + qMax(1, m_groupLayout->spacing() / 2);
+        painter.setPen(QColor(QStringLiteral("#c2c2c2")));
+        painter.drawLine(x, top, x, bottom);
+        painter.setPen(QColor(QStringLiteral("#f4f4f4")));
+        painter.drawLine(x + 1, top, x + 1, bottom);
+    }
+}
+
 ///
 /// \brief RibbonPage::title
 /// Returns the title mirrored to the Ribbon tab.
@@ -2183,6 +2206,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     updateRibbonMetrics();
     tabBar()->setExpanding(false);
     tabBar()->setUsesScrollButtons(true);
+    tabBar()->installEventFilter(this);
 
     m_searchEdit->setObjectName(QStringLiteral("lqRibbonSearchEdit"));
     m_searchEdit->setPlaceholderText(ribbonText("Search"));
@@ -3476,6 +3500,18 @@ bool RibbonBar::event(QEvent *event)
 ///
 bool RibbonBar::eventFilter(QObject *object, QEvent *event)
 {
+    if (object == tabBar()
+        && event->type() == QEvent::MouseButtonDblClick) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::LeftButton
+            && tabBar()->tabAt(mouseEvent->pos()) >= 0) {
+            if (m_ribbonMinimized) {
+                setRibbonMinimized(false);
+                return true;
+            }
+        }
+    }
+
     if (object == m_searchEdit && event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
         if (keyEvent->key() == Qt::Key_Down) {
@@ -3650,9 +3686,7 @@ void RibbonBar::updateRibbonTabGeometry()
         ? ribbonTabHeight
         : ribbonTabBar->sizeHint().height();
     const int stackTop = titleHeight + tabHeight;
-    const int availableTabWidth = m_frameThemeEnabled
-        ? qMax(0, width() - ribbonCollapseButtonWidth)
-        : width();
+    const int availableTabWidth = width();
     const int tabWidth = qMin(availableTabWidth,
                               ribbonTabBar->sizeHint().width());
     ribbonTabBar->setGeometry(0, titleHeight, tabWidth, tabHeight);
@@ -3823,8 +3857,8 @@ void RibbonBar::updateWindowControlGeometry()
     m_maximizeButton->setGeometry(x, top, buttonWidth, buttonHeight);
     x += buttonWidth;
     m_closeButton->setGeometry(x, top, buttonWidth, buttonHeight);
-    const int collapseTop = topLeft.y() + ribbonCaptionHeight
-        + ((ribbonTabHeight - ribbonCollapseButtonHeight) / 2);
+    const int collapseTop = topLeft.y() + height()
+        - ribbonCollapseButtonHeight - 2;
     m_collapseButton->setGeometry(qMax(topLeft.x(),
                                       controlRight - ribbonCollapseButtonWidth),
                                   collapseTop,
@@ -3834,7 +3868,7 @@ void RibbonBar::updateWindowControlGeometry()
     m_minimizeButton->setVisible(m_frameThemeEnabled);
     m_maximizeButton->setVisible(m_frameThemeEnabled);
     m_closeButton->setVisible(m_frameThemeEnabled);
-    m_collapseButton->setVisible(m_frameThemeEnabled);
+    m_collapseButton->setVisible(m_frameThemeEnabled && !m_ribbonMinimized);
     m_minimizeButton->raise();
     m_maximizeButton->raise();
     m_closeButton->raise();
@@ -3877,7 +3911,7 @@ void RibbonBar::updateWindowControlVisibility()
     m_minimizeButton->setVisible(m_frameThemeEnabled);
     m_maximizeButton->setVisible(m_frameThemeEnabled);
     m_closeButton->setVisible(m_frameThemeEnabled);
-    m_collapseButton->setVisible(m_frameThemeEnabled);
+    m_collapseButton->setVisible(m_frameThemeEnabled && !m_ribbonMinimized);
     updateWindowControlState();
 }
 ///

@@ -2,9 +2,11 @@
 LqRibbonBar - Ribbon bar container that holds ribbon pages
 """
 
-from PySide6.QtWidgets import QTabWidget, QWidget, QHBoxLayout, QMenu
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction, QIcon, QPainter, QBrush, QColor, QPixmap
+from PySide6.QtWidgets import (
+    QTabWidget, QWidget, QHBoxLayout, QMenu, QStackedWidget, QToolButton
+)
+from PySide6.QtCore import Qt, Signal, QEvent, QSize
+from PySide6.QtGui import QAction, QIcon, QPainter, QColor, QPen, QPixmap
 from .lq_ribbon_extras import (
     CallableList,
     LqRibbonCustomizeDialog,
@@ -18,15 +20,74 @@ from .lq_ribbon_extras import (
 )
 
 
+RIBBON_CAPTION_HEIGHT = 36
+RIBBON_TAB_HEIGHT = 24
+RIBBON_BAR_HEIGHT = 158
+RIBBON_COLLAPSED_HEIGHT = RIBBON_CAPTION_HEIGHT + RIBBON_TAB_HEIGHT
+RIBBON_COLLAPSE_BUTTON_WIDTH = 32
+RIBBON_COLLAPSE_BUTTON_HEIGHT = 24
+
+
+class _RibbonCollapseButton(QToolButton):
+    """Office-style collapse chevron used by LqRibbonBar."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._collapsed = False
+        self.setAutoRaise(True)
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.setFixedSize(RIBBON_COLLAPSE_BUTTON_WIDTH, RIBBON_COLLAPSE_BUTTON_HEIGHT)
+
+    def setCollapsed(self, collapsed):
+        collapsed = bool(collapsed)
+        if self._collapsed == collapsed:
+            return
+        self._collapsed = collapsed
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        if self.isDown():
+            painter.fillRect(self.rect(), QColor("#d0d0d0"))
+        elif self.underMouse():
+            painter.fillRect(self.rect(), QColor("#e7e7e7"))
+
+        pen = QPen(QColor("#333333"))
+        pen.setWidthF(1.5)
+        painter.setPen(pen)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+
+        center_x = self.width() // 2
+        center_y = self.height() // 2
+        if self._collapsed:
+            painter.drawLine(center_x - 6, center_y - 3, center_x, center_y + 3)
+            painter.drawLine(center_x, center_y + 3, center_x + 6, center_y - 3)
+        else:
+            painter.drawLine(center_x - 6, center_y + 3, center_x, center_y - 3)
+            painter.drawLine(center_x, center_y - 3, center_x + 6, center_y + 3)
+
+
 class LqRibbonBar(QTabWidget):
     """Ribbon bar that contains multiple ribbon pages"""
 
     page_changed = Signal(int)  # Signal emitted when page changes
+    pageChanged = Signal(int)
     current_page_index_changed = Signal(int)
+    currentPageIndexChanged = Signal(int)
     current_page_changed = Signal(QWidget)
+    currentPageChanged = Signal(QWidget)
     ribbon_minimized_changed = Signal(bool)
+    ribbonMinimizedChanged = Signal(bool)
     minimization_changed = Signal(bool)
+    minimizationChanged = Signal(bool)
     simplified_mode_changed = Signal(bool)
+    simplifiedModeChanged = Signal(bool)
+    frameThemeChanged = Signal(bool)
+    searchTextChanged = Signal(str)
+    searchAccepted = Signal(str)
+    searchSuggestionActivated = Signal(str)
+    searchActionTriggered = Signal(QAction)
+    recentSearchActionsChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -45,6 +106,7 @@ class LqRibbonBar(QTabWidget):
         self._acrylic_enabled = False
         self._contextual_tabs_visible = True
         self._title_groups_visible = True
+        self._expand_direction = Qt.LayoutDirection.LeftToRight
         self._quick_access_position = 1
         self._tab_bar_position = 1
         self._search_bar_appearance = 1
@@ -63,10 +125,16 @@ class LqRibbonBar(QTabWidget):
         self._key_tips_complement = False
         self._key_tips_showing = False
         self._key_tips = {}
+        self._collapse_button = _RibbonCollapseButton(self)
+        self._collapse_button.clicked.connect(
+            lambda: self.setRibbonMinimized(not self._ribbon_minimized)
+        )
         self.init_ui()
 
     def init_ui(self):
         """Initialize the ribbon bar UI"""
+        self.setObjectName("lqRibbonBar")
+
         # Set tab position to North (top)
         self.setTabPosition(QTabWidget.TabPosition.North)
 
@@ -75,20 +143,128 @@ class LqRibbonBar(QTabWidget):
 
         # Connect signals
         self.currentChanged.connect(self.on_page_changed)
+        self._search_bar.textChanged.connect(lambda text: self.searchTextChanged.emit(text))
+        self._search_bar.returnPressed.connect(self._accept_search_text)
+        self.tabBar().setExpanding(False)
+        self.tabBar().setUsesScrollButtons(True)
+        self.tabBar().installEventFilter(self)
 
         # Set height for ribbon area
-        self.setFixedHeight(120)
+        self.setFixedHeight(RIBBON_BAR_HEIGHT)
+        self.setStyleSheet(self._style_sheet())
+        self._search_bar.setObjectName("lqRibbonSearchEdit")
         self._quick_access_bar.hide()
         self._search_bar.hide()
         self._progress_bar.hide()
+        self._collapse_button.hide()
+        self._update_layout()
 
     def paintEvent(self, event):
-        """Custom paint event to draw blue background for tab bar area"""
+        """Paint the themed title and tab background."""
         super().paintEvent(event)
 
-        # Paint blue background for tab bar area
         painter = QPainter(self)
-        painter.fillRect(0, 0, self.width(), 30, QBrush(QColor("#2B579A")))
+        painter.fillRect(0, 0, self.width(), RIBBON_COLLAPSED_HEIGHT, QColor("#2b579a"))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_layout()
+
+    def event(self, event):
+        handled = super().event(event)
+        if event.type() in (
+            QEvent.Type.LayoutRequest,
+            QEvent.Type.PolishRequest,
+            QEvent.Type.Show,
+            QEvent.Type.FontChange,
+            QEvent.Type.StyleChange,
+        ):
+            self._update_layout()
+        return handled
+
+    def eventFilter(self, obj, event):
+        if obj == self.tabBar() and event.type() == QEvent.Type.MouseButtonDblClick:
+            if self.tabBar().tabAt(event.pos()) >= 0 and self._ribbon_minimized:
+                self.setRibbonMinimized(False)
+                return True
+        return super().eventFilter(obj, event)
+
+    def _style_sheet(self):
+        return """
+        LqRibbonBar, QTabWidget::pane {
+            background: #f3f3f3;
+            border: none;
+        }
+        QTabBar {
+            background: transparent;
+        }
+        QTabBar::tab {
+            min-width: 46px;
+            min-height: 21px;
+            padding: 2px 10px 1px 10px;
+            color: #ffffff;
+            background: transparent;
+            border: none;
+            font-size: 12px;
+        }
+        QTabBar::tab:selected {
+            background: #ffffff;
+            color: #124078;
+            border-left: 1px solid #c8c8c8;
+            border-right: 1px solid #c8c8c8;
+            border-top: 1px solid #c8c8c8;
+        }
+        QTabBar::tab:hover:!selected {
+            background: #386caf;
+        }
+        QLineEdit#lqRibbonSearchEdit {
+            min-height: 18px;
+            padding: 0px 22px 0px 6px;
+            border: 1px solid #b7cbe6;
+            border-radius: 1px;
+            background: #ffffff;
+        }
+        """
+
+    def _update_layout(self):
+        tab_bar = self.tabBar()
+        tab_width = min(self.width(), tab_bar.sizeHint().width())
+        tab_bar.setGeometry(0, RIBBON_CAPTION_HEIGHT, tab_width, RIBBON_TAB_HEIGHT)
+        tab_bar.raise_()
+
+        stack = self.findChild(QStackedWidget)
+        if stack:
+            stack_top = RIBBON_COLLAPSED_HEIGHT
+            stack_height = 0 if self._ribbon_minimized else max(0, self.height() - stack_top)
+            stack.setGeometry(0, stack_top, self.width(), stack_height)
+            stack.setVisible(not self._ribbon_minimized)
+
+        self._search_bar.setGeometry(
+            max(0, (self.width() - 524) // 2),
+            7,
+            min(524, max(120, self.width() - 220)),
+            22,
+        )
+        self._search_bar.raise_()
+
+        collapse_x = max(0, self.width() - RIBBON_COLLAPSE_BUTTON_WIDTH)
+        collapse_y = max(0, self.height() - RIBBON_COLLAPSE_BUTTON_HEIGHT - 2)
+        self._collapse_button.setGeometry(
+            collapse_x,
+            collapse_y,
+            RIBBON_COLLAPSE_BUTTON_WIDTH,
+            RIBBON_COLLAPSE_BUTTON_HEIGHT,
+        )
+        self._collapse_button.setCollapsed(self._ribbon_minimized)
+        self._collapse_button.setVisible(self._frame_theme_enabled and not self._ribbon_minimized)
+        self._collapse_button.raise_()
+
+    def _accept_search_text(self):
+        text = self._search_bar.text().strip()
+        if not text:
+            return
+        if not self.triggerSearchAction(text):
+            self.searchAccepted.emit(text)
 
     def add_page(self, title):
         """Add a new ribbon page
@@ -115,6 +291,7 @@ class LqRibbonBar(QTabWidget):
             self.pages.append(page)
             self.addTab(page, str(page.title))
         self.setCurrentWidget(page)
+        self._update_layout()
         return page
 
     def insertPage(self, index, page_or_title):
@@ -130,6 +307,7 @@ class LqRibbonBar(QTabWidget):
         self.pages.insert(index, page)
         self.insertTab(index, page, str(page.title))
         self.setCurrentIndex(index)
+        self._update_layout()
         return page
 
     def movePage(self, page_or_index, new_index):
@@ -143,6 +321,7 @@ class LqRibbonBar(QTabWidget):
         self.pages.insert(new_index, page)
         self.insertTab(new_index, page, str(page.title))
         self.setCurrentIndex(new_index)
+        self._update_layout()
 
     def get_page(self, index):
         """Get a page by index
@@ -202,8 +381,11 @@ class LqRibbonBar(QTabWidget):
             index: Index of the new current page
         """
         self.page_changed.emit(index)
+        self.pageChanged.emit(index)
         self.current_page_index_changed.emit(index)
+        self.currentPageIndexChanged.emit(index)
         self.current_page_changed.emit(self.get_page(index))
+        self.currentPageChanged.emit(self.get_page(index))
 
     def set_page_enabled(self, index, enabled):
         """Enable or disable a page
@@ -307,8 +489,10 @@ class LqRibbonBar(QTabWidget):
         if not action:
             return False
         action.trigger()
+        self.searchActionTriggered.emit(action)
         self._recent_search_actions.insert(0, action)
         self._recent_search_actions = self._recent_search_actions[: self._recent_search_limit]
+        self.recentSearchActionsChanged.emit()
         return True
 
     def setSearchActionTriggerEnabled(self, enabled):
@@ -322,10 +506,12 @@ class LqRibbonBar(QTabWidget):
 
     def clearRecentSearchActions(self):
         self._recent_search_actions.clear()
+        self.recentSearchActionsChanged.emit()
 
     def setRecentSearchLimit(self, count):
         self._recent_search_limit = max(0, int(count))
         self._recent_search_actions = self._recent_search_actions[: self._recent_search_limit]
+        self.recentSearchActionsChanged.emit()
 
     def recentSearchLimit(self):
         return self._recent_search_limit
@@ -371,10 +557,16 @@ class LqRibbonBar(QTabWidget):
     def setRibbonMinimized(self, minimized):
         if minimized and not self._minimization_enabled:
             return
-        self._ribbon_minimized = bool(minimized)
-        self.setFixedHeight(30 if minimized else 120)
+        minimized = bool(minimized)
+        if self._ribbon_minimized == minimized:
+            return
+        self._ribbon_minimized = minimized
+        self.setFixedHeight(RIBBON_COLLAPSED_HEIGHT if minimized else RIBBON_BAR_HEIGHT)
+        self._update_layout()
         self.ribbon_minimized_changed.emit(self._ribbon_minimized)
+        self.ribbonMinimizedChanged.emit(self._ribbon_minimized)
         self.minimization_changed.emit(self._ribbon_minimized)
+        self.minimizationChanged.emit(self._ribbon_minimized)
 
     def isRibbonMinimized(self):
         return self._ribbon_minimized
@@ -415,6 +607,7 @@ class LqRibbonBar(QTabWidget):
         self._simplified_mode = bool(enabled)
         self._simplified_action.setChecked(self._simplified_mode)
         self.simplified_mode_changed.emit(self._simplified_mode)
+        self.simplifiedModeChanged.emit(self._simplified_mode)
 
     def simplifiedModeEnabled(self):
         return self._simplified_mode_enabled
@@ -425,6 +618,8 @@ class LqRibbonBar(QTabWidget):
     def setFrameThemeEnabled(self, enabled=True):
         self._frame_theme_enabled = bool(enabled)
         self._search_bar.setVisible(enabled)
+        self._update_layout()
+        self.frameThemeChanged.emit(self._frame_theme_enabled)
 
     def isFrameThemeEnabled(self):
         return self._frame_theme_enabled
@@ -463,6 +658,7 @@ class LqRibbonBar(QTabWidget):
     def setSearchBarAppearance(self, appearance):
         self._search_bar_appearance = appearance
         self._search_bar.setVisible(appearance != 3)
+        self._update_layout()
 
     def searchBarAppearance(self):
         return self._search_bar_appearance
@@ -479,6 +675,12 @@ class LqRibbonBar(QTabWidget):
 
     def logoPixmap(self):
         return self._logo_pixmap
+
+    def expandDirection(self):
+        return self._expand_direction
+
+    def setExpandDirection(self, direction):
+        self._expand_direction = direction
 
     def addSystemButton(self, *args):
         if len(args) == 1:
@@ -552,6 +754,7 @@ class LqRibbonBar(QTabWidget):
 
     def updateLayout(self):
         self.updateGeometry()
+        self._update_layout()
 
     def beginUpdate(self):
         self.setUpdatesEnabled(False)

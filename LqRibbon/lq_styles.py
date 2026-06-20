@@ -7,13 +7,13 @@ class LqStyle:
 
     # Color scheme aligned with the captured Ribbon baseline
     PRIMARY_COLOR = "#2B579A"        # Main blue color
-    TAB_SELECTED = "#2B579A"         # Selected tab blue
+    TAB_SELECTED = "#124078"         # Selected tab text blue
     TAB_HOVER = "#3A6AB1"            # Hover blue
-    RIBBON_BG = "#FFFFFF"            # White ribbon background
-    GROUP_BG = "#FFFFFF"             # White group background
-    TEXT_COLOR = "#333333"           # Dark text
-    GROUP_TITLE_COLOR = "#666666"    # Group title gray
-    SEPARATOR_COLOR = "#D8D8D8"      # Light separator
+    RIBBON_BG = "#F3F3F3"            # Ribbon background
+    GROUP_BG = "#F3F3F3"             # Group background
+    TEXT_COLOR = "#202020"           # Dark text
+    GROUP_TITLE_COLOR = "#202020"    # Group title black
+    SEPARATOR_COLOR = "#C2C2C2"      # Word-style separator
 
     @staticmethod
     def get_ribbon_style():
@@ -21,9 +21,8 @@ class LqStyle:
         return """
         /* Tab Widget */
         QTabWidget::pane {
-            background-color: #FFFFFF;
+            background-color: #F3F3F3;
             border: none;
-            border-bottom: 1px solid #D8D8D8;
         }
 
         /* Tab Bar */
@@ -35,20 +34,22 @@ class LqStyle:
         QTabBar::tab {
             background-color: transparent;
             color: rgba(255, 255, 255, 1.0);
-            padding: 6px 20px;
+            padding: 2px 10px 1px 10px;
             margin: 0;
-            margin-bottom: -1px;
             border: none;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: normal;
-            min-width: 70px;
+            min-width: 46px;
+            min-height: 21px;
         }
 
         QTabBar::tab:selected {
             background-color: #FFFFFF;
-            color: #2B579A;
+            color: #124078;
             font-weight: normal;
-            padding-bottom: 7px;
+            border-left: 1px solid #C8C8C8;
+            border-right: 1px solid #C8C8C8;
+            border-top: 1px solid #C8C8C8;
         }
 
         QTabBar::tab:hover:!selected {
@@ -57,7 +58,7 @@ class LqStyle:
 
         /* Ribbon Page */
         QWidget#ribbon_page {
-            background-color: #FFFFFF;
+            background-color: #F3F3F3;
             border: none;
         }
         """
@@ -105,33 +106,22 @@ class LqStyle:
         """Get the ribbon group style sheet"""
         return """
         /* Ribbon Group */
-        QGroupBox {
-            background-color: #FFFFFF;
+        QGroupBox#lqRibbonGroup {
+            background-color: transparent;
             border: none;
-            border-right: 1px solid #E5E5E5;
-            margin: 0px 0px;
-            padding: 2px 5px 24px 5px;
+            margin: 0px;
+            padding: 0px;
             font-size: 11px;
-            color: #666666;
-            min-width: 80px;
+            color: #202020;
+            min-width: 44px;
         }
 
-        QGroupBox:last-child {
-            border-right: none;
-        }
-
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            subcontrol-position: bottom center;
-            left: 0;
-            right: 0;
-            bottom: 4px;
-            padding: 0 5px;
-            color: #666666;
+        QGroupBox#lqRibbonGroup QLabel#lqRibbonGroupTitle {
+            color: #202020;
             font-size: 11px;
             font-weight: normal;
             background-color: transparent;
-            min-height: 12px;
+            padding: 0px 4px 3px 4px;
         }
         """
 
@@ -142,8 +132,10 @@ class LqStyle:
         /* All Ribbon Buttons */
         QToolButton {
             background-color: transparent;
-            border: none;
-            color: #333333;
+            border: 1px solid transparent;
+            border-radius: 1px;
+            padding: 1px 2px;
+            color: #202020;
             font-size: 11px;
             font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
         }
@@ -169,15 +161,15 @@ class LqStyle:
 
         /* Hover Effect (Office2016 flat highlight) */
         QToolButton:hover {
-            background-color: #E5F1FB;
-            border: 1px solid #9DC7F1;
+            background-color: #DCEBFF;
+            border: 1px solid #80A9DC;
             border-radius: 0px;
         }
 
         /* Pressed Effect */
         QToolButton:pressed {
-            background-color: #CCE4F7;
-            border: 1px solid #6AADE4;
+            background-color: #C5DDFA;
+            border: 1px solid #5F95D0;
             border-radius: 0px;
         }
 

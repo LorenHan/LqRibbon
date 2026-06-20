@@ -3,13 +3,41 @@ LqRibbonPage - Ribbon page that contains ribbon groups
 """
 
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QScrollArea
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QColor, QIcon
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QAction, QColor, QIcon, QPainter
 from .lq_ribbon_extras import CallableString, CallableList, ContextColor
+
+
+class _RibbonGroupsContainer(QWidget):
+    """Content widget that paints Word-style group separators."""
+
+    def __init__(self, page):
+        super().__init__(page)
+        self._page = page
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+
+        painter = QPainter(self)
+        top = 5
+        bottom = max(top, self.height() - 4)
+        spacing = max(1, self._page.groups_layout.spacing() // 2)
+        for group in self._page.groups:
+            if not group or not group.isVisible():
+                continue
+            x = group.geometry().right() + spacing
+            painter.setPen(QColor("#c2c2c2"))
+            painter.drawLine(x, top, x, bottom)
+            painter.setPen(QColor("#f4f4f4"))
+            painter.drawLine(x + 1, top, x + 1, bottom)
 
 
 class LqRibbonPage(QWidget):
     """Ribbon page that contains multiple ribbon groups"""
+
+    titleChanged = Signal(str)
+    activated = Signal()
+    activating = Signal(object)
 
     def __init__(self, title, parent=None):
         super().__init__(parent)
@@ -40,10 +68,10 @@ class LqRibbonPage(QWidget):
         self.scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
 
         # Create container widget for groups
-        self.groups_container = QWidget()
+        self.groups_container = _RibbonGroupsContainer(self)
         self.groups_layout = QHBoxLayout(self.groups_container)
         self.groups_layout.setContentsMargins(0, 0, 0, 0)
-        self.groups_layout.setSpacing(1)
+        self.groups_layout.setSpacing(4)
         self.groups_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         self.scroll_area.setWidget(self.groups_container)
@@ -76,6 +104,7 @@ class LqRibbonPage(QWidget):
             self.groups.append(group)
             group.setParent(self.groups_container)
             self.groups_layout.addWidget(group)
+            self.updateLayout()
             return group
         if len(args) == 1:
             return self.add_group(args[0])
@@ -108,6 +137,7 @@ class LqRibbonPage(QWidget):
         self.groups.insert(index, group)
         group.setParent(self.groups_container)
         self.groups_layout.insertWidget(index, group)
+        self.updateLayout()
         return group
 
     def get_group(self, index):
@@ -159,6 +189,7 @@ class LqRibbonPage(QWidget):
             self.groups.remove(group)
             self.groups_layout.removeWidget(group)
             group.deleteLater()
+            self.updateLayout()
 
     def removeGroup(self, group):
         self.remove_group(group)
@@ -173,6 +204,7 @@ class LqRibbonPage(QWidget):
             self.groups.remove(group)
             self.groups_layout.removeWidget(group)
             group.setParent(None)
+            self.updateLayout()
 
     def detachGroupByIndex(self, index):
         group = self.get_group(index)
@@ -185,6 +217,7 @@ class LqRibbonPage(QWidget):
             self.groups_layout.removeWidget(group)
             group.deleteLater()
         self.groups.clear()
+        self.updateLayout()
 
     def clearGroups(self):
         self.clear_groups()
@@ -197,6 +230,7 @@ class LqRibbonPage(QWidget):
         """
         self.title = CallableString(title)
         self._default_action.setText(title)
+        self.titleChanged.emit(title)
         # Update the tab text in parent ribbon bar
         if self.parent():
             parent = self.parent()
@@ -244,6 +278,8 @@ class LqRibbonPage(QWidget):
 
     def updateLayout(self):
         self.updateGeometry()
+        self.groups_container.updateGeometry()
+        self.groups_container.update()
 
 
 RibbonPage = LqRibbonPage

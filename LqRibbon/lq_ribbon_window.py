@@ -34,12 +34,14 @@ class LqRibbonWindow(QMainWindow):
 
         # Create central widget
         central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        self._root_widget = central_widget
+        QMainWindow.setCentralWidget(self, central_widget)
 
         # Main layout
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
+        self._root_layout = main_layout
 
         # Don't create custom title bar
         # self.title_bar = self.create_title_bar()
@@ -55,6 +57,7 @@ class LqRibbonWindow(QMainWindow):
         self.display_area.setReadOnly(True)
         self.display_area.setPlaceholderText("Click any action button to see its name here...")
         main_layout.addWidget(self.display_area, 1)
+        self._content_widget = self.display_area
 
         # Create status bar
         self.status_bar = QStatusBar()
@@ -138,11 +141,52 @@ class LqRibbonWindow(QMainWindow):
         """Replace the current ribbon bar."""
         if ribbon_bar is self.ribbon_bar:
             return
-        parent_layout = self.centralWidget().layout()
+        parent_layout = self._root_layout
         parent_layout.removeWidget(self.ribbon_bar)
         self.ribbon_bar.deleteLater()
         self.ribbon_bar = ribbon_bar
         parent_layout.insertWidget(0, self.ribbon_bar)
+
+    def setCentralWidget(self, widget):
+        """Set the content widget below the Ribbon, matching C++ RibbonMainWindow."""
+        if not hasattr(self, "_root_layout"):
+            QMainWindow.setCentralWidget(self, widget)
+            return
+        if widget is self._content_widget:
+            return
+        if self._content_widget is not None:
+            self._root_layout.removeWidget(self._content_widget)
+            self._content_widget.setParent(None)
+        self._content_widget = widget
+        self._root_layout.addWidget(widget, 1)
+
+    def centralWidget(self):
+        """Return the content widget below the Ribbon."""
+        return getattr(self, "_content_widget", QMainWindow.centralWidget(self))
+
+    def setFrameThemeEnabled(self, enabled):
+        self.ribbon_bar.setFrameThemeEnabled(enabled)
+
+    def isFrameThemeEnabled(self):
+        return self.ribbon_bar.isFrameThemeEnabled()
+
+    def setNativeFrameEnabled(self, enabled):
+        self._native_frame_enabled = bool(enabled)
+
+    def isNativeFrameEnabled(self):
+        return getattr(self, "_native_frame_enabled", False)
+
+    def setNativeCaptionHeight(self, height):
+        self._native_caption_height = int(height)
+
+    def nativeCaptionHeight(self):
+        return getattr(self, "_native_caption_height", 36)
+
+    def setNativeResizeBorderWidth(self, width):
+        self._native_resize_border_width = int(width)
+
+    def nativeResizeBorderWidth(self):
+        return getattr(self, "_native_resize_border_width", 5)
 
     def set_display_text(self, text):
         """Set text in the display area"""

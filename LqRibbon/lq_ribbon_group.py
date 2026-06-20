@@ -4,10 +4,11 @@ LqRibbonGroup - Ribbon group that contains buttons and controls
 
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QVBoxLayout, QGridLayout,
-    QWidget, QSizePolicy, QMenu, QFrame, QWidgetAction
+    QWidget, QSizePolicy, QMenu, QFrame, QWidgetAction,
+    QLabel, QToolButton
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction, QColor, QIcon
 from .lq_ribbon_extras import CallableString, CallableList
 
 
@@ -15,6 +16,11 @@ class LqRibbonGroup(QGroupBox):
     """Ribbon group that contains buttons and other controls"""
 
     action_triggered = Signal(str)  # Signal emitted when an action is triggered
+    actionTriggered = Signal(QAction)
+    released = Signal()
+    hidePopup = Signal()
+    titleChanged = Signal(str)
+    titleFontChanged = Signal(object)
 
     def __init__(self, title, parent=None):
         super().__init__(title, parent)
@@ -30,20 +36,49 @@ class LqRibbonGroup(QGroupBox):
         self._title_elide_mode = Qt.TextElideMode.ElideRight
         self._size_definition = 0
         self._icon = QIcon()
+        self._title_color = QColor("#202020")
+        self._controls_grouping = False
         self.init_ui()
 
     def init_ui(self):
         """Initialize the group UI"""
+        super().setTitle("")
+        self.setObjectName("lqRibbonGroup")
+
         # Set size policy
-        self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-        self.setMinimumHeight(92)
-        self.setMinimumWidth(80)
+        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        self.setMinimumHeight(98)
+        self.setMinimumWidth(44)
 
         # Create main layout
-        self.main_layout = QHBoxLayout(self)
-        self.main_layout.setContentsMargins(3, 2, 3, 6) # set the margins for the group box 
-        self.main_layout.setSpacing(1)
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        self.main_layout = QHBoxLayout()
+        self.main_layout.setContentsMargins(4, 5, 5, 5)
+        self.main_layout.setSpacing(2)
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        outer_layout.addLayout(self.main_layout, 1)
+
+        self.title_label = QLabel(str(self.title), self)
+        self.title_label.setObjectName("lqRibbonGroupTitle")
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title_label.setFixedHeight(17)
+
+        self.option_button = QToolButton(self)
+        self.option_button.setObjectName("lqRibbonGroupOptionButton")
+        self.option_button.setAutoRaise(True)
+        self.option_button.setFixedSize(16, 16)
+        self.option_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.option_button.hide()
+
+        title_layout = QHBoxLayout()
+        title_layout.setContentsMargins(4, 0, 4, 0)
+        title_layout.setSpacing(2)
+        title_layout.addWidget(self.title_label, 1)
+        title_layout.addWidget(self.option_button)
+        outer_layout.addLayout(title_layout)
 
         # Create grid layout for small buttons
         self.grid_layout = QGridLayout()
@@ -127,7 +162,7 @@ class LqRibbonGroup(QGroupBox):
         if button_style is None:
             button_style = Qt.ToolButtonStyle.ToolButtonTextUnderIcon
 
-        action.triggered.connect(lambda: self.on_action_triggered(action.text()))
+        action.triggered.connect(lambda checked=False, act=action: self.on_action_triggered(act))
 
         # Create button
         button = LqRibbonButton(action, button_style, self)
@@ -252,13 +287,15 @@ class LqRibbonGroup(QGroupBox):
                 return button
         return None
 
-    def on_action_triggered(self, action_text):
+    def on_action_triggered(self, action):
         """Handle action trigger
 
         Args:
-            action_text: Text of the triggered action
+            action: Triggered action
         """
+        action_text = action.text()
         self.action_triggered.emit(action_text)
+        self.actionTriggered.emit(action)
 
         # Propagate to parent window
         parent = self.parent()
@@ -298,15 +335,35 @@ class LqRibbonGroup(QGroupBox):
             title: New title for the group
         """
         self.title = CallableString(title)
-        self.setTitle(title)
+        self.title_label.setText(title)
+        self.titleChanged.emit(title)
 
     def setTitle(self, title):
         self.title = CallableString(title)
-        super().setTitle(title)
+        self.title_label.setText(title)
+        self.titleChanged.emit(title)
+
+    def titleFont(self):
+        return self.title_label.font()
+
+    def setTitleFont(self, font):
+        self.title_label.setFont(font)
+        self.titleFontChanged.emit(font)
+
+    def titleColor(self):
+        return self._title_color
+
+    def setTitleColor(self, color):
+        self._title_color = color if isinstance(color, QColor) else QColor(color)
+        self.title_label.setStyleSheet(f"color: {self._title_color.name()};")
 
     def ribbonBar(self):
-        page = self.parent()
-        return page.ribbonBar() if page and hasattr(page, "ribbonBar") else None
+        parent = self.parent()
+        while parent:
+            if hasattr(parent, "ribbonBar"):
+                return parent.ribbonBar()
+            parent = parent.parent()
+        return None
 
     def isReduced(self):
         return False
@@ -322,12 +379,15 @@ class LqRibbonGroup(QGroupBox):
 
     def setOptionButtonVisible(self, visible=True):
         self._option_button_visible = bool(visible)
+        self.option_button.setVisible(self._option_button_visible)
 
     def optionButtonAction(self):
         return self._option_button_action
 
     def setOptionButtonAction(self, action):
         self._option_button_action = action
+        if action is not None:
+            self.option_button.setDefaultAction(action)
         self.setOptionButtonVisible(action is not None)
 
     def contentAlignment(self):
@@ -404,7 +464,7 @@ class LqRibbonGroup(QGroupBox):
         self._controls_grouping = bool(enabled)
 
     def isControlsGrouping(self):
-        return getattr(self, "_controls_grouping", False)
+        return self._controls_grouping
 
 
 RibbonGroup = LqRibbonGroup

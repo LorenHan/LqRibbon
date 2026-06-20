@@ -291,6 +291,9 @@ signals:
     void activated();
     void activating(bool &allow);
 
+protected:
+    void paintEvent(QPaintEvent *event) override;
+
 private:
     QString m_strTitle;
     QHBoxLayout *m_groupLayout;

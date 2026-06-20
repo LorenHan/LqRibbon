@@ -38,16 +38,19 @@ class LqRibbonButton(QToolButton):
         if self.button_style == Qt.ToolButtonStyle.ToolButtonTextUnderIcon:
             # Large button with icon on top and text below
             self.setProperty("buttonStyle", "0")
+            self._large_icon = True
             self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
 
         elif self.button_style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
             # Medium button with icon and text side by side
             self.setProperty("buttonStyle", "1")
+            self._large_icon = False
             self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
 
         elif self.button_style == Qt.ToolButtonStyle.ToolButtonIconOnly:
             # Icon only button
             self.setProperty("buttonStyle", "2")
+            self._large_icon = False
             self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         # Set auto raise for flat appearance
