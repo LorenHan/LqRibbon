@@ -160,7 +160,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *showTabsAndCommandsAction,
                      QAction *showTabsOnlyAction,
                      QAction *alwaysShowRibbonAction,
-                     QAction *autoHideRibbonAction)
+                     QAction *autoHideRibbonAction,
+                     QLabel *collapseStatePreview)
 {
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     ribbonBar->setMinimizationEnabled(true);
@@ -361,6 +362,37 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && ribbonBar->isRibbonMinimized()
                      && !collapseTestCommandAreaVisible(ribbonBar),
                  QStringLiteral("display menu auto hides ribbon"))) {
+        return 1;
+    }
+
+    reset();
+    if (!require(collapseStatePreview->text().contains(QStringLiteral("Expanded")),
+                 QStringLiteral("collapse state preview starts expanded"))) {
+        return 1;
+    }
+    ribbonBar->setRibbonMinimized(true);
+    processCollapseTestEvents();
+    if (!require(collapseStatePreview->text().contains(QStringLiteral("Collapsed")),
+                 QStringLiteral("collapse state preview tracks collapsed"))) {
+        return 1;
+    }
+    ribbonBar->setRibbonMinimized(false);
+    ribbonBar->setSimplifiedMode(true);
+    processCollapseTestEvents();
+    if (!require(collapseStatePreview->text().contains(QStringLiteral("Simplified")),
+                 QStringLiteral("collapse state preview tracks simplified"))) {
+        return 1;
+    }
+    pinRibbonAction->trigger();
+    processCollapseTestEvents();
+    if (!require(collapseStatePreview->text().contains(QStringLiteral("Pinned")),
+                 QStringLiteral("collapse state preview tracks pinned"))) {
+        return 1;
+    }
+    autoHideRibbonAction->trigger();
+    processCollapseTestEvents();
+    if (!require(collapseStatePreview->text().contains(QStringLiteral("Collapsed")),
+                 QStringLiteral("collapse state preview tracks auto hide"))) {
         return 1;
     }
 
@@ -1523,6 +1555,13 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_DialogCancelButton),
         QObject::tr("Unpin Ribbon"),
         Qt::ToolButtonTextBesideIcon);
+    QLabel *collapseStatePreview = new QLabel(&mainWindow);
+    collapseStatePreview->setObjectName(QStringLiteral("collapseStatePreview"));
+    collapseStatePreview->setMinimumWidth(112);
+    collapseStatePreview->setAlignment(Qt::AlignCenter);
+    collapseStatePreview->setFrameShape(QFrame::StyledPanel);
+    collapseStatePreview->setToolTip(QObject::tr("Collapse button state preview"));
+    windowGroup->addWidget(collapseStatePreview);
 
     LqRibbon::RibbonGroup *runtimeGroup =
         shellPage->addGroup(QObject::tr("Runtime"));
@@ -1646,6 +1685,34 @@ int main(int argc, char *argv[])
     customizeManager->setGroupId(runtimeGroup, QStringLiteral("runtime"));
     QByteArray savedRibbonState;
 
+    auto updateCollapseStatePreview = [&mainWindow, collapseStatePreview]() {
+        LqRibbon::RibbonBar *bar = mainWindow.ribbonBar();
+        QString stateText;
+        if (!bar->isMinimizationEnabled()) {
+            stateText = QObject::tr("Pinned");
+        } else if (bar->simplifiedMode()) {
+            stateText = QObject::tr("Simplified");
+        } else if (bar->isRibbonMinimized()) {
+            stateText = QObject::tr("Collapsed");
+        } else {
+            stateText = QObject::tr("Expanded");
+        }
+        collapseStatePreview->setText(QObject::tr("State: %1").arg(stateText));
+    };
+    QObject::connect(mainWindow.ribbonBar(),
+                     &LqRibbon::RibbonBar::ribbonMinimizedChanged,
+                     collapseStatePreview,
+                     [updateCollapseStatePreview](bool) {
+                         updateCollapseStatePreview();
+                     });
+    QObject::connect(mainWindow.ribbonBar(),
+                     &LqRibbon::RibbonBar::simplifiedModeChanged,
+                     collapseStatePreview,
+                     [updateCollapseStatePreview](bool) {
+                         updateCollapseStatePreview();
+                     });
+    updateCollapseStatePreview();
+
     QObject::connect(fullScreenAction, &QAction::triggered, [&mainWindow]() {
         mainWindow.setWindowState(mainWindow.windowState() ^ Qt::WindowFullScreen);
     });
@@ -1680,27 +1747,32 @@ int main(int argc, char *argv[])
                              2500);
                      });
     QObject::connect(minimizeRibbonAction, &QAction::triggered,
-                     [&mainWindow]() {
+                     [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setRibbonMinimized(true);
+                         updateCollapseStatePreview();
                      });
     QObject::connect(restoreRibbonAction, &QAction::triggered,
-                     [&mainWindow]() {
+                     [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setRibbonMinimized(false);
+                         updateCollapseStatePreview();
                      });
     QObject::connect(classicRibbonAction, &QAction::triggered,
-                     [&mainWindow]() {
+                     [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setRibbonMinimized(false);
                          mainWindow.ribbonBar()->setSimplifiedMode(false);
+                         updateCollapseStatePreview();
                      });
     QObject::connect(pinRibbonAction, &QAction::triggered,
-                     [&mainWindow]() {
+                     [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setRibbonMinimized(false);
                          mainWindow.ribbonBar()->setMinimizationEnabled(false);
+                         updateCollapseStatePreview();
                      });
     QObject::connect(unpinRibbonAction, &QAction::triggered,
-                     [&mainWindow]() {
+                     [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setMinimizationEnabled(true);
                          mainWindow.ribbonBar()->setRibbonMinimized(true);
+                         updateCollapseStatePreview();
                      });
     QObject::connect(toggleFrameAction, &QAction::toggled,
                      [&mainWindow](bool checked) {
@@ -1961,28 +2033,32 @@ int main(int argc, char *argv[])
                                  QObject::tr("Account"));
     });
     QObject::connect(showTabsAndCommandsAction, &QAction::triggered,
-                     [&mainWindow]() {
+                     [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setMinimizationEnabled(true);
                          mainWindow.ribbonBar()->setSimplifiedMode(false);
                          mainWindow.ribbonBar()->setRibbonMinimized(false);
+                         updateCollapseStatePreview();
                      });
     QObject::connect(showTabsOnlyAction, &QAction::triggered,
-                     [&mainWindow]() {
+                     [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setMinimizationEnabled(true);
                          mainWindow.ribbonBar()->setSimplifiedMode(false);
                          mainWindow.ribbonBar()->setRibbonMinimized(true);
+                         updateCollapseStatePreview();
                      });
     QObject::connect(alwaysShowRibbonAction, &QAction::triggered,
-                     [&mainWindow]() {
+                     [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setSimplifiedMode(false);
                          mainWindow.ribbonBar()->setRibbonMinimized(false);
                          mainWindow.ribbonBar()->setMinimizationEnabled(false);
+                         updateCollapseStatePreview();
                      });
     QObject::connect(autoHideRibbonAction, &QAction::triggered,
-                     [&mainWindow]() {
+                     [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setMinimizationEnabled(true);
                          mainWindow.ribbonBar()->setSimplifiedMode(false);
                          mainWindow.ribbonBar()->setRibbonMinimized(true);
+                         updateCollapseStatePreview();
                      });
 
     QObject::connect(mainWindow.ribbonBar(), &LqRibbon::RibbonBar::searchAccepted,
@@ -2005,7 +2081,8 @@ int main(int argc, char *argv[])
                             showTabsAndCommandsAction,
                             showTabsOnlyAction,
                             alwaysShowRibbonAction,
-                            autoHideRibbonAction]() {
+                            autoHideRibbonAction,
+                            collapseStatePreview]() {
             qApp->exit(runCollapseTests(mainWindow,
                                         classicRibbonAction,
                                         pinRibbonAction,
@@ -2014,7 +2091,8 @@ int main(int argc, char *argv[])
                                         showTabsAndCommandsAction,
                                         showTabsOnlyAction,
                                         alwaysShowRibbonAction,
-                                        autoHideRibbonAction));
+                                        autoHideRibbonAction,
+                                        collapseStatePreview));
         });
         return application.exec();
     }

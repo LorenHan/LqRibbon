@@ -508,6 +508,13 @@ class MainWindow(RibbonMainWindow):
             "Unpin Ribbon",
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
+        self.collapse_state_preview = QLabel(window_group)
+        self.collapse_state_preview.setObjectName("collapseStatePreview")
+        self.collapse_state_preview.setMinimumWidth(112)
+        self.collapse_state_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.collapse_state_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.collapse_state_preview.setToolTip("Collapse button state preview")
+        window_group.addWidget(self.collapse_state_preview)
 
         self.runtime_group = self.shell_page.addGroup("Runtime")
         self.add_page_action = self._add_group_action(
@@ -756,6 +763,13 @@ class MainWindow(RibbonMainWindow):
         self.display_show_tabs_only_action.triggered.connect(self.show_tabs_only)
         self.display_always_show_action.triggered.connect(self.always_show_ribbon)
         self.display_auto_hide_action.triggered.connect(self.auto_hide_ribbon)
+        self.ribbonBar().ribbonMinimizedChanged.connect(
+            lambda _minimized: self.update_collapse_state_preview()
+        )
+        self.ribbonBar().simplifiedModeChanged.connect(
+            lambda _enabled: self.update_collapse_state_preview()
+        )
+        self.update_collapse_state_preview()
 
     def _configure_search_and_quick_access(self):
         self.search_actions = [
@@ -788,33 +802,51 @@ class MainWindow(RibbonMainWindow):
     def restore_classic_ribbon(self):
         self.ribbonBar().setRibbonMinimized(False)
         self.ribbonBar().setSimplifiedMode(False)
+        self.update_collapse_state_preview()
 
     def pin_ribbon(self):
         self.ribbonBar().setRibbonMinimized(False)
         self.ribbonBar().setMinimizationEnabled(False)
+        self.update_collapse_state_preview()
 
     def unpin_ribbon(self):
         self.ribbonBar().setMinimizationEnabled(True)
         self.ribbonBar().setRibbonMinimized(True)
+        self.update_collapse_state_preview()
 
     def show_tabs_and_commands(self):
         self.ribbonBar().setMinimizationEnabled(True)
         self.ribbonBar().setSimplifiedMode(False)
         self.ribbonBar().setRibbonMinimized(False)
+        self.update_collapse_state_preview()
 
     def show_tabs_only(self):
         self.ribbonBar().setMinimizationEnabled(True)
         self.ribbonBar().setSimplifiedMode(False)
         self.ribbonBar().setRibbonMinimized(True)
+        self.update_collapse_state_preview()
 
     def auto_hide_ribbon(self):
         self.ribbonBar().setMinimizationEnabled(True)
         self.ribbonBar().setSimplifiedMode(False)
         self.ribbonBar().setRibbonMinimized(True)
+        self.update_collapse_state_preview()
 
     def always_show_ribbon(self):
         self.ribbonBar().setSimplifiedMode(False)
         self.pin_ribbon()
+
+    def update_collapse_state_preview(self):
+        ribbon = self.ribbonBar()
+        if not ribbon.isMinimizationEnabled():
+            state = "Pinned"
+        elif ribbon.simplifiedMode():
+            state = "Simplified"
+        elif ribbon.isRibbonMinimized():
+            state = "Collapsed"
+        else:
+            state = "Expanded"
+        self.collapse_state_preview.setText(f"State: {state}")
 
     def install_default_content(self):
         content = QLabel("LqRibbon PySide6 example")
