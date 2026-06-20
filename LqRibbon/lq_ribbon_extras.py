@@ -904,7 +904,11 @@ class LqRibbonSearchBar(QLineEdit):
             if grouped_actions:
                 actions = grouped_actions
 
-        if normalized and document_results and actions:
+        if (
+            normalized
+            and actions
+            and not any(isinstance(action, str) for action in actions)
+        ):
             actions = [QtnRibbonSearchBarActionsString] + actions
 
         if document_results:
@@ -930,6 +934,7 @@ class LqRibbonSearchBar(QLineEdit):
             self._popup.addAction(action)
             count += 1
         if self._help_enabled and text:
+            self._popup.addSection(QtnRibbonSearchBarHelpString)
             help_action = self._popup.addAction(f'{QtnRibbonSearchBarGetHelpString} "{text}"')
             help_action.triggered.connect(lambda: self.show_help.emit(text))
         if not self._popup.isEmpty():

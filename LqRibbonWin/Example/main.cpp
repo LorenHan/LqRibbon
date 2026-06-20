@@ -457,6 +457,25 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         return 1;
     }
 
+    ribbonBar->setSearchText(QStringLiteral("sensor"));
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    QStringList helpRows;
+    if (searchPopupView && searchPopupView->model()) {
+        QAbstractItemModel *popupModel = searchPopupView->model();
+        for (int row = 0; row < popupModel->rowCount(); ++row) {
+            helpRows.append(
+                popupModel->index(row, 0).data(Qt::DisplayRole).toString());
+        }
+    }
+    if (!require(searchPopupView && searchPopupView->isVisible()
+                     && helpRows.value(0) == QStringLiteral("Help")
+                     && helpRows.value(1)
+                         == QStringLiteral("Get Help with \"sensor\""),
+                 QStringLiteral("search shows help result section"))) {
+        return 1;
+    }
+
     reset();
     doubleClickCollapseTestTab(ribbonBar, firstIndex);
     if (!require(ribbonBar->isRibbonMinimized()
@@ -1900,6 +1919,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-suggested-search-preview"));
     const bool documentSearchPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-document-search-preview"));
+    const bool helpSearchPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-help-search-preview"));
     const bool collapsedPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
     const bool simplifiedPreviewRequested =
@@ -2000,6 +2021,7 @@ int main(int argc, char *argv[])
         || recentSearchPreviewRequested
         || suggestedSearchPreviewRequested
         || documentSearchPreviewRequested
+        || helpSearchPreviewRequested
         || searchPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
@@ -2020,7 +2042,8 @@ int main(int argc, char *argv[])
         || zeroQuerySearchPreviewRequested
         || recentSearchPreviewRequested
         || suggestedSearchPreviewRequested
-        || documentSearchPreviewRequested) {
+        || documentSearchPreviewRequested
+        || helpSearchPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -3721,12 +3744,14 @@ int main(int argc, char *argv[])
                             zeroQuerySearchPreviewRequested,
                             recentSearchPreviewRequested,
                             suggestedSearchPreviewRequested,
-                            documentSearchPreviewRequested]() {
+                            documentSearchPreviewRequested,
+                            helpSearchPreviewRequested]() {
             QPixmap preview = mainWindow.grab();
             if (zeroQuerySearchPreviewRequested
                 || recentSearchPreviewRequested
                 || suggestedSearchPreviewRequested
-                || documentSearchPreviewRequested) {
+                || documentSearchPreviewRequested
+                || helpSearchPreviewRequested) {
                 QListView *searchPopupView =
                     mainWindow.ribbonBar()->findChild<QListView *>(
                         QStringLiteral("lqRibbonSearchPopupView"));
@@ -3806,6 +3831,16 @@ int main(int argc, char *argv[])
                            [focusSearchAction, &mainWindow]() {
             focusSearchAction->trigger();
             mainWindow.ribbonBar()->setSearchText(QStringLiteral("driver"));
+            mainWindow.ribbonBar()->searchLineEdit()->setFocus(
+                Qt::OtherFocusReason);
+        });
+    }
+    if (helpSearchPreviewRequested) {
+        QTimer::singleShot(120,
+                           &mainWindow,
+                           [focusSearchAction, &mainWindow]() {
+            focusSearchAction->trigger();
+            mainWindow.ribbonBar()->setSearchText(QStringLiteral("sensor"));
             mainWindow.ribbonBar()->searchLineEdit()->setFocus(
                 Qt::OtherFocusReason);
         });
