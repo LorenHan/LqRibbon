@@ -71,6 +71,7 @@ def main():
     quick_access_below_preview = "--grab-qat-below-preview" in arguments
     quick_access_labels_preview = "--grab-qat-labels-preview" in arguments
     add_to_quick_access_preview = "--grab-add-to-qat-preview" in arguments
+    remove_from_quick_access_preview = "--grab-remove-from-qat-preview" in arguments
     style_preview = "--grab-style-preview" in arguments
     style_name = _option_value(arguments, "--style")
     deterministic_style = bool(preview_path)
@@ -95,6 +96,7 @@ def main():
         or quick_access_below_preview
         or quick_access_labels_preview
         or add_to_quick_access_preview
+        or remove_from_quick_access_preview
         or simplified_preview
         or temporary_preview
         or double_click_preview
@@ -109,6 +111,7 @@ def main():
         or quick_access_below_preview
         or quick_access_labels_preview
         or add_to_quick_access_preview
+        or remove_from_quick_access_preview
     ):
         window.resize(1476, 560)
     if style_name:
@@ -130,6 +133,7 @@ def main():
             or quick_access_below_preview
             or quick_access_labels_preview
             or add_to_quick_access_preview
+            or remove_from_quick_access_preview
             or simplified_preview
             or temporary_preview
             or double_click_preview
@@ -189,6 +193,19 @@ def main():
             window.statusBar().clearMessage()
 
         QTimer.singleShot(120, show_add_to_quick_access_preview)
+    if remove_from_quick_access_preview:
+        def show_remove_from_quick_access_preview():
+            menu = QMenu(window)
+            remove_action = window.populate_quick_access_action_context_menu(
+                menu, window.connect_action
+            )
+            if remove_action is not None:
+                remove_action.trigger()
+            window.quick_access_below_action.trigger()
+            window.quick_access_labels_action.setChecked(True)
+            window.statusBar().clearMessage()
+
+        QTimer.singleShot(120, show_remove_from_quick_access_preview)
     if preview_path:
         QTimer.singleShot(300, lambda: (window.grab().save(preview_path), app.quit()))
 

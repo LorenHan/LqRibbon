@@ -54,7 +54,7 @@ Default style remains `Office 2016 Blue`.
 | 023 | QAT below-ribbon position | QAT menu | Complete |
 | 024 | QAT command labels on/off | QAT menu | Complete |
 | 025 | Add command to QAT from context menu | Action context menu | Complete |
-| 026 | Remove command from QAT | QAT context menu | Planned |
+| 026 | Remove command from QAT | QAT context menu | Complete |
 | 027 | Reorder QAT commands | Customize dialog | Planned |
 | 028 | Reset QAT to default | Customize dialog | Planned |
 | 029 | Export QAT customization | Customize dialog | Planned |

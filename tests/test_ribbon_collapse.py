@@ -461,6 +461,42 @@ def test_example_action_context_menu_adds_command_to_quick_access():
     window.close()
 
 
+def test_example_quick_access_context_menu_removes_command():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    quick_access_bar = window.ribbonBar().quickAccessBar()
+    window.add_action_to_quick_access(window.rename_page_action)
+    _app().processEvents()
+    assert window.rename_page_action in quick_access_bar.actions()
+    assert "Visible 4/4" in window.quick_access_status_preview.text()
+
+    menu = QMenu(window)
+    remove_action = window.populate_quick_access_action_context_menu(
+        menu, window.rename_page_action
+    )
+    assert remove_action is not None
+    assert remove_action.objectName() == "removeFromQuickAccessContextAction"
+    assert remove_action.isEnabled()
+    assert "Remove from Quick Access Toolbar" in remove_action.text()
+
+    remove_action.trigger()
+    _app().processEvents()
+    assert window.rename_page_action not in quick_access_bar.actions()
+    assert window.rename_page_action not in window.quick_access_actions
+    assert quick_access_bar.visibleCount() == 3
+    assert "Visible 3/3" in window.quick_access_status_preview.text()
+
+    duplicate_menu = QMenu(window)
+    duplicate_remove = window.populate_quick_access_action_context_menu(
+        duplicate_menu, window.rename_page_action
+    )
+    assert duplicate_remove is not None
+    assert not duplicate_remove.isEnabled()
+    assert "Not in Quick Access Toolbar" in duplicate_remove.text()
+    window.close()
+
+
 def test_example_responsive_label_preview_hides_labels_under_stress():
     window = MainWindow()
     window.show()
@@ -597,6 +633,7 @@ def main():
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,
         test_example_action_context_menu_adds_command_to_quick_access,
+        test_example_quick_access_context_menu_removes_command,
         test_example_responsive_label_preview_hides_labels_under_stress,
         test_single_click_collapsed_tab_temporarily_expands,
         test_action_triggers_while_temporarily_expanded,

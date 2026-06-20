@@ -256,6 +256,7 @@ class MainWindow(RibbonMainWindow):
         self._create_customize_state()
         self._connect_actions()
         self._configure_search_and_quick_access()
+        self._configure_quick_access_context_menus()
         self._configure_action_context_menus()
 
         ribbon.setCurrentPageIndex(ribbon.pageIndex(self.driver_page))
@@ -951,6 +952,56 @@ class MainWindow(RibbonMainWindow):
         if not menu.isEmpty():
             menu.exec(global_pos)
 
+    def _configure_quick_access_context_menus(self):
+        quick_access_bar = self.ribbonBar().quickAccessBar()
+        for action in quick_access_bar.actions():
+            if action is None or action == quick_access_bar.actionCustomizeButton():
+                continue
+            button = quick_access_bar.widgetForAction(action)
+            if (
+                button is None
+                or button.property("quickAccessContextMenuInstalled") is True
+            ):
+                continue
+            button.setProperty("quickAccessContextMenuInstalled", True)
+            button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            button.customContextMenuRequested.connect(
+                lambda pos, act=action, source=button: self.show_quick_access_action_context_menu(
+                    act, source.mapToGlobal(pos)
+                )
+            )
+
+    def populate_quick_access_action_context_menu(self, menu, command_action):
+        if menu is None or command_action is None or command_action.isSeparator():
+            return None
+        quick_access_bar = self.ribbonBar().quickAccessBar()
+        in_quick_access = (
+            command_action != quick_access_bar.actionCustomizeButton()
+            and command_action in quick_access_bar.actions()
+        )
+        if menu.actions():
+            menu.addSeparator()
+        remove_action = menu.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DialogDiscardButton),
+            "Remove from Quick Access Toolbar"
+            if in_quick_access
+            else "Not in Quick Access Toolbar",
+        )
+        remove_action.setObjectName("removeFromQuickAccessContextAction")
+        remove_action.setEnabled(in_quick_access)
+        remove_action.triggered.connect(
+            lambda _checked=False, action=command_action: self.remove_action_from_quick_access(
+                action
+            )
+        )
+        return remove_action
+
+    def show_quick_access_action_context_menu(self, command_action, global_pos):
+        menu = QMenu(self)
+        self.populate_quick_access_action_context_menu(menu, command_action)
+        if not menu.isEmpty():
+            menu.exec(global_pos)
+
     def add_action_to_quick_access(self, command_action):
         if command_action is None:
             return
@@ -959,9 +1010,23 @@ class MainWindow(RibbonMainWindow):
         quick_access_bar = self.ribbonBar().quickAccessBar()
         self.ribbonBar().addQuickAccessAction(command_action)
         quick_access_bar.setActionVisible(command_action, True)
+        self._configure_quick_access_context_menus()
         self.update_quick_access_preview()
         self.statusBar().showMessage(
             f"Added {command_action.text()} to Quick Access Toolbar", 2500
+        )
+
+    def remove_action_from_quick_access(self, command_action):
+        if command_action is None:
+            return
+        quick_access_bar = self.ribbonBar().quickAccessBar()
+        if command_action in quick_access_bar.actions():
+            quick_access_bar.removeAction(command_action)
+        if command_action in self.quick_access_actions:
+            self.quick_access_actions.remove(command_action)
+        self.update_quick_access_preview()
+        self.statusBar().showMessage(
+            f"Removed {command_action.text()} from Quick Access Toolbar", 2500
         )
 
     def set_quick_access_visible(self, visible):
