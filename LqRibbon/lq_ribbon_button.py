@@ -6,6 +6,8 @@ from PySide6.QtWidgets import QToolButton, QSizePolicy
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QAction
 
+from .lq_styles import LqStyle
+
 
 class LqRibbonButton(QToolButton):
     """Ribbon button that can display icon and text in different styles"""
@@ -20,6 +22,9 @@ class LqRibbonButton(QToolButton):
 
     def init_ui(self):
         """Initialize the button UI"""
+        self.setMinimumSize(0, 0)
+        self.setMaximumSize(16777215, 16777215)
+
         # Set button properties based on style
         self.setToolButtonStyle(self.button_style)
 
@@ -27,16 +32,24 @@ class LqRibbonButton(QToolButton):
             # Large button with icon on top and text below
             self.setProperty("buttonStyle", "0")
             self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+            self.setMinimumSize(LqStyle.LARGE_BUTTON_MIN_WIDTH, LqStyle.LARGE_BUTTON_MIN_HEIGHT)
+            self.setMaximumHeight(LqStyle.LARGE_BUTTON_MIN_HEIGHT + 2)
+            self.setIconSize(QSize(LqStyle.LARGE_ICON_SIZE, LqStyle.LARGE_ICON_SIZE))
 
         elif self.button_style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
             # Medium button with icon and text side by side
             self.setProperty("buttonStyle", "1")
             self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+            self.setMinimumSize(LqStyle.SMALL_BUTTON_MIN_WIDTH, LqStyle.SMALL_BUTTON_HEIGHT)
+            self.setMaximumHeight(LqStyle.SMALL_BUTTON_HEIGHT + 1)
+            self.setIconSize(QSize(LqStyle.SMALL_ICON_SIZE, LqStyle.SMALL_ICON_SIZE))
 
         elif self.button_style == Qt.ToolButtonStyle.ToolButtonIconOnly:
             # Icon only button
             self.setProperty("buttonStyle", "2")
             self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            self.setFixedSize(LqStyle.ICON_ONLY_BUTTON_SIZE, LqStyle.ICON_ONLY_BUTTON_SIZE)
+            self.setIconSize(QSize(LqStyle.ICON_ONLY_ICON_SIZE, LqStyle.ICON_ONLY_ICON_SIZE))
 
         # Set auto raise for flat appearance
         self.setAutoRaise(True)

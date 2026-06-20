@@ -5,6 +5,8 @@ LqRibbonPage - Ribbon page that contains ribbon groups
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QScrollArea
 from PySide6.QtCore import Qt
 
+from .lq_styles import LqStyle
+
 
 class LqRibbonPage(QWidget):
     """Ribbon page that contains multiple ribbon groups"""
@@ -37,7 +39,7 @@ class LqRibbonPage(QWidget):
         self.groups_container = QWidget()
         self.groups_layout = QHBoxLayout(self.groups_container)
         self.groups_layout.setContentsMargins(0, 0, 0, 0)
-        self.groups_layout.setSpacing(1)
+        self.groups_layout.setSpacing(LqStyle.PAGE_GROUP_SPACING)
         self.groups_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         self.scroll_area.setWidget(self.groups_container)

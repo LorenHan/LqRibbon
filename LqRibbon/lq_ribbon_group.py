@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QIcon
 
+from .lq_styles import LqStyle
+
 
 class LqRibbonGroup(QGroupBox):
     """Ribbon group that contains buttons and other controls"""
@@ -26,18 +28,19 @@ class LqRibbonGroup(QGroupBox):
         """Initialize the group UI"""
         # Set size policy
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-        self.setMinimumHeight(92)
-        self.setMinimumWidth(80)
+        self.setMinimumHeight(LqStyle.GROUP_MIN_HEIGHT)
+        self.setMinimumWidth(LqStyle.GROUP_MIN_WIDTH)
 
         # Create main layout
         self.main_layout = QHBoxLayout(self)
-        self.main_layout.setContentsMargins(3, 2, 3, 6) # set the margins for the group box 
-        self.main_layout.setSpacing(1)
+        self.main_layout.setContentsMargins(*LqStyle.GROUP_LAYOUT_MARGINS)
+        self.main_layout.setSpacing(LqStyle.GROUP_BUTTON_SPACING)
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
         # Create grid layout for small buttons
         self.grid_layout = QGridLayout()
-        self.grid_layout.setSpacing(2)
+        self.grid_layout.setContentsMargins(0, 0, 0, 0)
+        self.grid_layout.setSpacing(LqStyle.GROUP_GRID_SPACING)
         self.grid_column = 0
         self.grid_row = 0
 

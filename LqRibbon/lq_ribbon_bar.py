@@ -6,6 +6,8 @@ from PySide6.QtWidgets import QTabWidget, QWidget, QHBoxLayout
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPainter, QBrush, QColor
 
+from .lq_styles import LqStyle
+
 
 class LqRibbonBar(QTabWidget):
     """Ribbon bar that contains multiple ribbon pages"""
@@ -28,8 +30,8 @@ class LqRibbonBar(QTabWidget):
         # Connect signals
         self.currentChanged.connect(self.on_page_changed)
 
-        # Set height for ribbon area
-        self.setFixedHeight(120)
+        # Set height for the classic Word-like ribbon area.
+        self.setFixedHeight(LqStyle.RIBBON_HEIGHT)
 
     def paintEvent(self, event):
         """Custom paint event to draw blue background for tab bar area"""
@@ -37,7 +39,7 @@ class LqRibbonBar(QTabWidget):
 
         # Paint blue background for tab bar area
         painter = QPainter(self)
-        painter.fillRect(0, 0, self.width(), 30, QBrush(QColor("#2B579A")))
+        painter.fillRect(0, 0, self.width(), LqStyle.TAB_BAR_HEIGHT, QBrush(QColor(LqStyle.PRIMARY_COLOR)))
 
     def add_page(self, title):
         """Add a new ribbon page

@@ -21,6 +21,25 @@ class LqStyle:
     PRESSED_BG = "#DDEBFF"
     PRESSED_BORDER = "#5B9BE5"
 
+    # Word-like classic ribbon density.
+    RIBBON_HEIGHT = 116
+    TAB_BAR_HEIGHT = 30
+    TAB_MIN_WIDTH = 64
+    GROUP_MIN_WIDTH = 76
+    GROUP_MIN_HEIGHT = 88
+    PAGE_GROUP_SPACING = 0
+    GROUP_LAYOUT_MARGINS = (4, 2, 4, 7)
+    GROUP_BUTTON_SPACING = 2
+    GROUP_GRID_SPACING = 1
+    LARGE_BUTTON_MIN_WIDTH = 58
+    LARGE_BUTTON_MIN_HEIGHT = 60
+    SMALL_BUTTON_MIN_WIDTH = 76
+    SMALL_BUTTON_HEIGHT = 22
+    ICON_ONLY_BUTTON_SIZE = 28
+    LARGE_ICON_SIZE = 28
+    SMALL_ICON_SIZE = 16
+    ICON_ONLY_ICON_SIZE = 18
+
     @staticmethod
     def get_ribbon_style():
         """Get the main ribbon style sheet"""
@@ -41,20 +60,20 @@ class LqStyle:
         QTabBar::tab {
             background-color: transparent;
             color: rgba(255, 255, 255, 1.0);
-            padding: 6px 20px;
+            padding: 5px 18px;
             margin: 0;
             margin-bottom: -1px;
             border: none;
             font-size: 13px;
             font-weight: normal;
-            min-width: 70px;
+            min-width: 64px;
         }
 
         QTabBar::tab:selected {
             background-color: #FFFFFF;
             color: #185ABD;
             font-weight: normal;
-            padding-bottom: 7px;
+            padding-bottom: 6px;
             border-top-left-radius: 3px;
             border-top-right-radius: 3px;
         }
@@ -141,10 +160,10 @@ class LqStyle:
             border: none;
             border-right: 1px solid #E1DFDD;
             margin: 0px 0px;
-            padding: 2px 5px 24px 5px;
+            padding: 2px 4px 20px 4px;
             font-size: 11px;
             color: #5F6368;
-            min-width: 80px;
+            min-width: 76px;
         }
 
         QGroupBox:last-child {
@@ -156,8 +175,8 @@ class LqStyle:
             subcontrol-position: bottom center;
             left: 0;
             right: 0;
-            bottom: 4px;
-            padding: 0 5px;
+            bottom: 3px;
+            padding: 0 4px;
             color: #5F6368;
             font-size: 11px;
             font-weight: normal;
@@ -181,21 +200,31 @@ class LqStyle:
 
         /* Icon + Text Under (Large Button) */
         QToolButton[buttonStyle="0"] {
-            padding: 2px 1px 4px 1px;
-            margin: 1px;
-            min-width: 54px;
-            min-height: 58px;
+            padding: 2px 3px 3px 3px;
+            margin: 0px;
+            min-width: 58px;
+            min-height: 60px;
             text-align: center;
         }
 
         /* Text Beside Icon (Small Button) */
         QToolButton[buttonStyle="1"] {
-            padding: 2px 6px;
-            margin: 1px;
+            padding: 2px 5px;
+            margin: 0px;
             min-height: 22px;
-            max-height: 24px;
-            min-width: 75px;
+            max-height: 23px;
+            min-width: 76px;
             text-align: left;
+        }
+
+        /* Icon Only */
+        QToolButton[buttonStyle="2"] {
+            padding: 2px;
+            margin: 0px;
+            min-width: 28px;
+            min-height: 28px;
+            max-width: 28px;
+            max-height: 28px;
         }
 
         /* Hover Effect (Microsoft 365 Fluent highlight) */
@@ -214,11 +243,15 @@ class LqStyle:
 
         /* Icon size for buttons */
         QToolButton {
-            qproperty-iconSize: 24px;
+            qproperty-iconSize: 28px;
         }
 
         QToolButton[buttonStyle="1"] {
             qproperty-iconSize: 16px;
+        }
+
+        QToolButton[buttonStyle="2"] {
+            qproperty-iconSize: 18px;
         }
         """
 
