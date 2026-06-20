@@ -304,6 +304,8 @@ int main(int argc, char *argv[])
         Qt::ToolButtonTextBesideIcon);
     LqRibbon::PopupColorButton *colorButton =
         new LqRibbon::PopupColorButton(popupGroup);
+    colorButton->setText(QObject::tr("Color"));
+    colorButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     colorButton->setColor(QColor(QStringLiteral("#2b579a")));
     colorButton->setToolTip(QObject::tr("Popup Color Button"));
     popupGroup->addWidget(colorButton);

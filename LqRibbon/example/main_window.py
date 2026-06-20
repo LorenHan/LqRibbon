@@ -4,7 +4,7 @@ MainWindow - feature parity demo for the C++ example.
 
 import io
 
-from PySide6.QtCore import QPoint, QSize, Qt
+from PySide6.QtCore import QDate, QPoint, QSize, Qt
 from PySide6.QtGui import QAction, QActionGroup, QColor
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -162,6 +162,7 @@ class MainWindow(RibbonMainWindow):
 
         date_edit = RibbonDateEditControl(value_group)
         date_edit.widget().setCalendarPopup(True)
+        date_edit.widget().setDate(QDate.currentDate())
         value_group.addWidget(date_edit)
 
         range_group = self.controls_page.addGroup("Range")
