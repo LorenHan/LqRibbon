@@ -1,19 +1,25 @@
 """
-LqRibbon Style Module - Blue flat style definitions
+LqRibbon Style Module - Office-style Fluent theme definitions.
 """
 
 class LqStyle:
-    """Blue flat style for LqRibbon"""
+    """Modern Office-style theme for LqRibbon."""
 
-    # Color scheme - matching QtitanRibbon screenshot
-    PRIMARY_COLOR = "#2B579A"        # Main blue color
-    TAB_SELECTED = "#2B579A"         # Selected tab blue
-    TAB_HOVER = "#3A6AB1"            # Hover blue
-    RIBBON_BG = "#FFFFFF"            # White ribbon background
-    GROUP_BG = "#FFFFFF"             # White group background
-    TEXT_COLOR = "#333333"           # Dark text
-    GROUP_TITLE_COLOR = "#666666"    # Group title gray
-    SEPARATOR_COLOR = "#D8D8D8"      # Light separator
+    # Microsoft 365 / Fluent inspired palette.
+    PRIMARY_COLOR = "#185ABD"
+    PRIMARY_HOVER = "#2B6FD8"
+    PRIMARY_PRESSED = "#0F4AA8"
+    RIBBON_BG = "#FFFFFF"
+    APP_BG = "#F5F6F8"
+    GROUP_BG = "#FFFFFF"
+    TEXT_COLOR = "#242424"
+    MUTED_TEXT_COLOR = "#616161"
+    GROUP_TITLE_COLOR = "#5F6368"
+    SEPARATOR_COLOR = "#E1DFDD"
+    HOVER_BG = "#F3F8FF"
+    HOVER_BORDER = "#8CB7E8"
+    PRESSED_BG = "#DDEBFF"
+    PRESSED_BORDER = "#5B9BE5"
 
     @staticmethod
     def get_ribbon_style():
@@ -23,12 +29,12 @@ class LqStyle:
         QTabWidget::pane {
             background-color: #FFFFFF;
             border: none;
-            border-bottom: 1px solid #D8D8D8;
+            border-bottom: 1px solid #E1DFDD;
         }
 
         /* Tab Bar */
         QTabBar {
-            background-color: #2B579A;
+            background-color: #185ABD;
             border: none;
         }
 
@@ -46,13 +52,16 @@ class LqStyle:
 
         QTabBar::tab:selected {
             background-color: #FFFFFF;
-            color: #2B579A;
+            color: #185ABD;
             font-weight: normal;
             padding-bottom: 7px;
+            border-top-left-radius: 3px;
+            border-top-right-radius: 3px;
         }
 
         QTabBar::tab:hover:!selected {
-            color: rgba(255, 255, 255, 0.9);
+            background-color: #2B6FD8;
+            color: rgba(255, 255, 255, 1.0);
         }
 
         /* Ribbon Page */
@@ -68,11 +77,11 @@ class LqStyle:
         return """
         /* Main Window */
         QMainWindow {
-            background-color: #F5F5F5;
+            background-color: #F5F6F8;
         }
 
         QWidget#lq_ribbon_root {
-            background-color: #F5F5F5;
+            background-color: #F5F6F8;
             border: none;
         }
 
@@ -83,12 +92,12 @@ class LqStyle:
 
         /* Frameless Title Bar */
         QWidget#title_bar {
-            background-color: #2B579A;
+            background-color: #185ABD;
             border: none;
         }
 
         QWidget#title_bar[active="false"] {
-            background-color: #64748B;
+            background-color: #687182;
         }
 
         QLabel#title_label {
@@ -100,17 +109,17 @@ class LqStyle:
 
         /* Display Area */
         QTextEdit#display_area {
-            background-color: #F5F5F5;
+            background-color: #F5F6F8;
             border: none;
             font-size: 13px;
             font-family: Consolas, Monaco, monospace;
             padding: 10px;
-            color: #333333;
+            color: #242424;
         }
 
         /* Status Bar */
         QStatusBar {
-            background-color: #2B579A;
+            background-color: #185ABD;
             color: white;
             border: none;
             min-height: 22px;
@@ -130,11 +139,11 @@ class LqStyle:
         QGroupBox {
             background-color: #FFFFFF;
             border: none;
-            border-right: 1px solid #E5E5E5;
+            border-right: 1px solid #E1DFDD;
             margin: 0px 0px;
             padding: 2px 5px 24px 5px;
             font-size: 11px;
-            color: #666666;
+            color: #5F6368;
             min-width: 80px;
         }
 
@@ -149,7 +158,7 @@ class LqStyle:
             right: 0;
             bottom: 4px;
             padding: 0 5px;
-            color: #666666;
+            color: #5F6368;
             font-size: 11px;
             font-weight: normal;
             background-color: transparent;
@@ -165,7 +174,7 @@ class LqStyle:
         QToolButton {
             background-color: transparent;
             border: none;
-            color: #333333;
+            color: #242424;
             font-size: 11px;
             font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
         }
@@ -189,18 +198,18 @@ class LqStyle:
             text-align: left;
         }
 
-        /* Hover Effect (Office2016 flat highlight) */
+        /* Hover Effect (Microsoft 365 Fluent highlight) */
         QToolButton:hover {
-            background-color: #E5F1FB;
-            border: 1px solid #9DC7F1;
-            border-radius: 0px;
+            background-color: #F3F8FF;
+            border: 1px solid #8CB7E8;
+            border-radius: 3px;
         }
 
         /* Pressed Effect */
         QToolButton:pressed {
-            background-color: #CCE4F7;
-            border: 1px solid #6AADE4;
-            border-radius: 0px;
+            background-color: #DDEBFF;
+            border: 1px solid #5B9BE5;
+            border-radius: 3px;
         }
 
         /* Icon size for buttons */
