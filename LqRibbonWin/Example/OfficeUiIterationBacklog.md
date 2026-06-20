@@ -41,7 +41,7 @@ Default style remains `Office 2016 Blue`.
 | 010 | Fluent hover and pressed state timing | Style preview page | Complete |
 | 011 | Simplified one-line ribbon | Ribbon display toggle | Complete |
 | 012 | Classic multi-line ribbon restore | Ribbon display toggle | Complete |
-| 013 | Ribbon pin and unpin command | Ribbon display menu | Planned |
+| 013 | Ribbon pin and unpin command | Ribbon display menu | Complete |
 | 014 | Ribbon display options menu | Caption control | Planned |
 | 015 | Collapse button state preview | Shell page | Planned |
 | 016 | Temporary ribbon expansion on tab click | Shell page | Planned |

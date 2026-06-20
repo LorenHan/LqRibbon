@@ -152,7 +152,9 @@ QToolButton *collapseTestActionButton(LqRibbon::RibbonBar *ribbonBar,
 }
 
 int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
-                     QAction *classicRibbonAction)
+                     QAction *classicRibbonAction,
+                     QAction *pinRibbonAction,
+                     QAction *unpinRibbonAction)
 {
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     ribbonBar->setMinimizationEnabled(true);
@@ -282,6 +284,37 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && collapseTestCommandAreaVisible(ribbonBar)
                      && ribbonBar->height() >= fullRibbonHeight,
                  QStringLiteral("classic command restores multi-line ribbon"))) {
+        return 1;
+    }
+
+    reset();
+    ribbonBar->setRibbonMinimized(true);
+    pinRibbonAction->trigger();
+    processCollapseTestEvents();
+    if (!require(!ribbonBar->isMinimizationEnabled()
+                     && !ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("pin command keeps ribbon open"))) {
+        return 1;
+    }
+    doubleClickCollapseTestTab(ribbonBar, firstIndex);
+    if (!require(!ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("pinned ribbon ignores collapse gesture"))) {
+        return 1;
+    }
+    unpinRibbonAction->trigger();
+    processCollapseTestEvents();
+    if (!require(ribbonBar->isMinimizationEnabled()
+                     && ribbonBar->isRibbonMinimized()
+                     && !collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("unpin command allows ribbon collapse"))) {
+        return 1;
+    }
+    clickCollapseTestTab(ribbonBar, firstIndex);
+    if (!require(ribbonBar->isRibbonMinimized()
+                     && collapseTestCommandAreaVisible(ribbonBar),
+                 QStringLiteral("unpinned ribbon temporarily expands"))) {
         return 1;
     }
 
@@ -1436,6 +1469,14 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_ArrowDown),
         QObject::tr("Classic Ribbon"),
         Qt::ToolButtonTextBesideIcon);
+    QAction *pinRibbonAction = windowGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
+        QObject::tr("Pin Ribbon"),
+        Qt::ToolButtonTextBesideIcon);
+    QAction *unpinRibbonAction = windowGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogCancelButton),
+        QObject::tr("Unpin Ribbon"),
+        Qt::ToolButtonTextBesideIcon);
 
     LqRibbon::RibbonGroup *runtimeGroup =
         shellPage->addGroup(QObject::tr("Runtime"));
@@ -1551,6 +1592,8 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), fullScreenAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
     customizeManager->addToCategory(QObject::tr("Actions"), classicRibbonAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), pinRibbonAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), unpinRibbonAction);
     customizeManager->addToCategory(QObject::tr("Actions"), officePopupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), showCustomizeAction);
     customizeManager->setPageId(shellPage, QStringLiteral("shell"));
@@ -1602,6 +1645,16 @@ int main(int argc, char *argv[])
                      [&mainWindow]() {
                          mainWindow.ribbonBar()->setRibbonMinimized(false);
                          mainWindow.ribbonBar()->setSimplifiedMode(false);
+                     });
+    QObject::connect(pinRibbonAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.ribbonBar()->setRibbonMinimized(false);
+                         mainWindow.ribbonBar()->setMinimizationEnabled(false);
+                     });
+    QObject::connect(unpinRibbonAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.ribbonBar()->setMinimizationEnabled(true);
+                         mainWindow.ribbonBar()->setRibbonMinimized(true);
                      });
     QObject::connect(toggleFrameAction, &QAction::toggled,
                      [&mainWindow](bool checked) {
@@ -1805,6 +1858,8 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(minimizeRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(restoreRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(classicRibbonAction);
+    mainWindow.ribbonBar()->registerSearchAction(pinRibbonAction);
+    mainWindow.ribbonBar()->registerSearchAction(unpinRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(addPageAction);
     mainWindow.ribbonBar()->registerSearchAction(renamePageAction);
     mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
@@ -1845,8 +1900,14 @@ int main(int argc, char *argv[])
     if (collapseTestsRequested) {
         QTimer::singleShot(0,
                            &mainWindow,
-                           [&mainWindow, classicRibbonAction]() {
-            qApp->exit(runCollapseTests(mainWindow, classicRibbonAction));
+                           [&mainWindow,
+                            classicRibbonAction,
+                            pinRibbonAction,
+                            unpinRibbonAction]() {
+            qApp->exit(runCollapseTests(mainWindow,
+                                        classicRibbonAction,
+                                        pinRibbonAction,
+                                        unpinRibbonAction));
         });
         return application.exec();
     }
