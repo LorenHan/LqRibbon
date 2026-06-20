@@ -4,8 +4,10 @@
 #include <QAction>
 #include <QByteArray>
 #include <QCompleter>
+#include <QColor>
 #include <QDebug>
 #include <QEvent>
+#include <QFont>
 #include <QFrame>
 #include <QGridLayout>
 #include <QHash>
@@ -14,15 +16,18 @@
 #include <QLineEdit>
 #include <QList>
 #include <QListView>
+#include <QMenu>
 #include <QMainWindow>
 #include <QPaintEvent>
 #include <QPointer>
 #include <QPoint>
+#include <QPixmap>
 #include <QResizeEvent>
 #include <QStatusBar>
 #include <QStringList>
 #include <QStringListModel>
 #include <QStandardItemModel>
+#include <QStyle>
 #include <QTabWidget>
 #include <QToolBar>
 #include <QToolButton>
@@ -32,8 +37,10 @@
 #include "LqRibbonControls.h"
 #include "LqRibbonGallery.h"
 #include "LqRibbonStatusBar.h"
+#include "LqRibbonExtras.h"
 
 QT_BEGIN_NAMESPACE
+class QContextMenuEvent;
 class QMdiArea;
 class QMdiSubWindow;
 QT_END_NAMESPACE
@@ -52,6 +59,8 @@ class RibbonGroup : public QFrame
     Q_OBJECT
 
 public:
+    explicit RibbonGroup(QWidget *parent = nullptr);
+    explicit RibbonGroup(RibbonPage *page, const QString &strTitle);
     ///
     /// \brief RibbonGroup::RibbonGroup
     /// Creates a Ribbon command group with a visible title.
@@ -70,20 +79,84 @@ public:
     ///
     QAction *addAction(const QIcon &icon,
                        const QString &strText,
-                       Qt::ToolButtonStyle buttonStyle);
+                       Qt::ToolButtonStyle buttonStyle,
+                       QMenu *menu = nullptr,
+                       QToolButton::ToolButtonPopupMode mode =
+                           QToolButton::MenuButtonPopup);
     ///
     /// \brief RibbonGroup::addAction
     /// Adds an existing action to the group with the requested button style.
     /// \param action Existing action to expose in the Ribbon group.
     /// \param buttonStyle Qt tool button style used by the generated button.
     ///
-    void addAction(QAction *action, Qt::ToolButtonStyle buttonStyle);
+    QAction *addAction(QAction *action,
+                       Qt::ToolButtonStyle buttonStyle,
+                       QMenu *menu = nullptr,
+                       QToolButton::ToolButtonPopupMode mode =
+                           QToolButton::MenuButtonPopup);
+    QAction *insertAction(QAction *before,
+                          QAction *action,
+                          Qt::ToolButtonStyle buttonStyle,
+                          QMenu *menu = nullptr,
+                          QToolButton::ToolButtonPopupMode mode =
+                              QToolButton::MenuButtonPopup);
     ///
     /// \brief RibbonGroup::addWidget
     /// Adds a custom widget to the group content area.
     /// \param widget Widget that becomes owned by the group layout.
     ///
-    void addWidget(QWidget *widget);
+    QAction *addWidget(QWidget *widget);
+    QAction *addWidget(const QIcon &icon,
+                       const QString &strText,
+                       QWidget *widget);
+    QAction *addWidget(const QIcon &icon,
+                       const QString &strText,
+                       bool stretch,
+                       QWidget *widget);
+    ///
+    /// \brief RibbonGroup::addMenu
+    /// Adds a menu command button that opens the menu directly when clicked.
+    ///
+    QMenu *addMenu(const QIcon &icon,
+                   const QString &strText,
+                   Qt::ToolButtonStyle buttonStyle =
+                       Qt::ToolButtonFollowStyle);
+    QAction *addSeparator();
+    void addControl(RibbonControl *control);
+    void removeControl(RibbonControl *control);
+    void remove(QWidget *widget);
+    void clear();
+    RibbonBar *ribbonBar() const;
+    bool isReduced() const;
+    const QFont &titleFont() const;
+    void setTitleFont(const QFont &font);
+    const QColor &titleColor() const;
+    void setTitleColor(const QColor &color);
+    const QIcon &icon() const;
+    void setIcon(const QIcon &icon);
+    bool isOptionButtonVisible() const;
+    void setOptionButtonVisible(bool visible = true);
+    QAction *optionButtonAction() const;
+    void setOptionButtonAction(QAction *action);
+    Qt::Alignment contentAlignment() const;
+    void setContentAlignment(Qt::Alignment alignment);
+    Qt::Alignment controlsAlignment() const;
+    void setControlsAlignment(Qt::Alignment alignment);
+    int spacing() const;
+    void setSpacing(int spacing);
+    int controlCount() const;
+    RibbonControl *controlByIndex(int index) const;
+    RibbonControl *controlByAction(QAction *action) const;
+    RibbonWidgetControl *controlByWidget(QWidget *widget) const;
+    Qt::TextElideMode titleElideMode() const;
+    void setTitleElideMode(Qt::TextElideMode mode);
+    RibbonControlSizeDefinition::GroupSizes sizeDefinition() const;
+    void setSizeDefinition(
+        const RibbonControlSizeDefinition::GroupSizes &sizeDefinition);
+    void setControlsCentering(bool enabled = true);
+    bool isControlsCentering() const;
+    void setControlsGrouping(bool enabled = true);
+    bool isControlsGrouping() const;
 
     ///
     /// \brief RibbonGroup::title
@@ -98,23 +171,48 @@ public:
     ///
     void setTitle(const QString &strTitle);
 
+signals:
+    void released();
+    void actionTriggered(QAction *action);
+    void hidePopup();
+    void titleChanged(const QString &strTitle);
+    void titleFontChanged(const QFont &font);
+
 protected:
     bool event(QEvent *event) override;
 
 private:
-    QToolButton *createButton(QAction *action, Qt::ToolButtonStyle buttonStyle);
+    QToolButton *createButton(QAction *action,
+                              Qt::ToolButtonStyle buttonStyle,
+                              QMenu *menu = nullptr,
+                              QToolButton::ToolButtonPopupMode mode =
+                                  QToolButton::MenuButtonPopup);
     void addSmallButton(QWidget *widget);
     void setupSmallButton(QToolButton *button);
     QGridLayout *smallButtonLayout();
     void updateMetrics();
+    void rememberActionWidget(QAction *action, QWidget *widget);
 
 private:
     QLabel *m_titleLabel;
     QHBoxLayout *m_contentLayout;
     QGridLayout *m_smallButtonLayout;
     QWidget *m_smallButtonWidget;
+    QToolButton *m_optionButton;
     int m_smallButtonRow;
     int m_smallButtonColumn;
+    QFont m_titleFont;
+    QColor m_titleColor;
+    QIcon m_icon;
+    QAction *m_optionButtonAction;
+    Qt::Alignment m_contentAlignment;
+    Qt::Alignment m_controlsAlignment;
+    Qt::TextElideMode m_titleElideMode;
+    RibbonControlSizeDefinition::GroupSizes m_sizeDefinition;
+    QList<RibbonControl *> m_controlList;
+    QHash<QAction *, QWidget *> m_actionWidgetHash;
+    QHash<QWidget *, QAction *> m_widgetActionHash;
+    bool m_controlsGrouping;
 };
 
 ///
@@ -128,6 +226,7 @@ class RibbonPage : public QWidget
     Q_OBJECT
 
 public:
+    explicit RibbonPage(QWidget *parent = nullptr);
     ///
     /// \brief RibbonPage::RibbonPage
     /// Creates a page that can hold Ribbon groups.
@@ -143,18 +242,44 @@ public:
     /// \return Newly created group owned by the page.
     ///
     RibbonGroup *addGroup(const QString &strTitle);
+    void addGroup(RibbonGroup *group);
+    RibbonGroup *addGroup(const QIcon &icon, const QString &strTitle);
+    void insertGroup(int index, RibbonGroup *group);
+    RibbonGroup *insertGroup(int index, const QString &strTitle);
+    RibbonGroup *insertGroup(int index,
+                             const QIcon &icon,
+                             const QString &strTitle);
+    void removeGroup(RibbonGroup *group);
+    void removeGroupByIndex(int index);
+    void detachGroup(RibbonGroup *group);
+    void detachGroupByIndex(int index);
+    void clearGroups();
+    RibbonBar *ribbonBar() const;
+    QAction *defaultAction() const;
+    int groupCount() const;
+    RibbonGroup *group(int index) const;
+    int groupIndex(RibbonGroup *group) const;
+    const RibbonGroupList &groups() const;
     ///
     /// \brief RibbonPage::title
     /// Returns the current page title.
     /// \return Text shown by the Ribbon tab.
     ///
     QString title() const;
+    const QColor &contextColor() const;
+    const QString &contextTitle() const;
+    const QString &contextGroupName() const;
+    void setContextColor(ContextColor color);
+    void updateLayout();
     ///
     /// \brief RibbonPage::setTitle
     /// Updates the page title and notifies the Ribbon bar.
     /// \param strTitle New page title.
     ///
     void setTitle(const QString &strTitle);
+    void setContextColor(const QColor &color);
+    void setContextTitle(const QString &strTitle);
+    void setContextGroupName(const QString &strGroupName);
 
 signals:
     ///
@@ -163,10 +288,17 @@ signals:
     /// \param strTitle New page title.
     ///
     void titleChanged(const QString &strTitle);
+    void activated();
+    void activating(bool &allow);
 
 private:
     QString m_strTitle;
     QHBoxLayout *m_groupLayout;
+    RibbonGroupList m_groupList;
+    QAction *m_defaultAction;
+    QColor m_contextColor;
+    QString m_contextTitle;
+    QString m_contextGroupName;
 };
 
 ///
@@ -184,8 +316,23 @@ private:
 class RibbonBar : public QTabWidget
 {
     Q_OBJECT
+    Q_ENUMS(BarPosition)
+    Q_ENUMS(SearchBarAppearance)
 
 public:
+    enum BarPosition
+    {
+        TopPosition = 1,
+        BottomPosition
+    };
+
+    enum SearchBarAppearance
+    {
+        SearchBarCentral = 1,
+        SearchBarCompact,
+        SearchBarHidden
+    };
+
     ///
     /// \brief RibbonBar::RibbonBar
     /// Creates an empty Ribbon bar with search and quick access support.
@@ -205,6 +352,16 @@ public:
     /// \return Newly created page owned by the Ribbon bar.
     ///
     RibbonPage *addPage(const QString &strTitle);
+    void addPage(RibbonPage *page);
+    RibbonPage *insertPage(int index, const QString &strTitle);
+    void insertPage(int index, RibbonPage *page);
+    void movePage(RibbonPage *page, int newIndex);
+    void movePage(int index, int newIndex);
+    void removePage(RibbonPage *page);
+    void removePage(int index);
+    void detachPage(RibbonPage *page);
+    void detachPage(int index);
+    void clearPages();
     ///
     /// \brief RibbonBar::page
     /// Returns the page at the requested tab index.
@@ -212,12 +369,30 @@ public:
     /// \return Page pointer or nullptr when index is invalid.
     ///
     RibbonPage *page(int index) const;
+    int pageCount() const;
+    int currentPageIndex() const;
     ///
     /// \brief RibbonBar::currentPage
     /// Returns the currently selected page.
     /// \return Current page pointer or nullptr when no page exists.
     ///
     RibbonPage *currentPage() const;
+    RibbonPageList pages() const;
+    int pageIndex(RibbonPage *page) const;
+    bool isKeyTipsShowing() const;
+    bool keyTipsEnabled() const;
+    void setKeyTipsEnable(bool enable);
+    bool isKeyTipsComplement() const;
+    void setKeyTipsComplement(bool complement);
+    void setKeyTip(QAction *action, const QString &keyTip);
+    bool isMovableTabs() const;
+    void setMovableTabs(bool movable);
+    Qt::TextElideMode tabsElideMode() const;
+    void setTabsElideMode(Qt::TextElideMode mode);
+    void setLogoPixmap(const QPixmap &pixmap, Qt::AlignmentFlag alignment);
+    QPixmap logoPixmap() const;
+    void setTitleBackground(const QPixmap &pixmap);
+    const QPixmap &titleBackground() const;
     ///
     /// \brief RibbonBar::searchLineEdit
     /// Returns the editable search box widget.
@@ -351,7 +526,15 @@ public:
     /// Returns the title-bar quick access toolbar.
     /// \return Quick access toolbar owned by the Ribbon bar.
     ///
-    QToolBar *quickAccessBar() const;
+    RibbonQuickAccessBar *quickAccessBar() const;
+    RibbonProgressBar *progressBar() const;
+    RibbonSearchBar *searchBar() const;
+    void setQuickAccessBarPosition(BarPosition position);
+    BarPosition quickAccessBarPosition() const;
+    void setSearchBarAppearance(SearchBarAppearance appearance);
+    SearchBarAppearance searchBarAppearance() const;
+    void setTabBarPosition(BarPosition position);
+    BarPosition tabBarPosition() const;
     ///
     /// \brief RibbonBar::addQuickAccessAction
     /// Creates and adds an action to the quick access toolbar.
@@ -379,18 +562,61 @@ public:
     /// Removes all actions from the quick access toolbar.
     ///
     void clearQuickAccessActions();
+    void removeTitleButton(QAction *action);
     ///
     /// \brief RibbonBar::setCurrentPageIndex
     /// Selects a Ribbon page by index.
     /// \param index Zero-based tab index.
     ///
     void setCurrentPageIndex(int index);
+    int rowItemHeight() const;
+    int rowItemCount() const;
     ///
     /// \brief RibbonBar::setRibbonMinimized
     /// Collapses or expands the Ribbon command area while keeping tabs visible.
     /// \param minimized true to collapse command pages, false to expand them.
     ///
     void setRibbonMinimized(bool minimized);
+    void minimize();
+    bool isMinimized() const;
+    void setMinimized(bool minimized);
+    void maximize();
+    bool isMaximized() const;
+    void setMaximized(bool maximized);
+    void setMinimizationEnabled(bool enabled);
+    bool isMinimizationEnabled() const;
+    QAction *simplifiedAction() const;
+    bool simplifiedMode() const;
+    void setSimplifiedMode(bool enabled);
+    bool simplifiedModeEnabled() const;
+    void setSimplifiedModeEnabled(bool enabled);
+    Qt::LayoutDirection expandDirection() const;
+    void setExpandDirection(Qt::LayoutDirection direction);
+    RibbonCustomizeManager *customizeManager();
+    RibbonCustomizeDialog *customizeDialog();
+    void showCustomizeDialog();
+    QMenu *addMenu(const QString &strText);
+    using QWidget::addAction;
+    QAction *addAction(const QIcon &icon,
+                       const QString &strText,
+                       Qt::ToolButtonStyle buttonStyle,
+                       QMenu *menu = nullptr);
+    QAction *addAction(QAction *action, Qt::ToolButtonStyle buttonStyle);
+    QAction *addSystemButton(const QString &strText);
+    QAction *addSystemButton(const QIcon &icon, const QString &strText);
+    RibbonSystemButton *systemButton() const;
+    void setAcrylicEnabled(bool enabled);
+    bool isAcrylicEnabled() const;
+    void setContextualTabsVisible(bool visible);
+    bool isContextualTabsVisible() const;
+    void setTitleGroupsVisible(bool visible);
+    bool isTitleGroupsVisible() const;
+    bool isBackstageVisible() const;
+    void updateLayout();
+    void beginUpdate();
+    void endUpdate();
+    static bool loadTranslation(const QString &strCountry = QString());
+    static QString tr_compatible(const char *text, const char *context = nullptr);
     ///
     /// \brief RibbonBar::isRibbonMinimized
     /// Checks whether only the Ribbon tabs are currently visible.
@@ -459,12 +685,21 @@ signals:
     /// \param minimized true when the command area is collapsed.
     ///
     void ribbonMinimizedChanged(bool minimized);
+    void minimizationChanged(bool minimized);
+    void simplifiedModeChanged(bool enabled);
+    void pageAboutToBeChanged(RibbonPage *page, bool &changed);
+    void currentPageIndexChanged(int index);
+    void currentPageChanged(RibbonPage *page);
+    void keyTipsShowed(bool showed);
+    void showRibbonContextMenu(QMenu *menu, QContextMenuEvent *event);
+    void frameThemeChanged(bool enabled);
 
 protected:
     bool event(QEvent *event) override;
     bool eventFilter(QObject *object, QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
     void updateRibbonTabGeometry();
@@ -483,6 +718,14 @@ private:
     void finishSearch();
     void activateSearchPopupIndex(const QModelIndex &index);
     QList<QAction *> matchedSearchActions(const QString &strText) const;
+    bool isSearchableAction(QAction *action) const;
+    bool searchActionMatches(QAction *action, const QString &strNormalizedText) const;
+    void appendSearchActionIfMatches(QList<QAction *> &actionList,
+                                     QAction *action,
+                                     const QString &strNormalizedText) const;
+    void appendMenuSearchActions(QList<QAction *> &actionList,
+                                 QMenu *menu,
+                                 const QString &strNormalizedText) const;
     void updateSearchSuggestions();
     void recordRecentSearchAction(QAction *action);
     void removeInvalidSearchActions();
@@ -501,12 +744,17 @@ private:
     };
 
 private:
-    QLineEdit *m_searchEdit;
+    RibbonSearchBar *m_searchEdit;
     QListView *m_searchPopupView;
     QStandardItemModel *m_searchPopupModel;
     QAction *m_searchLineAction;
-    QToolBar *m_quickAccessBar;
+    RibbonQuickAccessBar *m_quickAccessBar;
     QToolBar *m_titleButtonBar;
+    RibbonProgressBar *m_progressBar;
+    RibbonSystemButton *m_systemButton;
+    QAction *m_simplifiedAction;
+    RibbonCustomizeManager *m_customizeManager;
+    RibbonCustomizeDialog *m_customizeDialog;
     QToolButton *m_minimizeButton;
     QToolButton *m_maximizeButton;
     QToolButton *m_closeButton;
@@ -523,6 +771,25 @@ private:
     bool m_ribbonMinimized;
     bool m_searchVisibleExplicitlySet;
     bool m_searchPlaceholderExplicitlySet;
+    BarPosition m_quickAccessBarPosition;
+    BarPosition m_tabBarPosition;
+    SearchBarAppearance m_searchBarAppearance;
+    QPixmap m_logoPixmap;
+    Qt::AlignmentFlag m_logoAlignment;
+    QPixmap m_titleBackground;
+    bool m_keyTipsEnabled;
+    bool m_keyTipsComplement;
+    bool m_keyTipsShowing;
+    bool m_minimizationEnabled;
+    bool m_simplifiedMode;
+    bool m_simplifiedModeEnabled;
+    bool m_acrylicEnabled;
+    bool m_contextualTabsVisible;
+    bool m_titleGroupsVisible;
+    Qt::LayoutDirection m_expandDirection;
+    int m_updateLockCount;
+    QHash<QAction *, QString> m_keyTipHash;
+    QList<QMenu *> m_ownedMenuList;
 };
 
 ///
@@ -542,7 +809,8 @@ public:
     /// Creates a main window with an embedded RibbonBar.
     /// \param parent Parent widget.
     ///
-    explicit RibbonMainWindow(QWidget *parent = nullptr);
+    explicit RibbonMainWindow(QWidget *parent = nullptr,
+                              Qt::WindowFlags flags = Qt::WindowFlags());
     ///
     /// \brief RibbonMainWindow::~RibbonMainWindow
     /// Destroys the Ribbon host and restores owned widgets through Qt parenting.
@@ -555,12 +823,14 @@ public:
     /// \return RibbonBar owned by the main window.
     ///
     RibbonBar *ribbonBar() const;
+    void setRibbonBar(RibbonBar *ribbonBar);
     ///
     /// \brief RibbonMainWindow::setCentralWidget
     /// Sets the content widget below the Ribbon bar.
     /// \param widget Widget to place in the central content area.
     ///
     void setCentralWidget(QWidget *widget);
+    void setCentralWidget(QStyle *style);
     ///
     /// \brief RibbonMainWindow::setNativeFrameEnabled
     /// Enables native move, resize, system menu, and hit-test behavior.
@@ -630,6 +900,7 @@ private:
     bool canNativeResizeHorizontally() const;
     bool canNativeResizeVertically() const;
     bool canNativeMaximize() const;
+    void updateNativeContentMargins();
     void updateNativeWindowStyle();
     void polishMdiObject(QObject *object);
     void polishMdiArea(QMdiArea *mdiArea);
@@ -678,6 +949,28 @@ using LqRibbonGalleryItem = RibbonGalleryItem;
 using LqRibbonGalleryGroup = RibbonGalleryGroup;
 using LqRibbonGallery = RibbonGallery;
 using LqRibbonGalleryControl = RibbonGalleryControl;
+using LqRibbonButton = RibbonButton;
+using LqRibbonQuickAccessBar = RibbonQuickAccessBar;
+using LqRibbonSearchBar = RibbonSearchBar;
+using LqRibbonBackstageSeparator = RibbonBackstageSeparator;
+using LqRibbonBackstageButton = RibbonBackstageButton;
+using LqRibbonBackstagePage = RibbonBackstagePage;
+using LqRibbonBackstageView = RibbonBackstageView;
+using LqRibbonSystemButton = RibbonSystemButton;
+using LqRibbonSystemMenu = RibbonSystemMenu;
+using LqRibbonPageSystemRecentFileList = RibbonPageSystemRecentFileList;
+using LqRibbonPageSystemPopup = RibbonPageSystemPopup;
+using LqOfficePopupMenu = OfficePopupMenu;
+using LqPopupColorButton = PopupColorButton;
+using LqOfficePopupWindow = OfficePopupWindow;
+using LqRibbonScrollArea = RibbonScrollArea;
+using LqRibbonWorkspace = RibbonWorkspace;
+using LqRibbonMdiArea = RibbonMdiArea;
+using LqRibbonCustomizeManager = RibbonCustomizeManager;
+using LqRibbonCustomizeDialog = RibbonCustomizeDialog;
+using LqRibbonQuickAccessBarCustomizePage =
+    RibbonQuickAccessBarCustomizePage;
+using LqRibbonBarCustomizePage = RibbonBarCustomizePage;
 
 } // namespace LqRibbon
 
@@ -714,5 +1007,29 @@ using RibbonGalleryItem = LqRibbon::RibbonGalleryItem;
 using RibbonGalleryGroup = LqRibbon::RibbonGalleryGroup;
 using RibbonGallery = LqRibbon::RibbonGallery;
 using RibbonGalleryControl = LqRibbon::RibbonGalleryControl;
+using RibbonButton = LqRibbon::RibbonButton;
+using RibbonQuickAccessBar = LqRibbon::RibbonQuickAccessBar;
+using RibbonSearchBar = LqRibbon::RibbonSearchBar;
+using RibbonBackstageSeparator = LqRibbon::RibbonBackstageSeparator;
+using RibbonBackstageButton = LqRibbon::RibbonBackstageButton;
+using RibbonBackstagePage = LqRibbon::RibbonBackstagePage;
+using RibbonBackstageView = LqRibbon::RibbonBackstageView;
+using RibbonSystemButton = LqRibbon::RibbonSystemButton;
+using RibbonSystemMenu = LqRibbon::RibbonSystemMenu;
+using RibbonPageSystemRecentFileList = LqRibbon::RibbonPageSystemRecentFileList;
+using RibbonPageSystemPopup = LqRibbon::RibbonPageSystemPopup;
+using OfficePopupMenu = LqRibbon::OfficePopupMenu;
+using PopupColorButton = LqRibbon::PopupColorButton;
+using OfficePopupWindow = LqRibbon::OfficePopupWindow;
+using RibbonScrollArea = LqRibbon::RibbonScrollArea;
+using RibbonWorkspace = LqRibbon::RibbonWorkspace;
+using RibbonMdiArea = LqRibbon::RibbonMdiArea;
+using RibbonCustomizeManager = LqRibbon::RibbonCustomizeManager;
+using RibbonCustomizeDialog = LqRibbon::RibbonCustomizeDialog;
+using RibbonQuickAccessBarCustomizePage =
+    LqRibbon::RibbonQuickAccessBarCustomizePage;
+using RibbonBarCustomizePage = LqRibbon::RibbonBarCustomizePage;
+using RibbonPageList = LqRibbon::RibbonPageList;
+using RibbonGroupList = LqRibbon::RibbonGroupList;
 
 #endif // LQRIBBON_H

@@ -130,6 +130,20 @@ class LqRibbonWindow(QMainWindow):
         """Get the ribbon bar instance"""
         return self.ribbon_bar
 
+    def ribbonBar(self):
+        """Qtitan/C++ compatible ribbon bar getter."""
+        return self.ribbon_bar
+
+    def setRibbonBar(self, ribbon_bar):
+        """Replace the current ribbon bar."""
+        if ribbon_bar is self.ribbon_bar:
+            return
+        parent_layout = self.centralWidget().layout()
+        parent_layout.removeWidget(self.ribbon_bar)
+        self.ribbon_bar.deleteLater()
+        self.ribbon_bar = ribbon_bar
+        parent_layout.insertWidget(0, self.ribbon_bar)
+
     def set_display_text(self, text):
         """Set text in the display area"""
         self.display_area.setPlainText(text)
@@ -137,3 +151,7 @@ class LqRibbonWindow(QMainWindow):
     def append_display_text(self, text):
         """Append text to the display area"""
         self.display_area.append(text)
+
+
+RibbonMainWindow = LqRibbonWindow
+RibbonWindow = LqRibbonWindow

@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QChildEvent>
 #include <QComboBox>
+#include <QContextMenuEvent>
 #include <QCoreApplication>
 #include <QFontMetrics>
 #include <QGridLayout>
@@ -21,6 +22,7 @@
 #include <QStandardItemModel>
 #include <QStyle>
 #include <QTabBar>
+#include <QWidgetAction>
 #include <QWindow>
 
 #ifdef Q_OS_WIN
@@ -50,11 +52,12 @@ const int ribbonWindowButtonWidth = 46;
 const int ribbonWindowButtonHeight = 30;
 const int ribbonCollapseButtonWidth = 32;
 const int ribbonCollapseButtonHeight = 24;
+const int ribbonMaximizedContentMargin = 3;
 const int ribbonMdiTitleHeight = 28;
 const int ribbonMdiTitleBottomOverlap = 2;
 const int ribbonMdiButtonWidth = 28;
 const int ribbonMdiButtonHeight = 24;
-const int ribbonSearchPopupMaxHeight = 260;
+const int ribbonSearchPopupScreenMargin = 8;
 const int ribbonSearchPopupRowHeight = 24;
 const int ribbonSearchPopupKindRole = Qt::UserRole + 1;
 const int ribbonSearchPopupActionRole = Qt::UserRole + 2;
@@ -1202,9 +1205,45 @@ QStandardItem *createSearchHelpItem(const QString &strText, const QIcon &icon)
     return item;
 }
 
+QColor ribbonContextColor(LqRibbon::ContextColor color)
+{
+    switch (color) {
+    case LqRibbon::ContextColorBlue:
+        return QColor(QStringLiteral("#2b579a"));
+    case LqRibbon::ContextColorYellow:
+        return QColor(QStringLiteral("#f2c811"));
+    case LqRibbon::ContextColorGreen:
+        return QColor(QStringLiteral("#107c10"));
+    case LqRibbon::ContextColorRed:
+        return QColor(QStringLiteral("#d13438"));
+    case LqRibbon::ContextColorPurple:
+        return QColor(QStringLiteral("#5c2d91"));
+    case LqRibbon::ContextColorCyan:
+        return QColor(QStringLiteral("#008575"));
+    case LqRibbon::ContextColorOrange:
+        return QColor(QStringLiteral("#ca5010"));
+    case LqRibbon::ContextColorNone:
+    default:
+        return QColor();
+    }
+}
+
 } // namespace
 
 namespace LqRibbon {
+
+RibbonGroup::RibbonGroup(QWidget *parent)
+    : RibbonGroup(QString(), parent)
+{
+}
+
+RibbonGroup::RibbonGroup(RibbonPage *page, const QString &strTitle)
+    : RibbonGroup(strTitle, page)
+{
+    if (page) {
+        page->addGroup(this);
+    }
+}
 
 ///
 /// \brief RibbonGroup::RibbonGroup
@@ -1218,8 +1257,20 @@ RibbonGroup::RibbonGroup(const QString &strTitle, QWidget *parent)
     , m_contentLayout(new QHBoxLayout)
     , m_smallButtonLayout(nullptr)
     , m_smallButtonWidget(nullptr)
+    , m_optionButton(new QToolButton(this))
     , m_smallButtonRow(0)
     , m_smallButtonColumn(0)
+    , m_titleFont(m_titleLabel->font())
+    , m_titleColor(palette().text().color())
+    , m_optionButtonAction(nullptr)
+    , m_contentAlignment(Qt::AlignLeft | Qt::AlignTop)
+    , m_controlsAlignment(Qt::AlignLeft | Qt::AlignTop)
+    , m_titleElideMode(Qt::ElideRight)
+    , m_sizeDefinition(RibbonControlSizeDefinition::GroupLarge
+                       | RibbonControlSizeDefinition::GroupMedium
+                       | RibbonControlSizeDefinition::GroupSmall
+                       | RibbonControlSizeDefinition::GroupPopup)
+    , m_controlsGrouping(false)
 {
     setObjectName(QStringLiteral("lqRibbonGroup"));
     setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Preferred);
@@ -1228,18 +1279,30 @@ RibbonGroup::RibbonGroup(const QString &strTitle, QWidget *parent)
     m_titleLabel->setObjectName(QStringLiteral("lqRibbonGroupTitle"));
     m_titleLabel->setAlignment(Qt::AlignCenter);
 
+    m_optionButton->setObjectName(QStringLiteral("lqRibbonGroupOptionButton"));
+    m_optionButton->setAutoRaise(true);
+    m_optionButton->setFixedSize(16, 16);
+    m_optionButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    m_optionButton->hide();
+
     m_contentLayout->setContentsMargins(ribbonGroupLeftMargin,
                                         ribbonGroupTopMargin,
                                         ribbonGroupRightMargin,
                                         ribbonGroupBottomMargin);
     m_contentLayout->setSpacing(2);
-    m_contentLayout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    m_contentLayout->setAlignment(m_contentAlignment);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
     mainLayout->addLayout(m_contentLayout, 1);
-    mainLayout->addWidget(m_titleLabel);
+
+    QHBoxLayout *titleLayout = new QHBoxLayout;
+    titleLayout->setContentsMargins(4, 0, 4, 0);
+    titleLayout->setSpacing(2);
+    titleLayout->addWidget(m_titleLabel, 1);
+    titleLayout->addWidget(m_optionButton);
+    mainLayout->addLayout(titleLayout);
     updateMetrics();
 }
 
@@ -1253,10 +1316,12 @@ RibbonGroup::RibbonGroup(const QString &strTitle, QWidget *parent)
 ///
 QAction *RibbonGroup::addAction(const QIcon &icon,
                                 const QString &strText,
-                                Qt::ToolButtonStyle buttonStyle)
+                                Qt::ToolButtonStyle buttonStyle,
+                                QMenu *menu,
+                                QToolButton::ToolButtonPopupMode mode)
 {
     QAction *action = new QAction(icon, strText, this);
-    addAction(action, buttonStyle);
+    addAction(action, buttonStyle, menu, mode);
     return action;
 }
 
@@ -1266,19 +1331,53 @@ QAction *RibbonGroup::addAction(const QIcon &icon,
 /// \param action Existing action to expose in the group.
 /// \param buttonStyle Button style used by the created command button.
 ///
-void RibbonGroup::addAction(QAction *action, Qt::ToolButtonStyle buttonStyle)
+QAction *RibbonGroup::addAction(QAction *action,
+                                Qt::ToolButtonStyle buttonStyle,
+                                QMenu *menu,
+                                QToolButton::ToolButtonPopupMode mode)
 {
     if (!action) {
-        return;
+        return nullptr;
     }
 
-    QToolButton *button = createButton(action, buttonStyle);
+    QToolButton *button = createButton(action, buttonStyle, menu, mode);
     if (buttonStyle == Qt::ToolButtonTextBesideIcon) {
         addSmallButton(button);
-        return;
+        rememberActionWidget(action, button);
+        QWidget::addAction(action);
+        return action;
     }
 
     m_contentLayout->addWidget(button);
+    rememberActionWidget(action, button);
+    QWidget::addAction(action);
+    return action;
+}
+
+QAction *RibbonGroup::insertAction(QAction *before,
+                                   QAction *action,
+                                   Qt::ToolButtonStyle buttonStyle,
+                                   QMenu *menu,
+                                   QToolButton::ToolButtonPopupMode mode)
+{
+    if (!action) {
+        return nullptr;
+    }
+
+    QToolButton *button = createButton(action, buttonStyle, menu, mode);
+    const int beforeIndex = before && m_actionWidgetHash.contains(before)
+        ? m_contentLayout->indexOf(m_actionWidgetHash.value(before))
+        : -1;
+    if (buttonStyle == Qt::ToolButtonTextBesideIcon) {
+        addSmallButton(button);
+    } else if (beforeIndex >= 0) {
+        m_contentLayout->insertWidget(beforeIndex, button);
+    } else {
+        m_contentLayout->addWidget(button);
+    }
+    rememberActionWidget(action, button);
+    QWidget::insertAction(before, action);
+    return action;
 }
 
 ///
@@ -1286,22 +1385,132 @@ void RibbonGroup::addAction(QAction *action, Qt::ToolButtonStyle buttonStyle)
 /// Adds a custom widget into the group content area.
 /// \param widget Widget inserted into the group layout.
 ///
-void RibbonGroup::addWidget(QWidget *widget)
+QAction *RibbonGroup::addWidget(QWidget *widget)
 {
     if (!widget) {
-        return;
+        return nullptr;
     }
 
     widget->setParent(this);
+    QWidgetAction *action = new QWidgetAction(this);
+    action->setDefaultWidget(widget);
+    QWidget::addAction(action);
 
     QToolButton *button = qobject_cast<QToolButton *>(widget);
     if (button) {
         setupSmallButton(button);
         addSmallButton(button);
-        return;
+        rememberActionWidget(action, widget);
+        return action;
     }
 
     m_contentLayout->addWidget(widget);
+    rememberActionWidget(action, widget);
+    return action;
+}
+
+QAction *RibbonGroup::addWidget(const QIcon &icon,
+                                const QString &strText,
+                                QWidget *widget)
+{
+    QAction *action = addWidget(widget);
+    if (action) {
+        action->setIcon(icon);
+        action->setText(strText);
+    }
+    return action;
+}
+
+QAction *RibbonGroup::addWidget(const QIcon &icon,
+                                const QString &strText,
+                                bool stretch,
+                                QWidget *widget)
+{
+    QAction *action = addWidget(icon, strText, widget);
+    if (stretch && widget) {
+        widget->setSizePolicy(QSizePolicy::Expanding,
+                              widget->sizePolicy().verticalPolicy());
+    }
+    return action;
+}
+
+QMenu *RibbonGroup::addMenu(const QIcon &icon,
+                            const QString &strText,
+                            Qt::ToolButtonStyle buttonStyle)
+{
+    QMenu *menu = new QMenu(strText, this);
+    menu->menuAction()->setIcon(icon);
+    QAction *menuButtonAction = addAction(icon,
+                                          strText,
+                                          buttonStyle,
+                                          menu,
+                                          QToolButton::InstantPopup);
+    connect(menu->menuAction(), &QAction::changed, menuButtonAction, [menu, menuButtonAction]() {
+        menuButtonAction->setText(menu->title());
+        menuButtonAction->setIcon(menu->menuAction()->icon());
+        menuButtonAction->setEnabled(menu->menuAction()->isEnabled());
+        menuButtonAction->setVisible(menu->menuAction()->isVisible());
+    });
+    return menu;
+}
+
+QAction *RibbonGroup::addSeparator()
+{
+    QAction *action = new QAction(this);
+    action->setSeparator(true);
+    QFrame *line = new QFrame(this);
+    line->setFrameShape(QFrame::VLine);
+    line->setFrameShadow(QFrame::Sunken);
+    line->setFixedWidth(8);
+    m_contentLayout->addWidget(line);
+    QWidget::addAction(action);
+    rememberActionWidget(action, line);
+    return action;
+}
+
+void RibbonGroup::addControl(RibbonControl *control)
+{
+    if (!control || m_controlList.contains(control)) {
+        return;
+    }
+    m_controlList.append(control);
+    addWidget(control);
+}
+
+void RibbonGroup::removeControl(RibbonControl *control)
+{
+    if (!control) {
+        return;
+    }
+    m_controlList.removeAll(control);
+    remove(control);
+}
+
+void RibbonGroup::remove(QWidget *widget)
+{
+    if (!widget) {
+        return;
+    }
+    QAction *action = m_widgetActionHash.take(widget);
+    if (action) {
+        m_actionWidgetHash.remove(action);
+        QWidget::removeAction(action);
+        action->deleteLater();
+    }
+    m_contentLayout->removeWidget(widget);
+    if (m_smallButtonLayout) {
+        m_smallButtonLayout->removeWidget(widget);
+    }
+    widget->deleteLater();
+}
+
+void RibbonGroup::clear()
+{
+    const QList<QWidget *> widgets = m_widgetActionHash.keys();
+    for (QWidget *widget : widgets) {
+        remove(widget);
+    }
+    m_controlList.clear();
 }
 
 ///
@@ -1321,7 +1530,181 @@ QString RibbonGroup::title() const
 ///
 void RibbonGroup::setTitle(const QString &strTitle)
 {
+    if (m_titleLabel->text() == strTitle) {
+        return;
+    }
     m_titleLabel->setText(strTitle);
+    emit titleChanged(strTitle);
+}
+
+RibbonBar *RibbonGroup::ribbonBar() const
+{
+    const RibbonPage *page = qobject_cast<const RibbonPage *>(parentWidget());
+    return page ? page->ribbonBar() : nullptr;
+}
+
+bool RibbonGroup::isReduced() const
+{
+    return false;
+}
+
+const QFont &RibbonGroup::titleFont() const
+{
+    return m_titleFont;
+}
+
+void RibbonGroup::setTitleFont(const QFont &font)
+{
+    if (m_titleFont == font) {
+        return;
+    }
+    m_titleFont = font;
+    m_titleLabel->setFont(font);
+    emit titleFontChanged(font);
+}
+
+const QColor &RibbonGroup::titleColor() const
+{
+    return m_titleColor;
+}
+
+void RibbonGroup::setTitleColor(const QColor &color)
+{
+    m_titleColor = color;
+    QPalette pal = m_titleLabel->palette();
+    pal.setColor(QPalette::WindowText, color);
+    m_titleLabel->setPalette(pal);
+}
+
+const QIcon &RibbonGroup::icon() const
+{
+    return m_icon;
+}
+
+void RibbonGroup::setIcon(const QIcon &icon)
+{
+    m_icon = icon;
+}
+
+bool RibbonGroup::isOptionButtonVisible() const
+{
+    return m_optionButton->isVisible();
+}
+
+void RibbonGroup::setOptionButtonVisible(bool visible)
+{
+    m_optionButton->setVisible(visible);
+}
+
+QAction *RibbonGroup::optionButtonAction() const
+{
+    return m_optionButtonAction;
+}
+
+void RibbonGroup::setOptionButtonAction(QAction *action)
+{
+    m_optionButtonAction = action;
+    m_optionButton->setDefaultAction(action);
+    setOptionButtonVisible(action != nullptr);
+}
+
+Qt::Alignment RibbonGroup::contentAlignment() const
+{
+    return m_contentAlignment;
+}
+
+void RibbonGroup::setContentAlignment(Qt::Alignment alignment)
+{
+    m_contentAlignment = alignment;
+    m_contentLayout->setAlignment(alignment);
+}
+
+Qt::Alignment RibbonGroup::controlsAlignment() const
+{
+    return m_controlsAlignment;
+}
+
+void RibbonGroup::setControlsAlignment(Qt::Alignment alignment)
+{
+    m_controlsAlignment = alignment;
+}
+
+int RibbonGroup::spacing() const
+{
+    return m_contentLayout->spacing();
+}
+
+void RibbonGroup::setSpacing(int spacing)
+{
+    m_contentLayout->setSpacing(spacing);
+    if (m_smallButtonLayout) {
+        m_smallButtonLayout->setHorizontalSpacing(spacing);
+    }
+}
+
+int RibbonGroup::controlCount() const
+{
+    return m_controlList.count();
+}
+
+RibbonControl *RibbonGroup::controlByIndex(int index) const
+{
+    return index >= 0 && index < m_controlList.count()
+        ? m_controlList.at(index)
+        : nullptr;
+}
+
+RibbonControl *RibbonGroup::controlByAction(QAction *action) const
+{
+    QWidget *widget = m_actionWidgetHash.value(action, nullptr);
+    return qobject_cast<RibbonControl *>(widget);
+}
+
+RibbonWidgetControl *RibbonGroup::controlByWidget(QWidget *widget) const
+{
+    return qobject_cast<RibbonWidgetControl *>(widget);
+}
+
+Qt::TextElideMode RibbonGroup::titleElideMode() const
+{
+    return m_titleElideMode;
+}
+
+void RibbonGroup::setTitleElideMode(Qt::TextElideMode mode)
+{
+    m_titleElideMode = mode;
+    update();
+}
+
+RibbonControlSizeDefinition::GroupSizes RibbonGroup::sizeDefinition() const
+{
+    return m_sizeDefinition;
+}
+
+void RibbonGroup::setSizeDefinition(
+    const RibbonControlSizeDefinition::GroupSizes &sizeDefinition)
+{
+    m_sizeDefinition = sizeDefinition;
+}
+
+void RibbonGroup::setControlsCentering(bool enabled)
+{
+    setContentAlignment(enabled ? Qt::AlignCenter : Qt::AlignLeft);
+}
+
+bool RibbonGroup::isControlsCentering() const
+{
+    return m_contentAlignment.testFlag(Qt::AlignHCenter);
+}
+
+void RibbonGroup::setControlsGrouping(bool enabled)
+{
+    m_controlsGrouping = enabled;
+}
+
+bool RibbonGroup::isControlsGrouping() const
+{
+    return m_controlsGrouping;
 }
 
 ///
@@ -1354,7 +1737,10 @@ bool RibbonGroup::event(QEvent *event)
 /// \param buttonStyle Qt tool button style used by the button.
 /// \return Newly created button owned by the group.
 ///
-QToolButton *RibbonGroup::createButton(QAction *action, Qt::ToolButtonStyle buttonStyle)
+QToolButton *RibbonGroup::createButton(QAction *action,
+                                       Qt::ToolButtonStyle buttonStyle,
+                                       QMenu *menu,
+                                       QToolButton::ToolButtonPopupMode mode)
 {
     QToolButton *button = new QToolButton(this);
     button->setDefaultAction(action);
@@ -1362,9 +1748,11 @@ QToolButton *RibbonGroup::createButton(QAction *action, Qt::ToolButtonStyle butt
     button->setToolButtonStyle(buttonStyle);
     button->setFocusPolicy(Qt::NoFocus);
 
-    if (action->menu()) {
-        button->setMenu(action->menu());
-        button->setPopupMode(QToolButton::MenuButtonPopup);
+    QMenu *buttonMenu = menu ? menu : action->menu();
+    if (buttonMenu) {
+        button->setMenu(buttonMenu);
+        action->setMenu(buttonMenu);
+        button->setPopupMode(mode);
     }
 
     if (buttonStyle != Qt::ToolButtonTextUnderIcon) {
@@ -1373,8 +1761,8 @@ QToolButton *RibbonGroup::createButton(QAction *action, Qt::ToolButtonStyle butt
     }
 
     button->setIconSize(ribbonLargeIconSize(button));
-    button->setPopupMode(action->menu()
-                         ? QToolButton::MenuButtonPopup
+    button->setPopupMode(buttonMenu
+                         ? mode
                          : QToolButton::DelayedPopup);
     const int buttonWidth = ribbonLargeButtonWidth(button);
     const int buttonHeight = ribbonLargeButtonHeight(button);
@@ -1383,6 +1771,23 @@ QToolButton *RibbonGroup::createButton(QAction *action, Qt::ToolButtonStyle butt
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     return button;
+}
+
+void RibbonGroup::rememberActionWidget(QAction *action, QWidget *widget)
+{
+    if (!action || !widget) {
+        return;
+    }
+    m_actionWidgetHash.insert(action, widget);
+    m_widgetActionHash.insert(widget, action);
+    if (RibbonControl *control = qobject_cast<RibbonControl *>(widget)) {
+        if (!m_controlList.contains(control)) {
+            m_controlList.append(control);
+        }
+    }
+    connect(action, &QAction::triggered, this, [this, action]() {
+        emit actionTriggered(action);
+    }, Qt::UniqueConnection);
 }
 
 ///
@@ -1421,8 +1826,11 @@ void RibbonGroup::setupSmallButton(QToolButton *button)
     button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     button->setIconSize(ribbonSmallIconSize(button));
     button->setStyleSheet(QString());
+    const QToolButton::ToolButtonPopupMode popupMode = button->popupMode();
     button->setPopupMode(button->menu()
-                         ? QToolButton::MenuButtonPopup
+                         ? (popupMode == QToolButton::DelayedPopup
+                                ? QToolButton::MenuButtonPopup
+                                : popupMode)
                          : QToolButton::DelayedPopup);
 
     const int buttonWidth = ribbonSmallButtonWidth(button);
@@ -1495,10 +1903,17 @@ void RibbonGroup::updateMetrics()
 /// \param strTitle Title shown by the corresponding Ribbon tab.
 /// \param parent Parent widget.
 ///
+RibbonPage::RibbonPage(QWidget *parent)
+    : RibbonPage(QString::fromLatin1(QtnRibbonUntitledString), parent)
+{
+}
+
 RibbonPage::RibbonPage(const QString &strTitle, QWidget *parent)
     : QWidget(parent)
     , m_strTitle(strTitle)
     , m_groupLayout(new QHBoxLayout)
+    , m_defaultAction(new QAction(strTitle, this))
+    , m_contextColor()
 {
     m_groupLayout->setContentsMargins(0, 0, 0, 0);
     m_groupLayout->setSpacing(0);
@@ -1518,9 +1933,131 @@ RibbonPage::RibbonPage(const QString &strTitle, QWidget *parent)
 RibbonGroup *RibbonPage::addGroup(const QString &strTitle)
 {
     RibbonGroup *group = new RibbonGroup(strTitle, this);
-    const int stretchIndex = m_groupLayout->count() - 1;
-    m_groupLayout->insertWidget(stretchIndex, group);
+    addGroup(group);
     return group;
+}
+
+void RibbonPage::addGroup(RibbonGroup *group)
+{
+    insertGroup(m_groupList.count(), group);
+}
+
+RibbonGroup *RibbonPage::addGroup(const QIcon &icon, const QString &strTitle)
+{
+    RibbonGroup *group = addGroup(strTitle);
+    group->setIcon(icon);
+    return group;
+}
+
+void RibbonPage::insertGroup(int index, RibbonGroup *group)
+{
+    if (!group) {
+        return;
+    }
+    const int oldIndex = m_groupList.indexOf(group);
+    if (oldIndex >= 0) {
+        m_groupList.removeAt(oldIndex);
+        m_groupLayout->removeWidget(group);
+        if (oldIndex < index) {
+            --index;
+        }
+    }
+
+    const int normalizedIndex = index < 0
+        ? m_groupList.count()
+        : qMin(index, m_groupList.count());
+    group->setParent(this);
+    const int stretchIndex = qMax(0, m_groupLayout->count() - 1);
+    m_groupLayout->insertWidget(qMin(normalizedIndex, stretchIndex), group);
+    m_groupList.insert(normalizedIndex, group);
+    group->show();
+    updateLayout();
+}
+
+RibbonGroup *RibbonPage::insertGroup(int index, const QString &strTitle)
+{
+    RibbonGroup *group = new RibbonGroup(strTitle, this);
+    insertGroup(index, group);
+    return group;
+}
+
+RibbonGroup *RibbonPage::insertGroup(int index,
+                                     const QIcon &icon,
+                                     const QString &strTitle)
+{
+    RibbonGroup *group = insertGroup(index, strTitle);
+    group->setIcon(icon);
+    return group;
+}
+
+void RibbonPage::removeGroup(RibbonGroup *group)
+{
+    if (!group) {
+        return;
+    }
+    detachGroup(group);
+    group->deleteLater();
+}
+
+void RibbonPage::removeGroupByIndex(int index)
+{
+    removeGroup(group(index));
+}
+
+void RibbonPage::detachGroup(RibbonGroup *group)
+{
+    if (!group) {
+        return;
+    }
+    m_groupList.removeAll(group);
+    m_groupLayout->removeWidget(group);
+    group->setParent(nullptr);
+    updateLayout();
+}
+
+void RibbonPage::detachGroupByIndex(int index)
+{
+    detachGroup(group(index));
+}
+
+void RibbonPage::clearGroups()
+{
+    const RibbonGroupList groupList = m_groupList;
+    for (RibbonGroup *group : groupList) {
+        removeGroup(group);
+    }
+}
+
+RibbonBar *RibbonPage::ribbonBar() const
+{
+    return qobject_cast<RibbonBar *>(parentWidget());
+}
+
+QAction *RibbonPage::defaultAction() const
+{
+    return m_defaultAction;
+}
+
+int RibbonPage::groupCount() const
+{
+    return m_groupList.count();
+}
+
+RibbonGroup *RibbonPage::group(int index) const
+{
+    return index >= 0 && index < m_groupList.count()
+        ? m_groupList.at(index)
+        : nullptr;
+}
+
+int RibbonPage::groupIndex(RibbonGroup *group) const
+{
+    return m_groupList.indexOf(group);
+}
+
+const RibbonGroupList &RibbonPage::groups() const
+{
+    return m_groupList;
 }
 
 ///
@@ -1545,7 +2082,50 @@ void RibbonPage::setTitle(const QString &strTitle)
     }
 
     m_strTitle = strTitle;
+    m_defaultAction->setText(strTitle);
     emit titleChanged(strTitle);
+}
+
+const QColor &RibbonPage::contextColor() const
+{
+    return m_contextColor;
+}
+
+const QString &RibbonPage::contextTitle() const
+{
+    return m_contextTitle;
+}
+
+const QString &RibbonPage::contextGroupName() const
+{
+    return m_contextGroupName;
+}
+
+void RibbonPage::setContextColor(ContextColor color)
+{
+    setContextColor(ribbonContextColor(color));
+}
+
+void RibbonPage::setContextColor(const QColor &color)
+{
+    m_contextColor = color;
+    update();
+}
+
+void RibbonPage::setContextTitle(const QString &strTitle)
+{
+    m_contextTitle = strTitle;
+}
+
+void RibbonPage::setContextGroupName(const QString &strGroupName)
+{
+    m_contextGroupName = strGroupName;
+}
+
+void RibbonPage::updateLayout()
+{
+    updateGeometry();
+    update();
 }
 
 ///
@@ -1555,12 +2135,17 @@ void RibbonPage::setTitle(const QString &strTitle)
 ///
 RibbonBar::RibbonBar(QWidget *parent)
     : QTabWidget(parent)
-    , m_searchEdit(new QLineEdit(this))
+    , m_searchEdit(new RibbonSearchBar(this))
     , m_searchPopupView(new QListView(this))
     , m_searchPopupModel(new QStandardItemModel(this))
     , m_searchLineAction(nullptr)
-    , m_quickAccessBar(new QToolBar(this))
+    , m_quickAccessBar(new RibbonQuickAccessBar(this))
     , m_titleButtonBar(new QToolBar(this))
+    , m_progressBar(new RibbonProgressBar(this))
+    , m_systemButton(nullptr)
+    , m_simplifiedAction(new QAction(this))
+    , m_customizeManager(nullptr)
+    , m_customizeDialog(nullptr)
     , m_minimizeButton(new RibbonWindowButton(
                            RibbonWindowButton::MinimizeButton, this))
     , m_maximizeButton(new RibbonWindowButton(
@@ -1576,6 +2161,21 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_ribbonMinimized(false)
     , m_searchVisibleExplicitlySet(false)
     , m_searchPlaceholderExplicitlySet(false)
+    , m_quickAccessBarPosition(TopPosition)
+    , m_tabBarPosition(TopPosition)
+    , m_searchBarAppearance(SearchBarCentral)
+    , m_logoAlignment(Qt::AlignLeft)
+    , m_keyTipsEnabled(false)
+    , m_keyTipsComplement(false)
+    , m_keyTipsShowing(false)
+    , m_minimizationEnabled(true)
+    , m_simplifiedMode(false)
+    , m_simplifiedModeEnabled(true)
+    , m_acrylicEnabled(false)
+    , m_contextualTabsVisible(true)
+    , m_titleGroupsVisible(true)
+    , m_expandDirection(Qt::LeftToRight)
+    , m_updateLockCount(0)
 {
     setDocumentMode(false);
     setMovable(false);
@@ -1599,6 +2199,7 @@ RibbonBar::RibbonBar(QWidget *parent)
         QStringLiteral("lqRibbonSearchSuggestionPopup"));
 
     m_searchPopupView->setObjectName(QStringLiteral("lqRibbonSearchPopupView"));
+    m_searchPopupView->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
     m_searchPopupView->setModel(m_searchPopupModel);
     m_searchPopupView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_searchPopupView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -1616,6 +2217,9 @@ RibbonBar::RibbonBar(QWidget *parent)
     m_quickAccessBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     m_quickAccessBar->hide();
 
+    m_progressBar->setObjectName(QStringLiteral("lqRibbonProgressBar"));
+    m_progressBar->hide();
+
     m_titleButtonBar->setObjectName(QStringLiteral("lqRibbonTitleButtonBar"));
     m_titleButtonBar->setMovable(false);
     m_titleButtonBar->setFloatable(false);
@@ -1627,10 +2231,21 @@ RibbonBar::RibbonBar(QWidget *parent)
     setupWindowControlButton(m_maximizeButton);
     setupWindowControlButton(m_closeButton);
     setupWindowControlButton(m_collapseButton);
+    m_simplifiedAction->setText(
+        QString::fromLatin1(QtnRibbonSimplifiedRibbonActionString));
+    m_simplifiedAction->setToolTip(
+        QString::fromLatin1(QtnRibbonSimplifiedRibbonActionToolTipsString));
+    m_simplifiedAction->setCheckable(true);
+    connect(m_simplifiedAction, &QAction::toggled,
+            this, &RibbonBar::setSimplifiedMode);
     updateLocalizedText();
     updateWindowControlVisibility();
 
-    connect(this, &QTabWidget::currentChanged, this, &RibbonBar::pageChanged);
+    connect(this, &QTabWidget::currentChanged, this, [this](int index) {
+        emit pageChanged(index);
+        emit currentPageIndexChanged(index);
+        emit currentPageChanged(page(index));
+    });
     connect(m_searchEdit, &QLineEdit::textChanged,
             this, &RibbonBar::searchTextChanged);
     connect(m_searchEdit, &QLineEdit::textEdited,
@@ -1740,16 +2355,105 @@ RibbonBar::~RibbonBar()
 RibbonPage *RibbonBar::addPage(const QString &strTitle)
 {
     RibbonPage *newPage = new RibbonPage(strTitle, this);
-    const int index = addTab(newPage, strTitle);
-    connect(newPage, &RibbonPage::titleChanged, this, [this, newPage](const QString &strNewTitle) {
-        const int pageIndex = indexOf(newPage);
+    addPage(newPage);
+    return newPage;
+}
+
+void RibbonBar::addPage(RibbonPage *page)
+{
+    insertPage(count(), page);
+}
+
+RibbonPage *RibbonBar::insertPage(int index, const QString &strTitle)
+{
+    RibbonPage *newPage = new RibbonPage(strTitle, this);
+    insertPage(index, newPage);
+    return newPage;
+}
+
+void RibbonBar::insertPage(int index, RibbonPage *page)
+{
+    if (!page) {
+        return;
+    }
+    const int oldIndex = indexOf(page);
+    if (oldIndex >= 0) {
+        removeTab(oldIndex);
+        if (oldIndex < index) {
+            --index;
+        }
+    }
+    const int normalizedIndex = index < 0 ? count() : qMin(index, count());
+    const int insertedIndex = insertTab(normalizedIndex, page, page->title());
+    connect(page, &RibbonPage::titleChanged, this,
+            [this, page](const QString &strNewTitle) {
+        const int pageIndex = indexOf(page);
         if (pageIndex >= 0) {
             setTabText(pageIndex, strNewTitle);
         }
-    });
-    setCurrentIndex(index);
+    }, Qt::UniqueConnection);
+    setCurrentIndex(insertedIndex);
     updateRibbonTabGeometry();
-    return newPage;
+}
+
+void RibbonBar::movePage(RibbonPage *page, int newIndex)
+{
+    movePage(pageIndex(page), newIndex);
+}
+
+void RibbonBar::movePage(int index, int newIndex)
+{
+    RibbonPage *movingPage = page(index);
+    if (!movingPage || index == newIndex) {
+        return;
+    }
+    const QString title = tabText(index);
+    const QIcon icon = tabIcon(index);
+    removeTab(index);
+    const int normalizedIndex = newIndex < 0 ? count() : qMin(newIndex, count());
+    insertTab(normalizedIndex, movingPage, icon, title);
+    setCurrentIndex(normalizedIndex);
+}
+
+void RibbonBar::removePage(RibbonPage *page)
+{
+    if (!page) {
+        return;
+    }
+    const int index = indexOf(page);
+    if (index >= 0) {
+        removeTab(index);
+    }
+    page->deleteLater();
+}
+
+void RibbonBar::removePage(int index)
+{
+    removePage(page(index));
+}
+
+void RibbonBar::detachPage(RibbonPage *page)
+{
+    if (!page) {
+        return;
+    }
+    const int index = indexOf(page);
+    if (index >= 0) {
+        removeTab(index);
+    }
+    page->setParent(nullptr);
+}
+
+void RibbonBar::detachPage(int index)
+{
+    detachPage(page(index));
+}
+
+void RibbonBar::clearPages()
+{
+    while (count() > 0) {
+        removePage(0);
+    }
 }
 
 ///
@@ -1763,6 +2467,16 @@ RibbonPage *RibbonBar::page(int index) const
     return qobject_cast<RibbonPage *>(widget(index));
 }
 
+int RibbonBar::pageCount() const
+{
+    return count();
+}
+
+int RibbonBar::currentPageIndex() const
+{
+    return currentIndex();
+}
+
 ///
 /// \brief RibbonBar::currentPage
 /// Returns the currently selected Ribbon page.
@@ -1771,6 +2485,103 @@ RibbonPage *RibbonBar::page(int index) const
 RibbonPage *RibbonBar::currentPage() const
 {
     return page(currentIndex());
+}
+
+RibbonPageList RibbonBar::pages() const
+{
+    RibbonPageList list;
+    for (int index = 0; index < count(); ++index) {
+        if (RibbonPage *ribbonPage = page(index)) {
+            list.append(ribbonPage);
+        }
+    }
+    return list;
+}
+
+int RibbonBar::pageIndex(RibbonPage *page) const
+{
+    return indexOf(page);
+}
+
+bool RibbonBar::isKeyTipsShowing() const
+{
+    return m_keyTipsShowing;
+}
+
+bool RibbonBar::keyTipsEnabled() const
+{
+    return m_keyTipsEnabled;
+}
+
+void RibbonBar::setKeyTipsEnable(bool enable)
+{
+    if (m_keyTipsEnabled == enable) {
+        return;
+    }
+    m_keyTipsEnabled = enable;
+    m_keyTipsShowing = enable && m_keyTipsShowing;
+    emit keyTipsShowed(m_keyTipsShowing);
+}
+
+bool RibbonBar::isKeyTipsComplement() const
+{
+    return m_keyTipsComplement;
+}
+
+void RibbonBar::setKeyTipsComplement(bool complement)
+{
+    m_keyTipsComplement = complement;
+}
+
+void RibbonBar::setKeyTip(QAction *action, const QString &keyTip)
+{
+    if (action) {
+        m_keyTipHash[action] = keyTip;
+    }
+}
+
+bool RibbonBar::isMovableTabs() const
+{
+    return tabBar()->isMovable();
+}
+
+void RibbonBar::setMovableTabs(bool movable)
+{
+    tabBar()->setMovable(movable);
+}
+
+Qt::TextElideMode RibbonBar::tabsElideMode() const
+{
+    return tabBar()->elideMode();
+}
+
+void RibbonBar::setTabsElideMode(Qt::TextElideMode mode)
+{
+    tabBar()->setElideMode(mode);
+}
+
+void RibbonBar::setLogoPixmap(const QPixmap &pixmap,
+                              Qt::AlignmentFlag alignment)
+{
+    m_logoPixmap = pixmap;
+    m_logoAlignment = alignment;
+    update();
+}
+
+QPixmap RibbonBar::logoPixmap() const
+{
+    return m_logoPixmap;
+}
+
+void RibbonBar::setTitleBackground(const QPixmap &pixmap)
+{
+    m_titleBackground = pixmap;
+    update();
+}
+
+const QPixmap &RibbonBar::titleBackground() const
+{
+    return m_titleBackground;
 }
 
 ///
@@ -1994,6 +2805,13 @@ bool RibbonBar::triggerSearchAction(const QString &strText)
     }
 
     QAction *action = searchAction(strText);
+    if (!action) {
+        const QList<QAction *> actionList = matchedSearchActions(strText);
+        if (!actionList.isEmpty()) {
+            action = actionList.first();
+        }
+    }
+
     if (!action || !action->isEnabled()) {
         return false;
     }
@@ -2092,9 +2910,58 @@ int RibbonBar::recentSearchLimit() const
 /// Returns the quick access toolbar placed in the caption area.
 /// \return Quick access toolbar owned by the Ribbon bar.
 ///
-QToolBar *RibbonBar::quickAccessBar() const
+RibbonQuickAccessBar *RibbonBar::quickAccessBar() const
 {
     return m_quickAccessBar;
+}
+
+RibbonProgressBar *RibbonBar::progressBar() const
+{
+    return m_progressBar;
+}
+
+RibbonSearchBar *RibbonBar::searchBar() const
+{
+    return m_searchEdit;
+}
+
+void RibbonBar::setQuickAccessBarPosition(BarPosition position)
+{
+    m_quickAccessBarPosition = position;
+    updateQuickAccessGeometry();
+}
+
+RibbonBar::BarPosition RibbonBar::quickAccessBarPosition() const
+{
+    return m_quickAccessBarPosition;
+}
+
+void RibbonBar::setSearchBarAppearance(SearchBarAppearance appearance)
+{
+    m_searchBarAppearance = appearance;
+    if (appearance == SearchBarHidden) {
+        setSearchVisible(false);
+    } else {
+        setSearchVisible(true);
+        m_searchEdit->setCompact(appearance == SearchBarCompact);
+    }
+}
+
+RibbonBar::SearchBarAppearance RibbonBar::searchBarAppearance() const
+{
+    return m_searchBarAppearance;
+}
+
+void RibbonBar::setTabBarPosition(BarPosition position)
+{
+    m_tabBarPosition = position;
+    setTabPosition(position == TopPosition ? QTabWidget::North
+                                           : QTabWidget::South);
+}
+
+RibbonBar::BarPosition RibbonBar::tabBarPosition() const
+{
+    return m_tabBarPosition;
 }
 
 ///
@@ -2163,9 +3030,24 @@ QAction *RibbonBar::addTitleButton(const QIcon &icon, const QString &strText)
 void RibbonBar::clearQuickAccessActions()
 {
     m_quickAccessBar->clear();
+    m_quickAccessBar->addAction(m_quickAccessBar->actionCustomizeButton());
     m_quickAccessBar->hide();
     updateQuickAccessGeometry();
     updateStyleSheet();
+}
+
+void RibbonBar::removeTitleButton(QAction *action)
+{
+    if (!action) {
+        return;
+    }
+    m_titleButtonBar->removeAction(action);
+    action->deleteLater();
+    if (m_titleButtonBar->actions().isEmpty()) {
+        m_titleButtonBar->hide();
+    }
+    updateTitleButtonGeometry();
+    updateQuickAccessGeometry();
 }
 
 ///
@@ -2175,7 +3057,22 @@ void RibbonBar::clearQuickAccessActions()
 ///
 void RibbonBar::setCurrentPageIndex(int index)
 {
+    bool changed = true;
+    emit pageAboutToBeChanged(page(index), changed);
+    if (!changed) {
+        return;
+    }
     setCurrentIndex(index);
+}
+
+int RibbonBar::rowItemHeight() const
+{
+    return ribbonRowItemHeight(this);
+}
+
+int RibbonBar::rowItemCount() const
+{
+    return ribbonRowItemCount;
 }
 
 ///
@@ -2185,6 +3082,9 @@ void RibbonBar::setCurrentPageIndex(int index)
 ///
 void RibbonBar::setRibbonMinimized(bool minimized)
 {
+    if (!m_minimizationEnabled && minimized) {
+        return;
+    }
     if (m_ribbonMinimized == minimized) {
         return;
     }
@@ -2199,6 +3099,7 @@ void RibbonBar::setRibbonMinimized(bool minimized)
     updateQuickAccessGeometry();
     updateGeometry();
     emit ribbonMinimizedChanged(m_ribbonMinimized);
+    emit minimizationChanged(m_ribbonMinimized);
 }
 
 ///
@@ -2209,6 +3110,271 @@ void RibbonBar::setRibbonMinimized(bool minimized)
 bool RibbonBar::isRibbonMinimized() const
 {
     return m_ribbonMinimized;
+}
+
+void RibbonBar::minimize()
+{
+    setRibbonMinimized(true);
+}
+
+bool RibbonBar::isMinimized() const
+{
+    return isRibbonMinimized();
+}
+
+void RibbonBar::setMinimized(bool minimized)
+{
+    setRibbonMinimized(minimized);
+}
+
+void RibbonBar::maximize()
+{
+    setRibbonMinimized(false);
+}
+
+bool RibbonBar::isMaximized() const
+{
+    return !isRibbonMinimized();
+}
+
+void RibbonBar::setMaximized(bool maximized)
+{
+    setRibbonMinimized(!maximized);
+}
+
+void RibbonBar::setMinimizationEnabled(bool enabled)
+{
+    m_minimizationEnabled = enabled;
+    if (!enabled) {
+        setRibbonMinimized(false);
+    }
+}
+
+bool RibbonBar::isMinimizationEnabled() const
+{
+    return m_minimizationEnabled;
+}
+
+QAction *RibbonBar::simplifiedAction() const
+{
+    return m_simplifiedAction;
+}
+
+bool RibbonBar::simplifiedMode() const
+{
+    return m_simplifiedMode;
+}
+
+void RibbonBar::setSimplifiedMode(bool enabled)
+{
+    if (!m_simplifiedModeEnabled && enabled) {
+        return;
+    }
+    if (m_simplifiedMode == enabled) {
+        return;
+    }
+    m_simplifiedMode = enabled;
+    m_simplifiedAction->setChecked(enabled);
+    if (enabled) {
+        setRibbonMinimized(false);
+        setMaximumHeight(ribbonCaptionHeight + ribbonTabHeight + 48);
+    } else {
+        setMaximumHeight(QWIDGETSIZE_MAX);
+        updateRibbonMetrics();
+    }
+    emit simplifiedModeChanged(enabled);
+    updateGeometry();
+}
+
+bool RibbonBar::simplifiedModeEnabled() const
+{
+    return m_simplifiedModeEnabled;
+}
+
+void RibbonBar::setSimplifiedModeEnabled(bool enabled)
+{
+    m_simplifiedModeEnabled = enabled;
+    m_simplifiedAction->setEnabled(enabled);
+    if (!enabled) {
+        setSimplifiedMode(false);
+    }
+}
+
+Qt::LayoutDirection RibbonBar::expandDirection() const
+{
+    return m_expandDirection;
+}
+
+void RibbonBar::setExpandDirection(Qt::LayoutDirection direction)
+{
+    m_expandDirection = direction;
+    setLayoutDirection(direction);
+}
+
+RibbonCustomizeManager *RibbonBar::customizeManager()
+{
+    if (!m_customizeManager) {
+        m_customizeManager = new RibbonCustomizeManager(this);
+        m_customizeManager->addToolBar(m_quickAccessBar);
+    }
+    return m_customizeManager;
+}
+
+RibbonCustomizeDialog *RibbonBar::customizeDialog()
+{
+    if (!m_customizeDialog) {
+        m_customizeDialog = new RibbonCustomizeDialog(this);
+        RibbonQuickAccessBarCustomizePage *quickAccessPage =
+            new RibbonQuickAccessBarCustomizePage(this);
+        quickAccessPage->setWindowTitle(
+            QString::fromLatin1(QtnRibbonCustomizeQuickAccessToolBarString));
+        RibbonBarCustomizePage *ribbonPage =
+            new RibbonBarCustomizePage(this);
+        ribbonPage->setWindowTitle(
+            QString::fromLatin1(QtnRibbonCustomizeActionString));
+        m_customizeDialog->addPage(quickAccessPage);
+        m_customizeDialog->addPage(ribbonPage);
+    }
+    return m_customizeDialog;
+}
+
+void RibbonBar::showCustomizeDialog()
+{
+    customizeDialog()->show();
+    customizeDialog()->raise();
+    customizeDialog()->activateWindow();
+}
+
+QMenu *RibbonBar::addMenu(const QString &strText)
+{
+    QMenu *menu = new QMenu(strText, this);
+    m_ownedMenuList.append(menu);
+    return menu;
+}
+
+QAction *RibbonBar::addAction(const QIcon &icon,
+                              const QString &strText,
+                              Qt::ToolButtonStyle buttonStyle,
+                              QMenu *menu)
+{
+    QAction *action = new QAction(icon, strText, this);
+    if (menu) {
+        action->setMenu(menu);
+    }
+    addAction(action, buttonStyle);
+    return action;
+}
+
+QAction *RibbonBar::addAction(QAction *action, Qt::ToolButtonStyle buttonStyle)
+{
+    Q_UNUSED(buttonStyle)
+    if (!action) {
+        return nullptr;
+    }
+    addQuickAccessAction(action);
+    return action;
+}
+
+QAction *RibbonBar::addSystemButton(const QString &strText)
+{
+    return addSystemButton(QIcon(), strText);
+}
+
+QAction *RibbonBar::addSystemButton(const QIcon &icon, const QString &strText)
+{
+    if (!m_systemButton) {
+        m_systemButton = new RibbonSystemButton(this);
+        m_systemButton->setObjectName(QStringLiteral("lqRibbonSystemButton"));
+        m_systemButton->hide();
+    }
+    QAction *action = new QAction(icon, strText, this);
+    m_systemButton->setDefaultAction(action);
+    m_systemButton->show();
+    updateQuickAccessGeometry();
+    return action;
+}
+
+RibbonSystemButton *RibbonBar::systemButton() const
+{
+    return m_systemButton;
+}
+
+void RibbonBar::setAcrylicEnabled(bool enabled)
+{
+    m_acrylicEnabled = enabled;
+    update();
+}
+
+bool RibbonBar::isAcrylicEnabled() const
+{
+    return m_acrylicEnabled;
+}
+
+void RibbonBar::setContextualTabsVisible(bool visible)
+{
+    m_contextualTabsVisible = visible;
+    update();
+}
+
+bool RibbonBar::isContextualTabsVisible() const
+{
+    return m_contextualTabsVisible;
+}
+
+void RibbonBar::setTitleGroupsVisible(bool visible)
+{
+    m_titleGroupsVisible = visible;
+    update();
+}
+
+bool RibbonBar::isTitleGroupsVisible() const
+{
+    return m_titleGroupsVisible;
+}
+
+bool RibbonBar::isBackstageVisible() const
+{
+    return m_systemButton && m_systemButton->backstage()
+        && m_systemButton->backstage()->isVisible();
+}
+
+void RibbonBar::updateLayout()
+{
+    updateRibbonTabGeometry();
+    updateWindowControlGeometry();
+    updateSearchGeometry();
+    updateTitleButtonGeometry();
+    updateQuickAccessGeometry();
+    updateGeometry();
+}
+
+void RibbonBar::beginUpdate()
+{
+    ++m_updateLockCount;
+    setUpdatesEnabled(false);
+}
+
+void RibbonBar::endUpdate()
+{
+    if (m_updateLockCount > 0) {
+        --m_updateLockCount;
+    }
+    if (m_updateLockCount == 0) {
+        setUpdatesEnabled(true);
+        updateLayout();
+    }
+}
+
+bool RibbonBar::loadTranslation(const QString &strCountry)
+{
+    Q_UNUSED(strCountry)
+    return true;
+}
+
+QString RibbonBar::tr_compatible(const char *text, const char *context)
+{
+    Q_UNUSED(context)
+    return QString::fromUtf8(text);
 }
 
 ///
@@ -2242,6 +3408,7 @@ void RibbonBar::setFrameThemeEnabled(bool enabled)
     updateTitleButtonGeometry();
     updateQuickAccessGeometry();
     updateStyleSheet();
+    emit frameThemeChanged(enabled);
 }
 
 ///
@@ -2369,6 +3536,35 @@ void RibbonBar::paintEvent(QPaintEvent *event)
                      titleHeight,
                      QColor(QStringLiteral("#2b579a")));
 
+    QWidget *topLevelWidget = window();
+    if (!topLevelWidget) {
+        return;
+    }
+
+    const QIcon windowIcon = topLevelWidget->windowIcon();
+    const int iconSize = 16;
+    const int iconTop = ribbonCaptionTopMargin
+        + ((ribbonWindowButtonHeight - iconSize) / 2);
+    if (!windowIcon.isNull()) {
+        windowIcon.paint(&painter, QRect(7, iconTop, iconSize, iconSize));
+    }
+
+    const int titleLeft = 34;
+    const int titleRight = m_searchEdit->isVisible()
+        ? m_searchEdit->x() - 12
+        : width() - windowControlWidth() - 12;
+    const int titleWidth = qMax(0, titleRight - titleLeft);
+    if (titleWidth > 0) {
+        painter.setPen(Qt::white);
+        painter.drawText(QRect(titleLeft,
+                               ribbonCaptionTopMargin,
+                               titleWidth,
+                               ribbonWindowButtonHeight),
+                         Qt::AlignLeft | Qt::AlignVCenter,
+                         fontMetrics().elidedText(topLevelWidget->windowTitle(),
+                                                  Qt::ElideRight,
+                                                  titleWidth));
+    }
 }
 
 ///
@@ -2387,6 +3583,22 @@ void RibbonBar::resizeEvent(QResizeEvent *event)
     updateTitleButtonGeometry();
     updateQuickAccessGeometry();
     updateStyleSheet();
+}
+
+void RibbonBar::contextMenuEvent(QContextMenuEvent *event)
+{
+    QMenu menu(this);
+    QAction *minimizeAction = menu.addAction(
+        QString::fromLatin1(QtnRibbonMinimizeActionString));
+    minimizeAction->setCheckable(true);
+    minimizeAction->setChecked(isRibbonMinimized());
+    connect(minimizeAction, &QAction::toggled,
+            this, &RibbonBar::setRibbonMinimized);
+    menu.addAction(m_simplifiedAction);
+    emit showRibbonContextMenu(&menu, event);
+    if (!menu.isEmpty()) {
+        menu.exec(event->globalPos());
+    }
 }
 
 ///
@@ -2460,8 +3672,7 @@ void RibbonBar::updateRibbonTabGeometry()
 
 ///
 /// \brief RibbonBar::updateSearchGeometry
-/// Places the title-bar search box in the same left-aligned slot as the
-/// original application frame.
+/// Centers the title-bar search box while avoiding the right-side controls.
 ///
 void RibbonBar::updateSearchGeometry()
 {
@@ -2477,11 +3688,12 @@ void RibbonBar::updateSearchGeometry()
     const int rightLimit = controlWidth > 0
         ? width() - controlWidth - titleButtonReserve - 24
         : width() - 10;
-    const int preferredLeft = 80;
-    const int x = qMin(preferredLeft,
-                       qMax(0, rightLimit - minimumUsefulSearchWidth));
-    const int availableWidth = qMax(0, rightLimit - x);
+    const int availableWidth = qMax(0, rightLimit);
     const int searchWidth = qMin(preferredSearchWidth, availableWidth);
+    const int centeredX = qMax(0, (width() - searchWidth) / 2);
+    const int maxX = qMax(0, rightLimit - qMax(searchWidth,
+                                               minimumUsefulSearchWidth));
+    const int x = qMin(centeredX, maxX);
 
     m_searchEdit->setGeometry(x, topMargin, searchWidth, searchHeight);
     m_searchEdit->raise();
@@ -2515,6 +3727,12 @@ void RibbonBar::updateQuickAccessGeometry()
     const int leftMargin = qMin(leftLimit, qMax(0, rightLimit));
     const int maxWidth = qMax(0, rightLimit - leftMargin);
     const int barWidth = qMin(m_quickAccessBar->sizeHint().width(), maxWidth);
+
+    if (m_systemButton && m_systemButton->isVisible()) {
+        const int systemWidth = qMax(64, m_systemButton->sizeHint().width());
+        m_systemButton->setGeometry(6, topMargin, systemWidth, barHeight);
+        m_systemButton->raise();
+    }
 
     m_quickAccessBar->setGeometry(leftMargin, topMargin, barWidth, barHeight);
     m_quickAccessBar->raise();
@@ -2737,15 +3955,39 @@ void RibbonBar::updateSearchPopup()
                             m_searchPopupView->sizeHintForRow(row));
     }
 
-    const bool needsScrollBar = popupHeight > ribbonSearchPopupMaxHeight;
-    popupHeight = qMin(ribbonSearchPopupMaxHeight, popupHeight);
+    const int desiredPopupHeight = popupHeight;
+    QPoint popupTopLeft = m_searchEdit->mapToGlobal(
+        QPoint(0, m_searchEdit->height()));
+    const QPoint searchTopLeft = m_searchEdit->mapToGlobal(QPoint(0, 0));
+    const int popupWidth = m_searchEdit->width();
+
+    if (QScreen *screen = QApplication::screenAt(popupTopLeft)) {
+        const QRect screenRect = screen->availableGeometry();
+        const int belowHeight = qMax(0,
+                                     screenRect.bottom() - popupTopLeft.y() + 1
+                                     - ribbonSearchPopupScreenMargin);
+        const int aboveHeight = qMax(0,
+                                     searchTopLeft.y() - screenRect.top()
+                                     - ribbonSearchPopupScreenMargin);
+        const bool showAbove = belowHeight < desiredPopupHeight
+            && aboveHeight > belowHeight;
+        const int availableHeight = showAbove ? aboveHeight : belowHeight;
+        if (availableHeight > 0) {
+            popupHeight = qMin(desiredPopupHeight, availableHeight);
+        }
+        if (showAbove) {
+            popupTopLeft = QPoint(searchTopLeft.x(),
+                                  searchTopLeft.y() - popupHeight);
+        }
+    }
+
+    const bool needsScrollBar = desiredPopupHeight > popupHeight;
     m_searchPopupView->setVerticalScrollBarPolicy(needsScrollBar
                                                   ? Qt::ScrollBarAsNeeded
                                                   : Qt::ScrollBarAlwaysOff);
-    const QRect searchRect = m_searchEdit->geometry();
-    m_searchPopupView->setGeometry(searchRect.left(),
-                                   searchRect.bottom() + 1,
-                                   searchRect.width(),
+    m_searchPopupView->setGeometry(popupTopLeft.x(),
+                                   popupTopLeft.y(),
+                                   popupWidth,
                                    popupHeight);
     m_searchPopupView->show();
     m_searchPopupView->raise();
@@ -2864,17 +4106,10 @@ QList<QAction *> RibbonBar::matchedSearchActions(const QString &strText) const
         }
 
         QAction *action = button->defaultAction();
-        if (!action || actionList.contains(action)) {
-            continue;
-        }
-
-        const QString strActionText = searchActionText(action);
-        const QString strToolTip = action->toolTip();
-        const QString strObjectName = action->objectName();
-        if (normalizedSearchText(strActionText).contains(strNormalizedText)
-            || normalizedSearchText(strToolTip).contains(strNormalizedText)
-            || normalizedSearchText(strObjectName).contains(strNormalizedText)) {
-            actionList.append(action);
+        appendSearchActionIfMatches(actionList, action, strNormalizedText);
+        appendMenuSearchActions(actionList, button->menu(), strNormalizedText);
+        if (action) {
+            appendMenuSearchActions(actionList, action->menu(), strNormalizedText);
         }
     }
 
@@ -2883,6 +4118,80 @@ QList<QAction *> RibbonBar::matchedSearchActions(const QString &strText) const
     }
 
     return actionList;
+}
+
+///
+/// \brief RibbonBar::isSearchableAction
+/// Returns whether an action should appear in search results.
+/// \param action Action to test.
+/// \return true when the action is a visible command with display text.
+///
+bool RibbonBar::isSearchableAction(QAction *action) const
+{
+    if (!action || action->isSeparator() || !action->isVisible()) {
+        return false;
+    }
+
+    return !searchActionText(action).isEmpty();
+}
+
+///
+/// \brief RibbonBar::searchActionMatches
+/// Tests whether one visible command matches normalized search text.
+/// \param action Action to test.
+/// \param strNormalizedText Already normalized search text.
+/// \return true when current display text contains the query.
+///
+bool RibbonBar::searchActionMatches(QAction *action, const QString &strNormalizedText) const
+{
+    if (!isSearchableAction(action)) {
+        return false;
+    }
+
+    const QString strActionText = searchActionText(action);
+    return normalizedSearchText(strActionText).contains(strNormalizedText);
+}
+
+///
+/// \brief RibbonBar::appendSearchActionIfMatches
+/// Appends a matching action once.
+/// \param actionList Destination result list.
+/// \param action Candidate action.
+/// \param strNormalizedText Already normalized search text.
+///
+void RibbonBar::appendSearchActionIfMatches(QList<QAction *> &actionList,
+                                            QAction *action,
+                                            const QString &strNormalizedText) const
+{
+    if (!actionList.contains(action) && searchActionMatches(action, strNormalizedText)) {
+        actionList.append(action);
+    }
+}
+
+///
+/// \brief RibbonBar::appendMenuSearchActions
+/// Recursively appends matching actions from a menu and its submenus.
+/// \param actionList Destination result list.
+/// \param menu Menu to scan.
+/// \param strNormalizedText Already normalized search text.
+///
+void RibbonBar::appendMenuSearchActions(QList<QAction *> &actionList,
+                                        QMenu *menu,
+                                        const QString &strNormalizedText) const
+{
+    if (!menu) {
+        return;
+    }
+
+    const QList<QAction *> menuActions = menu->actions();
+    for (QAction *action : menuActions) {
+        if (!action || action->isSeparator()) {
+            continue;
+        }
+
+        appendSearchActionIfMatches(actionList, action, strNormalizedText);
+        appendMenuSearchActions(actionList, action->menu(), strNormalizedText);
+    }
 }
 
 ///
@@ -3065,8 +4374,8 @@ void RibbonBar::updateStyleSheet()
 /// Creates a main window with a top Ribbon bar and central content area.
 /// \param parent Parent widget.
 ///
-RibbonMainWindow::RibbonMainWindow(QWidget *parent)
-    : QMainWindow(parent)
+RibbonMainWindow::RibbonMainWindow(QWidget *parent, Qt::WindowFlags flags)
+    : QMainWindow(parent, flags)
     , m_rootWidget(new QWidget(this))
     , m_rootLayout(new QVBoxLayout(m_rootWidget))
     , m_ribbonBar(new RibbonBar(m_rootWidget))
@@ -3079,6 +4388,7 @@ RibbonMainWindow::RibbonMainWindow(QWidget *parent)
     m_rootLayout->setSpacing(0);
     m_rootLayout->addWidget(m_ribbonBar);
     QMainWindow::setCentralWidget(m_rootWidget);
+    updateNativeContentMargins();
     m_rootWidget->setMouseTracking(true);
     m_ribbonBar->setMouseTracking(true);
 
@@ -3108,6 +4418,21 @@ RibbonBar *RibbonMainWindow::ribbonBar() const
     return m_ribbonBar;
 }
 
+void RibbonMainWindow::setRibbonBar(RibbonBar *ribbonBar)
+{
+    if (!ribbonBar || ribbonBar == m_ribbonBar) {
+        return;
+    }
+    const int oldIndex = m_rootLayout->indexOf(m_ribbonBar);
+    if (m_ribbonBar) {
+        m_rootLayout->removeWidget(m_ribbonBar);
+        m_ribbonBar->deleteLater();
+    }
+    m_ribbonBar = ribbonBar;
+    m_ribbonBar->setParent(m_rootWidget);
+    m_rootLayout->insertWidget(qMax(0, oldIndex), m_ribbonBar);
+}
+
 ///
 /// \brief RibbonMainWindow::setCentralWidget
 /// Places a widget under the Ribbon bar and installs frame event filtering.
@@ -3129,6 +4454,15 @@ void RibbonMainWindow::setCentralWidget(QWidget *widget)
     widget->setMouseTracking(true);
     m_rootLayout->addWidget(widget, 1);
     polishMdiObject(widget);
+}
+
+void RibbonMainWindow::setCentralWidget(QStyle *style)
+{
+    QWidget *widget = new QWidget;
+    if (style) {
+        widget->setStyle(style);
+    }
+    setCentralWidget(widget);
 }
 
 ///
@@ -3155,10 +4489,12 @@ void RibbonMainWindow::setNativeFrameEnabled(bool enabled)
     setWindowFlags(flags);
     setAttribute(Qt::WA_NativeWindow, enabled);
     updateNativeWindowStyle();
+    updateNativeContentMargins();
 
     if (wasVisible) {
         show();
         updateNativeWindowStyle();
+        updateNativeContentMargins();
     }
 }
 
@@ -3242,6 +4578,13 @@ bool RibbonMainWindow::isFrameThemeEnabled() const
 ///
 bool RibbonMainWindow::eventFilter(QObject *object, QEvent *event)
 {
+    if (object == this
+        && (event->type() == QEvent::Show
+            || event->type() == QEvent::Resize
+            || event->type() == QEvent::WindowStateChange)) {
+        updateNativeContentMargins();
+    }
+
     if (handleNativeFrameEvent(object, event)) {
         return true;
     }
@@ -4006,6 +5349,25 @@ bool RibbonMainWindow::canNativeMaximize() const
     return hasMaximizeButton
         && canNativeResizeHorizontally()
         && canNativeResizeVertically();
+}
+
+///
+/// \brief RibbonMainWindow::updateNativeContentMargins
+/// Keeps custom-framed maximized content away from screen edges.
+///
+void RibbonMainWindow::updateNativeContentMargins()
+{
+    const bool needsSafeMargin = m_nativeFrameEnabled
+        && isMaximized()
+        && !windowState().testFlag(Qt::WindowFullScreen);
+    const int topMargin = needsSafeMargin ? ribbonMaximizedContentMargin : 0;
+    const int bottomMargin = needsSafeMargin ? ribbonMaximizedContentMargin * 2 : 0;
+    const QMargins targetMargins(0, topMargin, 0, bottomMargin);
+    if (contentsMargins() == targetMargins) {
+        return;
+    }
+
+    QMainWindow::setContentsMargins(targetMargins);
 }
 
 ///

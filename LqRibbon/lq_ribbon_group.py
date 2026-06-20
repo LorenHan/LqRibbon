@@ -4,10 +4,11 @@ LqRibbonGroup - Ribbon group that contains buttons and controls
 
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QVBoxLayout, QGridLayout,
-    QWidget, QSizePolicy
+    QWidget, QSizePolicy, QMenu, QFrame, QWidgetAction
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QIcon
+from .lq_ribbon_extras import CallableString, CallableList
 
 
 class LqRibbonGroup(QGroupBox):
@@ -17,9 +18,18 @@ class LqRibbonGroup(QGroupBox):
 
     def __init__(self, title, parent=None):
         super().__init__(title, parent)
-        self.title = title
-        self.buttons = []
-        self.actions = []
+        self.title = CallableString(title)
+        self.buttons = CallableList()
+        self.actions = CallableList()
+        self._controls = CallableList()
+        self._action_widgets = {}
+        self._option_button_action = None
+        self._option_button_visible = False
+        self._content_alignment = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        self._controls_alignment = self._content_alignment
+        self._title_elide_mode = Qt.TextElideMode.ElideRight
+        self._size_definition = 0
+        self._icon = QIcon()
         self.init_ui()
 
     def init_ui(self):
@@ -53,6 +63,18 @@ class LqRibbonGroup(QGroupBox):
         Returns:
             QAction: The created action
         """
+        if isinstance(icon, QAction):
+            action = icon
+            button_style = text
+            menu = tooltip
+            mode = style
+            button = self.add_action(action, button_style)
+            if menu is not None and hasattr(button, "setMenu"):
+                button.setMenu(menu)
+                if mode is not None:
+                    button.setPopupMode(mode)
+            return action
+
         # Handle backward compatibility: if the third argument is a style
         if isinstance(tooltip, Qt.ToolButtonStyle):
             style = tooltip
@@ -111,6 +133,7 @@ class LqRibbonGroup(QGroupBox):
         button = LqRibbonButton(action, button_style, self)
         self.buttons.append(button)
         self.actions.append(action)
+        self._action_widgets[action] = button
 
         # Add to layout based on style
         if button_style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
@@ -132,12 +155,32 @@ class LqRibbonGroup(QGroupBox):
 
         return button
 
+    def insertAction(self, before, action, style=Qt.ToolButtonStyle.ToolButtonTextBesideIcon, menu=None, mode=None):
+        """Insert an action before another action."""
+        button = self.add_action(action, style)
+        if menu is not None:
+            button.setMenu(menu)
+            button.setPopupMode(mode or button.popupMode())
+        if before in self.actions:
+            old_index = self.actions.index(action)
+            new_index = self.actions.index(before)
+            self.actions.insert(new_index, self.actions.pop(old_index))
+        return action
+
     def add_separator(self):
         """Add a vertical separator to the group"""
         separator = QWidget()
         separator.setFixedWidth(1)
         separator.setStyleSheet("background-color: #D1D1D1;")
         self.main_layout.addWidget(separator)
+        action = QAction(self)
+        action.setSeparator(True)
+        self.actions.append(action)
+        self._action_widgets[action] = separator
+        return action
+
+    def addSeparator(self):
+        return self.add_separator()
 
     def add_widget(self, widget):
         """Add a custom widget to the group
@@ -146,6 +189,32 @@ class LqRibbonGroup(QGroupBox):
             widget: The widget to add
         """
         self.main_layout.addWidget(widget)
+        action = QWidgetAction(self)
+        action.setDefaultWidget(widget)
+        self.actions.append(action)
+        self._action_widgets[action] = widget
+        return action
+
+    def addWidget(self, *args):
+        """Qtitan-style widget add overload."""
+        if len(args) == 1:
+            return self.add_widget(args[0])
+        if len(args) >= 3:
+            icon, text, widget = args[0], args[1], args[-1]
+            action = self.add_widget(widget)
+            action.setIcon(icon if isinstance(icon, QIcon) else QIcon(icon))
+            action.setText(text)
+            return action
+        return None
+
+    def addMenu(self, icon, text, style=Qt.ToolButtonStyle.ToolButtonFollowStyle):
+        menu = QMenu(text, self)
+        action = self.addAction(icon, text, style)
+        action.setMenu(menu)
+        button = self._action_widgets.get(action)
+        if button and hasattr(button, "setMenu"):
+            button.setMenu(menu)
+        return menu
 
     def add_layout(self, layout):
         """Add a custom layout to the group
@@ -217,6 +286,10 @@ class LqRibbonGroup(QGroupBox):
             button.deleteLater()
         self.buttons.clear()
         self.actions.clear()
+        self._action_widgets.clear()
+
+    def clear(self):
+        self.clear_actions()
 
     def set_title(self, title):
         """Set the group title
@@ -224,5 +297,114 @@ class LqRibbonGroup(QGroupBox):
         Args:
             title: New title for the group
         """
-        self.title = title
+        self.title = CallableString(title)
         self.setTitle(title)
+
+    def setTitle(self, title):
+        self.title = CallableString(title)
+        super().setTitle(title)
+
+    def ribbonBar(self):
+        page = self.parent()
+        return page.ribbonBar() if page and hasattr(page, "ribbonBar") else None
+
+    def isReduced(self):
+        return False
+
+    def setIcon(self, icon):
+        self._icon = icon if isinstance(icon, QIcon) else QIcon(icon)
+
+    def icon(self):
+        return self._icon
+
+    def isOptionButtonVisible(self):
+        return self._option_button_visible
+
+    def setOptionButtonVisible(self, visible=True):
+        self._option_button_visible = bool(visible)
+
+    def optionButtonAction(self):
+        return self._option_button_action
+
+    def setOptionButtonAction(self, action):
+        self._option_button_action = action
+        self.setOptionButtonVisible(action is not None)
+
+    def contentAlignment(self):
+        return self._content_alignment
+
+    def setContentAlignment(self, alignment):
+        self._content_alignment = alignment
+        self.main_layout.setAlignment(alignment)
+
+    def controlsAlignment(self):
+        return self._controls_alignment
+
+    def setControlsAlignment(self, alignment):
+        self._controls_alignment = alignment
+
+    def spacing(self):
+        return self.main_layout.spacing()
+
+    def setSpacing(self, spacing):
+        self.main_layout.setSpacing(spacing)
+
+    def controlCount(self):
+        return len(self._controls)
+
+    def controlByIndex(self, index):
+        return self._controls[index] if 0 <= index < len(self._controls) else None
+
+    def controlByAction(self, action):
+        return self._action_widgets.get(action)
+
+    def controlByWidget(self, widget):
+        return widget if widget in self._controls else None
+
+    def addControl(self, control):
+        if control not in self._controls:
+            self._controls.append(control)
+            self.add_widget(control)
+
+    def removeControl(self, control):
+        if control in self._controls:
+            self._controls.remove(control)
+            self.remove(control)
+
+    def remove(self, widget):
+        self.main_layout.removeWidget(widget)
+        if widget in self.buttons:
+            self.buttons.remove(widget)
+        for action, action_widget in list(self._action_widgets.items()):
+            if action_widget is widget:
+                self._action_widgets.pop(action, None)
+                if action in self.actions:
+                    self.actions.remove(action)
+        widget.deleteLater()
+
+    def titleElideMode(self):
+        return self._title_elide_mode
+
+    def setTitleElideMode(self, mode):
+        self._title_elide_mode = mode
+
+    def sizeDefinition(self):
+        return self._size_definition
+
+    def setSizeDefinition(self, definition):
+        self._size_definition = definition
+
+    def setControlsCentering(self, enabled=True):
+        self.setContentAlignment(Qt.AlignmentFlag.AlignCenter if enabled else Qt.AlignmentFlag.AlignLeft)
+
+    def isControlsCentering(self):
+        return bool(self._content_alignment & Qt.AlignmentFlag.AlignHCenter)
+
+    def setControlsGrouping(self, enabled=True):
+        self._controls_grouping = bool(enabled)
+
+    def isControlsGrouping(self):
+        return getattr(self, "_controls_grouping", False)
+
+
+RibbonGroup = LqRibbonGroup

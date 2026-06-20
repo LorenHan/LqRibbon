@@ -7,10 +7,18 @@ from .lq_ribbon_bar import LqRibbonBar
 from .lq_ribbon_page import LqRibbonPage
 from .lq_ribbon_group import LqRibbonGroup
 from .lq_ribbon_button import LqRibbonButton
+from . import lq_ribbon_extras as _extras
+from .lq_ribbon_extras import *
 from .lq_styles import LqStyle
 from .lq_icon_generator import LqIconGenerator
 
-__version__ = "1.0.0"
+RibbonMainWindow = LqRibbonWindow
+RibbonBar = LqRibbonBar
+RibbonPage = LqRibbonPage
+RibbonGroup = LqRibbonGroup
+RibbonButton = LqRibbonButton
+
+__version__ = "6.8.0-compatible"
 __author__ = "LqRibbon"
 
 __all__ = [
@@ -19,6 +27,14 @@ __all__ = [
     "LqRibbonPage",
     "LqRibbonGroup",
     "LqRibbonButton",
+    "RibbonMainWindow",
+    "RibbonBar",
+    "RibbonPage",
+    "RibbonGroup",
+    "RibbonButton",
     "LqStyle",
     "LqIconGenerator"
+] + [
+    name for name in dir(_extras)
+    if not name.startswith("_")
 ]
