@@ -332,14 +332,24 @@ RibbonSearchBar::~RibbonSearchBar() = default;
 QSize RibbonSearchBar::minimumSizeHint() const
 {
     QSize hint = QLineEdit::minimumSizeHint();
-    hint.setWidth(m_compact ? 120 : 180);
+    hint.setWidth(m_compact ? 36 : 180);
     return hint;
 }
 
 void RibbonSearchBar::setCompact(bool compact)
 {
+    if (m_compact == compact) {
+        return;
+    }
     m_compact = compact;
+    setTextMargins(m_compact ? 48 : 0, 0, 0, 0);
     updateGeometry();
+    update();
+}
+
+bool RibbonSearchBar::isCompact() const
+{
+    return m_compact;
 }
 
 const QIcon &RibbonSearchBar::icon() const
@@ -461,6 +471,24 @@ void RibbonSearchBar::keyPressEvent(QKeyEvent *event)
 void RibbonSearchBar::paintEvent(QPaintEvent *event)
 {
     QLineEdit::paintEvent(event);
+    if (!m_compact) {
+        return;
+    }
+
+    QPainter painter(this);
+    const int iconSize = qMin(16, qMin(width(), height()) - 6);
+    if (iconSize <= 0) {
+        return;
+    }
+
+    const QRect iconRect((width() - iconSize) / 2,
+                         (height() - iconSize) / 2,
+                         iconSize,
+                         iconSize);
+    m_icon.paint(&painter,
+                 iconRect,
+                 Qt::AlignCenter,
+                 isEnabled() ? QIcon::Normal : QIcon::Disabled);
 }
 
 void RibbonSearchBar::focusInEvent(QFocusEvent *event)
@@ -477,6 +505,9 @@ void RibbonSearchBar::focusOutEvent(QFocusEvent *event)
 void RibbonSearchBar::resizeEvent(QResizeEvent *event)
 {
     QLineEdit::resizeEvent(event);
+    if (m_compact) {
+        setTextMargins(width() + 12, 0, 0, 0);
+    }
 }
 
 RibbonBackstageSeparator::RibbonBackstageSeparator(QWidget *parent)

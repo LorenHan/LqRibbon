@@ -191,6 +191,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *resetQuickAccessAction,
                      QAction *exportQuickAccessAction,
                      QAction *importQuickAccessAction,
+                     QAction *centerSearchAction,
+                     QAction *compactSearchAction,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
                      const std::function<void(QMenu *, QAction *)> &populateActionContextMenu,
                      const std::function<void(QMenu *, QAction *)> &populateQuickAccessActionContextMenu,
@@ -283,12 +285,42 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     if (!require(ribbonBar->searchBarAppearance()
                          == LqRibbon::RibbonBar::SearchBarCentral
                      && ribbonBar->searchLineEdit()->isVisible()
+                     && !ribbonBar->searchBar()->isCompact()
                      && ribbonBar->searchLineEdit()->placeholderText()
                          == QStringLiteral("Search commands")
                      && searchGeometry.width() >= 120
                      && qAbs(searchGeometry.center().x()
                              - ribbonBar->rect().center().x()) <= 2,
                  QStringLiteral("caption search defaults to centered Microsoft box"))) {
+        return 1;
+    }
+
+    compactSearchAction->trigger();
+    processCollapseTestEvents();
+    const QRect compactSearchGeometry = ribbonBar->searchLineEdit()->geometry();
+    if (!require(ribbonBar->searchBarAppearance()
+                         == LqRibbon::RibbonBar::SearchBarCompact
+                     && compactSearchAction->isChecked()
+                     && !centerSearchAction->isChecked()
+                     && ribbonBar->searchLineEdit()->isVisible()
+                     && ribbonBar->searchBar()->isCompact()
+                     && compactSearchGeometry.width() <= 44
+                     && qAbs(compactSearchGeometry.center().x()
+                             - ribbonBar->rect().center().x()) <= 2,
+                 QStringLiteral("compact search mode shows centered icon box"))) {
+        return 1;
+    }
+
+    centerSearchAction->trigger();
+    processCollapseTestEvents();
+    if (!require(ribbonBar->searchBarAppearance()
+                         == LqRibbon::RibbonBar::SearchBarCentral
+                     && centerSearchAction->isChecked()
+                     && !compactSearchAction->isChecked()
+                     && !ribbonBar->searchBar()->isCompact()
+                     && ribbonBar->searchLineEdit()->geometry().width()
+                         > compactSearchGeometry.width(),
+                 QStringLiteral("center search mode restores full box"))) {
         return 1;
     }
 
@@ -1721,6 +1753,8 @@ int main(int argc, char *argv[])
         : QString();
     const bool searchPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-search-preview"));
+    const bool compactSearchPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-search-compact-preview"));
     const bool collapsedPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
     const bool simplifiedPreviewRequested =
@@ -1814,6 +1848,7 @@ int main(int argc, char *argv[])
         || resetQuickAccessPreviewRequested
         || exportQuickAccessPreviewRequested
         || importQuickAccessPreviewRequested
+        || compactSearchPreviewRequested
         || searchPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
@@ -1827,7 +1862,8 @@ int main(int argc, char *argv[])
         || reorderQuickAccessPreviewRequested
         || resetQuickAccessPreviewRequested
         || exportQuickAccessPreviewRequested
-        || importQuickAccessPreviewRequested) {
+        || importQuickAccessPreviewRequested
+        || compactSearchPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -2166,6 +2202,23 @@ int main(int argc, char *argv[])
         QObject::tr("Stress Width"),
         Qt::ToolButtonTextBesideIcon);
     widthStressAction->setCheckable(true);
+    QActionGroup *searchModeGroup = new QActionGroup(&mainWindow);
+    searchModeGroup->setExclusive(true);
+    QAction *centerSearchAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogContentsView),
+        QObject::tr("Center Search"),
+        Qt::ToolButtonTextBesideIcon);
+    centerSearchAction->setObjectName(QStringLiteral("centerSearchAction"));
+    centerSearchAction->setCheckable(true);
+    centerSearchAction->setChecked(true);
+    searchModeGroup->addAction(centerSearchAction);
+    QAction *compactSearchAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogContentsView),
+        QObject::tr("Compact Search"),
+        Qt::ToolButtonTextBesideIcon);
+    compactSearchAction->setObjectName(QStringLiteral("compactSearchAction"));
+    compactSearchAction->setCheckable(true);
+    searchModeGroup->addAction(compactSearchAction);
     QAction *showQuickAccessBarAction = new QAction(
         mainWindow.style()->standardIcon(QStyle::SP_TitleBarNormalButton),
         QObject::tr("Show Quick Access Toolbar"),
@@ -2317,6 +2370,8 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), pinRibbonAction);
     customizeManager->addToCategory(QObject::tr("Actions"), unpinRibbonAction);
     customizeManager->addToCategory(QObject::tr("Actions"), widthStressAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), centerSearchAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), compactSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     showQuickAccessBarAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
@@ -2484,6 +2539,20 @@ int main(int argc, char *argv[])
                      [updateResponsiveLabelsPreview](bool) {
                          updateResponsiveLabelsPreview();
                      });
+    QObject::connect(centerSearchAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow]() {
+        mainWindow.ribbonBar()->setSearchBarAppearance(
+            LqRibbon::RibbonBar::SearchBarCentral);
+    });
+    QObject::connect(compactSearchAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow]() {
+        mainWindow.ribbonBar()->setSearchBarAppearance(
+            LqRibbon::RibbonBar::SearchBarCompact);
+    });
 
     auto updateQuickAccessPreview =
         [&mainWindow,
@@ -3288,6 +3357,8 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
     mainWindow.ribbonBar()->registerSearchAction(toggleGroupAction);
     mainWindow.ribbonBar()->registerSearchAction(widthStressAction);
+    mainWindow.ribbonBar()->registerSearchAction(centerSearchAction);
+    mainWindow.ribbonBar()->registerSearchAction(compactSearchAction);
     mainWindow.ribbonBar()->registerSearchAction(showQuickAccessBarAction);
     mainWindow.ribbonBar()->registerSearchAction(quickAccessAboveAction);
     mainWindow.ribbonBar()->registerSearchAction(quickAccessBelowAction);
@@ -3405,6 +3476,8 @@ int main(int argc, char *argv[])
                                 resetQuickAccessAction,
                                 exportQuickAccessAction,
                                 importQuickAccessAction,
+                                centerSearchAction,
+                                compactSearchAction,
                                 populateQuickAccessMenu,
                                 populateActionContextMenu,
                                 populateQuickAccessActionContextMenu,
@@ -3439,6 +3512,11 @@ int main(int argc, char *argv[])
         QTimer::singleShot(120, &mainWindow, [&mainWindow]() {
             mainWindow.ribbonBar()->searchLineEdit()->setFocus();
             mainWindow.ribbonBar()->setSearchText(QStringLiteral("ba"));
+        });
+    }
+    if (compactSearchPreviewRequested) {
+        QTimer::singleShot(120, &mainWindow, [compactSearchAction]() {
+            compactSearchAction->trigger();
         });
     }
 

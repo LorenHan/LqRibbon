@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QStackedWidget,
     QStatusBar,
+    QStyle,
     QTimeEdit,
     QToolBar,
     QToolButton,
@@ -773,13 +774,22 @@ class LqRibbonSearchBar(QLineEdit):
         self._suggested_actions = []
         self._max_search_item_count = 8
         self._popup = QMenu(self)
+        self._icon = self.style().standardIcon(
+            QStyle.StandardPixmap.SP_FileDialogContentsView
+        )
         self.setPlaceholderText(QtnRibbonSearchBarSearchString)
 
     def setCompact(self, compact):
         self._compact = bool(compact)
+        self.setTextMargins(48 if self._compact else 0, 0, 0, 0)
+        self.updateGeometry()
+        self.update()
+
+    def isCompact(self):
+        return self._compact
 
     def icon(self):
-        return QIcon()
+        return self._icon
 
     def isHelpEnabled(self):
         return self._help_enabled
@@ -823,6 +833,27 @@ class LqRibbonSearchBar(QLineEdit):
 
     def closePopup(self):
         self._popup.hide()
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if not self._compact:
+            return
+        icon_size = min(16, self.width(), self.height() - 6)
+        if icon_size <= 0:
+            return
+        painter = QPainter(self)
+        icon_rect = QRect(
+            (self.width() - icon_size) // 2,
+            (self.height() - icon_size) // 2,
+            icon_size,
+            icon_size,
+        )
+        self._icon.paint(painter, icon_rect, Qt.AlignmentFlag.AlignCenter)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._compact:
+            self.setTextMargins(self.width() + 12, 0, 0, 0)
 
 
 class LqRibbonSliderPane(QWidget):

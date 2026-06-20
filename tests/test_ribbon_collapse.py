@@ -29,6 +29,7 @@ from main_window import (
     MainWindow,
     QUICK_ACCESS_BOTTOM_POSITION,
     QUICK_ACCESS_TOP_POSITION,
+    SEARCH_BAR_COMPACT,
     SEARCH_BAR_CENTRAL,
 )
 
@@ -305,6 +306,36 @@ def test_example_caption_search_defaults_to_centered_microsoft_box():
     assert search.placeholderText() == "Search commands"
     assert search_geometry.width() >= 120
     assert abs(search_geometry.center().x() - ribbon.rect().center().x()) <= 2
+    window.close()
+
+
+def test_example_compact_search_action_switches_caption_search_to_icon_mode():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    search = ribbon.searchLineEdit()
+    central_width = search.geometry().width()
+
+    window.compact_search_action.trigger()
+    _app().processEvents()
+    compact_geometry = search.geometry()
+    assert ribbon.searchBarAppearance() == SEARCH_BAR_COMPACT
+    assert window.compact_search_action.isChecked()
+    assert not window.center_search_action.isChecked()
+    assert search.isVisible()
+    assert search.isCompact()
+    assert compact_geometry.width() <= 44
+    assert abs(compact_geometry.center().x() - ribbon.rect().center().x()) <= 2
+
+    window.center_search_action.trigger()
+    _app().processEvents()
+    assert ribbon.searchBarAppearance() == SEARCH_BAR_CENTRAL
+    assert window.center_search_action.isChecked()
+    assert not window.compact_search_action.isChecked()
+    assert not search.isCompact()
+    assert search.geometry().width() > compact_geometry.width()
+    assert search.geometry().width() == central_width
     window.close()
 
 
@@ -808,6 +839,7 @@ def main():
         test_example_pin_unpin_actions_control_display_policy,
         test_example_display_options_menu_controls_ribbon_modes,
         test_example_caption_search_defaults_to_centered_microsoft_box,
+        test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,

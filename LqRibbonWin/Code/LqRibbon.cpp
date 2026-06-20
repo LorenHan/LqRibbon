@@ -3246,12 +3246,15 @@ RibbonBar::BarPosition RibbonBar::quickAccessBarPosition() const
 void RibbonBar::setSearchBarAppearance(SearchBarAppearance appearance)
 {
     m_searchBarAppearance = appearance;
+    m_searchVisibleExplicitlySet = true;
+    m_searchEdit->setCompact(appearance == SearchBarCompact);
+    m_searchEdit->setVisible(appearance != SearchBarHidden);
     if (appearance == SearchBarHidden) {
-        setSearchVisible(false);
-    } else {
-        setSearchVisible(true);
-        m_searchEdit->setCompact(appearance == SearchBarCompact);
+        hideSearchPopup();
     }
+
+    updateSearchGeometry();
+    updateQuickAccessGeometry();
 }
 
 RibbonBar::SearchBarAppearance RibbonBar::searchBarAppearance() const
@@ -4072,8 +4075,10 @@ void RibbonBar::updateRibbonTabGeometry()
 ///
 void RibbonBar::updateSearchGeometry()
 {
-    const int preferredSearchWidth = 524;
-    const int minimumUsefulSearchWidth = 120;
+    const bool compactSearch =
+        m_searchBarAppearance == RibbonBar::SearchBarCompact;
+    const int preferredSearchWidth = compactSearch ? 36 : 524;
+    const int minimumUsefulSearchWidth = compactSearch ? 36 : 120;
     const int searchHeight = 22;
     const int topMargin = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - searchHeight) / 2);

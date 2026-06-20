@@ -130,6 +130,7 @@ public:
 
     QSize minimumSizeHint() const override;
     void setCompact(bool compact);
+    bool isCompact() const;
     const QIcon &icon() const;
     bool isHelpEnabled() const;
     void setHelpEnabled(bool enabled);

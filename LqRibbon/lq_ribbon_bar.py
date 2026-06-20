@@ -278,10 +278,12 @@ class LqRibbonBar(QTabWidget):
             stack.setGeometry(0, stack_top, self.width(), stack_height)
             stack.setVisible(command_area_visible)
 
+        compact_search = self._search_bar_appearance == 2
+        search_width = 36 if compact_search else min(524, max(120, self.width() - 220))
         self._search_bar.setGeometry(
-            max(0, (self.width() - 524) // 2),
+            max(0, (self.width() - search_width) // 2),
             7,
-            min(524, max(120, self.width() - 220)),
+            search_width,
             22,
         )
         self._search_bar.raise_()
@@ -835,6 +837,7 @@ class LqRibbonBar(QTabWidget):
 
     def setSearchBarAppearance(self, appearance):
         self._search_bar_appearance = appearance
+        self._search_bar.setCompact(appearance == 2)
         self._search_bar.setVisible(appearance != 3)
         self._update_layout()
 

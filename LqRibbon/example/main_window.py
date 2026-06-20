@@ -57,6 +57,7 @@ SYSTEM_RIBBON_STYLE_VALUE = -1
 QUICK_ACCESS_TOP_POSITION = 1
 QUICK_ACCESS_BOTTOM_POSITION = 2
 SEARCH_BAR_CENTRAL = 1
+SEARCH_BAR_COMPACT = 2
 RIBBON_STYLE_SETTINGS_KEY = "Ribbon/Style"
 
 
@@ -263,7 +264,7 @@ class MainWindow(RibbonMainWindow):
 
         ribbon.setCurrentPageIndex(ribbon.pageIndex(self.driver_page))
         self.setFrameThemeEnabled(True)
-        ribbon.setSearchBarAppearance(SEARCH_BAR_CENTRAL)
+        self.set_search_bar_appearance(SEARCH_BAR_CENTRAL)
         ribbon.setSearchPlaceholderText("Search commands")
         ribbon.setRecentSearchLimit(5)
 
@@ -555,6 +556,27 @@ class MainWindow(RibbonMainWindow):
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
         self.width_stress_action.setCheckable(True)
+        self.search_mode_group = QActionGroup(self)
+        self.search_mode_group.setExclusive(True)
+        self.center_search_action = self._add_group_action(
+            self.runtime_group,
+            QStyle.StandardPixmap.SP_FileDialogContentsView,
+            "Center Search",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.center_search_action.setObjectName("centerSearchAction")
+        self.center_search_action.setCheckable(True)
+        self.center_search_action.setChecked(True)
+        self.search_mode_group.addAction(self.center_search_action)
+        self.compact_search_action = self._add_group_action(
+            self.runtime_group,
+            QStyle.StandardPixmap.SP_FileDialogContentsView,
+            "Compact Search",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.compact_search_action.setObjectName("compactSearchAction")
+        self.compact_search_action.setCheckable(True)
+        self.search_mode_group.addAction(self.compact_search_action)
         self.responsive_label_actions = [
             self.rename_page_action,
             self.move_gallery_action,
@@ -745,6 +767,8 @@ class MainWindow(RibbonMainWindow):
             self.connect_action,
             self.office_popup_action,
             self.show_customize_action,
+            self.center_search_action,
+            self.compact_search_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
             self.export_quick_access_action,
@@ -778,6 +802,12 @@ class MainWindow(RibbonMainWindow):
         self.toggle_group_action.triggered.connect(self.toggle_specialist_group)
         self.width_stress_action.toggled.connect(
             lambda _checked: self.update_responsive_label_preview()
+        )
+        self.center_search_action.triggered.connect(
+            lambda _checked=False: self.set_search_bar_appearance(SEARCH_BAR_CENTRAL)
+        )
+        self.compact_search_action.triggered.connect(
+            lambda _checked=False: self.set_search_bar_appearance(SEARCH_BAR_COMPACT)
         )
         self.office_popup_action.triggered.connect(self.show_office_popup)
         self.office_menu_action.triggered.connect(self.show_office_menu)
@@ -943,6 +973,8 @@ class MainWindow(RibbonMainWindow):
             self.move_gallery_action,
             self.toggle_group_action,
             self.width_stress_action,
+            self.center_search_action,
+            self.compact_search_action,
             self.show_quick_access_action,
             self.quick_access_above_action,
             self.quick_access_below_action,
@@ -1227,6 +1259,15 @@ class MainWindow(RibbonMainWindow):
             2500,
         )
         return imported
+
+    def set_search_bar_appearance(self, appearance):
+        self.ribbonBar().setSearchBarAppearance(appearance)
+        center_blocked = self.center_search_action.blockSignals(True)
+        self.center_search_action.setChecked(appearance == SEARCH_BAR_CENTRAL)
+        self.center_search_action.blockSignals(center_blocked)
+        compact_blocked = self.compact_search_action.blockSignals(True)
+        self.compact_search_action.setChecked(appearance == SEARCH_BAR_COMPACT)
+        self.compact_search_action.blockSignals(compact_blocked)
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()
