@@ -373,13 +373,17 @@ def test_example_quick_access_menu_controls_toolbar_visibility():
     assert window.show_quick_access_action in menu.actions()
     assert window.quick_access_above_action in menu.actions()
     assert window.quick_access_below_action in menu.actions()
+    assert window.quick_access_labels_action in menu.actions()
     assert window.show_quick_access_action.isChecked()
     assert window.quick_access_above_action.isChecked()
+    assert not window.quick_access_labels_action.isChecked()
     assert window.ribbonBar().quickAccessBarPosition() == QUICK_ACCESS_TOP_POSITION
     assert not quick_access_bar.isHidden()
     assert quick_access_bar.visibleCount() == 3
+    assert quick_access_bar.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
     assert "Visible 3/3" in status.text()
     assert "Above" in status.text()
+    assert "Icons" in status.text()
 
     window.show_quick_access_action.trigger()
     _app().processEvents()
@@ -404,6 +408,25 @@ def test_example_quick_access_menu_controls_toolbar_visibility():
     assert window.ribbonBar().quickAccessBarPosition() == QUICK_ACCESS_TOP_POSITION
     assert window.quick_access_above_action.isChecked()
     assert "Above" in status.text()
+
+    window.quick_access_labels_action.trigger()
+    _app().processEvents()
+    assert window.quick_access_labels_action.isChecked()
+    assert (
+        quick_access_bar.toolButtonStyle()
+        == Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+    )
+    assert "Labels" in status.text()
+    assert (
+        quick_access_bar.widgetForAction(window.full_screen_action).toolButtonStyle()
+        == Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+    )
+
+    window.quick_access_labels_action.trigger()
+    _app().processEvents()
+    assert not window.quick_access_labels_action.isChecked()
+    assert quick_access_bar.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+    assert "Icons" in status.text()
     window.close()
 
 

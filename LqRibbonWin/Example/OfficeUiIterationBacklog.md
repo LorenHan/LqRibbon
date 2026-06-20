@@ -52,7 +52,7 @@ Default style remains `Office 2016 Blue`.
 | 021 | Quick Access Toolbar show/hide | QAT menu | Complete |
 | 022 | QAT above-ribbon position | QAT menu | Complete |
 | 023 | QAT below-ribbon position | QAT menu | Complete |
-| 024 | QAT command labels on/off | QAT menu | Planned |
+| 024 | QAT command labels on/off | QAT menu | Complete |
 | 025 | Add command to QAT from context menu | Action context menu | Planned |
 | 026 | Remove command from QAT | QAT context menu | Planned |
 | 027 | Reorder QAT commands | Customize dialog | Planned |

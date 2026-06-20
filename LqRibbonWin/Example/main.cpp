@@ -181,6 +181,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *showQuickAccessBarAction,
                      QAction *quickAccessAboveAction,
                      QAction *quickAccessBelowAction,
+                     QAction *quickAccessLabelsAction,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
                      QAction *renamePageAction,
                      QAction *moveGalleryAction,
@@ -479,6 +480,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     if (!require(quickAccessMenu.actions().contains(showQuickAccessBarAction)
                      && quickAccessMenu.actions().contains(quickAccessAboveAction)
                      && quickAccessMenu.actions().contains(quickAccessBelowAction)
+                     && quickAccessMenu.actions().contains(quickAccessLabelsAction)
                      && showQuickAccessBarAction->isChecked(),
                  QStringLiteral("quick access menu exposes show action"))) {
         return 1;
@@ -492,6 +494,12 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     if (!require(!quickAccessBar->isHidden()
                      && quickAccessBar->visibleCount() == 3,
                  QStringLiteral("quick access toolbar starts visible"))) {
+        return 1;
+    }
+    if (!require(!quickAccessLabelsAction->isChecked()
+                     && quickAccessBar->toolButtonStyle()
+                         == Qt::ToolButtonIconOnly,
+                 QStringLiteral("quick access labels start hidden"))) {
         return 1;
     }
     if (!require(quickAccessStatusPreview->text().contains(
@@ -543,6 +551,27 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
     quickAccessAboveAction->trigger();
     processCollapseTestEvents();
+
+    quickAccessLabelsAction->trigger();
+    processCollapseTestEvents();
+    if (!require(quickAccessLabelsAction->isChecked()
+                     && quickAccessBar->toolButtonStyle()
+                         == Qt::ToolButtonTextBesideIcon
+                     && quickAccessStatusPreview->text().contains(
+                         QStringLiteral("Labels")),
+                 QStringLiteral("quick access labels action shows labels"))) {
+        return 1;
+    }
+    quickAccessLabelsAction->trigger();
+    processCollapseTestEvents();
+    if (!require(!quickAccessLabelsAction->isChecked()
+                     && quickAccessBar->toolButtonStyle()
+                         == Qt::ToolButtonIconOnly
+                     && quickAccessStatusPreview->text().contains(
+                         QStringLiteral("Icons")),
+                 QStringLiteral("quick access labels action hides labels"))) {
+        return 1;
+    }
 
     reset();
     if (!require(collapseStatePreview->text().contains(QStringLiteral("Expanded")),
@@ -1441,6 +1470,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-qat-above-preview"));
     const bool quickAccessBelowPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-qat-below-preview"));
+    const bool quickAccessLabelsPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-qat-labels-preview"));
     const bool stylePreviewRequested =
         argumentList.contains(QStringLiteral("--grab-style-preview"));
     const bool collapseTestsRequested =
@@ -1487,12 +1518,14 @@ int main(int argc, char *argv[])
         || quickAccessHiddenPreviewRequested
         || quickAccessAbovePreviewRequested
         || quickAccessBelowPreviewRequested
+        || quickAccessLabelsPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
         mainWindow.resize(1180, 560);
     }
     if (widthStressPreviewRequested || quickAccessHiddenPreviewRequested
-        || quickAccessAbovePreviewRequested || quickAccessBelowPreviewRequested) {
+        || quickAccessAbovePreviewRequested || quickAccessBelowPreviewRequested
+        || quickAccessLabelsPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -1852,6 +1885,13 @@ int main(int argc, char *argv[])
     quickAccessBelowAction->setObjectName(
         QStringLiteral("quickAccessBelowAction"));
     quickAccessBelowAction->setCheckable(true);
+    QAction *quickAccessLabelsAction = new QAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogContentsView),
+        QObject::tr("Show Command Labels"),
+        &mainWindow);
+    quickAccessLabelsAction->setObjectName(
+        QStringLiteral("quickAccessLabelsAction"));
+    quickAccessLabelsAction->setCheckable(true);
 
     LqRibbon::RibbonGroup *popupGroup =
         shellPage->addGroup(QObject::tr("Popups"));
@@ -1957,6 +1997,8 @@ int main(int argc, char *argv[])
                                     quickAccessAboveAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     quickAccessBelowAction);
+    customizeManager->addToCategory(QObject::tr("Actions"),
+                                    quickAccessLabelsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), officePopupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), showCustomizeAction);
     customizeManager->setPageId(shellPage, QStringLiteral("shell"));
@@ -2096,6 +2138,7 @@ int main(int argc, char *argv[])
          showQuickAccessBarAction,
          quickAccessAboveAction,
          quickAccessBelowAction,
+         quickAccessLabelsAction,
          quickAccessActions,
          &quickAccessStatusPreview]() {
         LqRibbon::RibbonQuickAccessBar *quickAccessBar =
@@ -2116,6 +2159,13 @@ int main(int argc, char *argv[])
             ribbonBar->quickAccessBarPosition()
             == LqRibbon::RibbonBar::BottomPosition);
         quickAccessBelowAction->blockSignals(oldBelowBlocked);
+        const bool labelsVisible =
+            quickAccessBar->toolButtonStyle()
+            == Qt::ToolButtonTextBesideIcon;
+        const bool oldLabelsBlocked =
+            quickAccessLabelsAction->blockSignals(true);
+        quickAccessLabelsAction->setChecked(labelsVisible);
+        quickAccessLabelsAction->blockSignals(oldLabelsBlocked);
 
         if (quickAccessStatusPreview) {
             const int visibleCount = visible ? quickAccessBar->visibleCount() : 0;
@@ -2125,12 +2175,14 @@ int main(int argc, char *argv[])
                 ? QObject::tr("Above")
                 : QObject::tr("Below");
             quickAccessStatusPreview->setText(
-                QObject::tr("QAT: %1 %2/%3 | %4")
+                QObject::tr("QAT: %1 %2/%3 | %4 | %5")
                     .arg(visible ? QObject::tr("Visible")
                                  : QObject::tr("Hidden"))
                     .arg(visibleCount)
                     .arg(quickAccessActions.size())
-                    .arg(positionText));
+                    .arg(positionText)
+                    .arg(labelsVisible ? QObject::tr("Labels")
+                                       : QObject::tr("Icons")));
         }
         mainWindow.ribbonBar()->update();
     };
@@ -2138,6 +2190,7 @@ int main(int argc, char *argv[])
         [showQuickAccessBarAction,
          quickAccessAboveAction,
          quickAccessBelowAction,
+         quickAccessLabelsAction,
          updateQuickAccessPreview](QMenu *menu) {
         if (!menu) {
             return;
@@ -2147,6 +2200,8 @@ int main(int argc, char *argv[])
         menu->addSeparator();
         menu->addAction(quickAccessAboveAction);
         menu->addAction(quickAccessBelowAction);
+        menu->addSeparator();
+        menu->addAction(quickAccessLabelsAction);
     };
     QObject::connect(showQuickAccessBarAction,
                      &QAction::toggled,
@@ -2177,6 +2232,19 @@ int main(int argc, char *argv[])
                      [&mainWindow, updateQuickAccessPreview]() {
                          mainWindow.ribbonBar()->setQuickAccessBarPosition(
                              LqRibbon::RibbonBar::BottomPosition);
+                         updateQuickAccessPreview();
+                     });
+    QObject::connect(quickAccessLabelsAction,
+                     &QAction::toggled,
+                     &mainWindow,
+                     [&mainWindow, updateQuickAccessPreview](bool visible) {
+                         LqRibbon::RibbonBar *ribbonBar =
+                             mainWindow.ribbonBar();
+                         ribbonBar->quickAccessBar()->setToolButtonStyle(
+                             visible ? Qt::ToolButtonTextBesideIcon
+                                     : Qt::ToolButtonIconOnly);
+                         ribbonBar->setQuickAccessBarPosition(
+                             ribbonBar->quickAccessBarPosition());
                          updateQuickAccessPreview();
                      });
 
@@ -2377,7 +2445,7 @@ int main(int argc, char *argv[])
     quickAccessStatusPreview = new QLabel(ribbonStatusBar);
     quickAccessStatusPreview->setObjectName(
         QStringLiteral("quickAccessStatusPreview"));
-    quickAccessStatusPreview->setMinimumWidth(130);
+    quickAccessStatusPreview->setMinimumWidth(180);
     ribbonStatusBar->addSeparator();
     ribbonStatusBar->addWidget(quickAccessStatusPreview);
 
@@ -2434,6 +2502,7 @@ int main(int argc, char *argv[])
                || quickAccessHiddenPreviewRequested
                || quickAccessAbovePreviewRequested
                || quickAccessBelowPreviewRequested
+               || quickAccessLabelsPreviewRequested
                || simplifiedPreviewRequested
                || temporaryPreviewRequested
                || doubleClickPreviewRequested) {
@@ -2480,6 +2549,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(showQuickAccessBarAction);
     mainWindow.ribbonBar()->registerSearchAction(quickAccessAboveAction);
     mainWindow.ribbonBar()->registerSearchAction(quickAccessBelowAction);
+    mainWindow.ribbonBar()->registerSearchAction(quickAccessLabelsAction);
     mainWindow.ribbonBar()->registerSearchAction(officePopupAction);
     mainWindow.ribbonBar()->registerSearchAction(officeMenuAction);
     mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
@@ -2582,6 +2652,7 @@ int main(int argc, char *argv[])
                                 showQuickAccessBarAction,
                                 quickAccessAboveAction,
                                 quickAccessBelowAction,
+                                quickAccessLabelsAction,
                                 populateQuickAccessMenu,
                                 renamePageAction,
                                 moveGalleryAction,
@@ -2653,6 +2724,14 @@ int main(int argc, char *argv[])
     if (quickAccessBelowPreviewRequested) {
         QTimer::singleShot(120, &mainWindow, [quickAccessBelowAction]() {
             quickAccessBelowAction->trigger();
+        });
+    }
+    if (quickAccessLabelsPreviewRequested) {
+        QTimer::singleShot(120,
+                           &mainWindow,
+                           [quickAccessBelowAction, quickAccessLabelsAction]() {
+            quickAccessBelowAction->trigger();
+            quickAccessLabelsAction->setChecked(true);
         });
     }
 

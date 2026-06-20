@@ -69,6 +69,7 @@ def main():
     quick_access_hidden_preview = "--grab-qat-hidden-preview" in arguments
     quick_access_above_preview = "--grab-qat-above-preview" in arguments
     quick_access_below_preview = "--grab-qat-below-preview" in arguments
+    quick_access_labels_preview = "--grab-qat-labels-preview" in arguments
     style_preview = "--grab-style-preview" in arguments
     style_name = _option_value(arguments, "--style")
     deterministic_style = bool(preview_path)
@@ -91,6 +92,7 @@ def main():
         or quick_access_hidden_preview
         or quick_access_above_preview
         or quick_access_below_preview
+        or quick_access_labels_preview
         or simplified_preview
         or temporary_preview
         or double_click_preview
@@ -103,6 +105,7 @@ def main():
         or quick_access_hidden_preview
         or quick_access_above_preview
         or quick_access_below_preview
+        or quick_access_labels_preview
     ):
         window.resize(1476, 560)
     if style_name:
@@ -122,6 +125,7 @@ def main():
             or quick_access_hidden_preview
             or quick_access_above_preview
             or quick_access_below_preview
+            or quick_access_labels_preview
             or simplified_preview
             or temporary_preview
             or double_click_preview
@@ -162,6 +166,12 @@ def main():
         QTimer.singleShot(120, window.quick_access_above_action.trigger)
     if quick_access_below_preview:
         QTimer.singleShot(120, window.quick_access_below_action.trigger)
+    if quick_access_labels_preview:
+        def show_quick_access_labels_preview():
+            window.quick_access_below_action.trigger()
+            window.quick_access_labels_action.setChecked(True)
+
+        QTimer.singleShot(120, show_quick_access_labels_preview)
     if preview_path:
         QTimer.singleShot(300, lambda: (window.grab().save(preview_path), app.quit()))
 

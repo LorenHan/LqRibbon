@@ -659,7 +659,7 @@ class MainWindow(RibbonMainWindow):
         status_bar.addWidget(QLabel("|", status_bar))
         self.quick_access_status_preview = QLabel(status_bar)
         self.quick_access_status_preview.setObjectName("quickAccessStatusPreview")
-        self.quick_access_status_preview.setMinimumWidth(130)
+        self.quick_access_status_preview.setMinimumWidth(180)
         status_bar.addWidget(self.quick_access_status_preview)
 
         switch_group = RibbonStatusBarSwitchGroup(status_bar)
@@ -847,6 +847,16 @@ class MainWindow(RibbonMainWindow):
         self.quick_access_below_action.triggered.connect(
             self.set_quick_access_below_ribbon
         )
+        self.quick_access_labels_action = QAction(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView),
+            "Show Command Labels",
+            self,
+        )
+        self.quick_access_labels_action.setObjectName("quickAccessLabelsAction")
+        self.quick_access_labels_action.setCheckable(True)
+        self.quick_access_labels_action.toggled.connect(
+            self.set_quick_access_labels_visible
+        )
         self.ribbonBar().quickAccessBar().show_customize_menu.connect(
             self.populate_quick_access_menu
         )
@@ -872,6 +882,7 @@ class MainWindow(RibbonMainWindow):
             self.show_quick_access_action,
             self.quick_access_above_action,
             self.quick_access_below_action,
+            self.quick_access_labels_action,
             self.office_popup_action,
             self.office_menu_action,
             self.show_customize_action,
@@ -888,6 +899,8 @@ class MainWindow(RibbonMainWindow):
         menu.addSeparator()
         menu.addAction(self.quick_access_above_action)
         menu.addAction(self.quick_access_below_action)
+        menu.addSeparator()
+        menu.addAction(self.quick_access_labels_action)
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()
@@ -903,6 +916,17 @@ class MainWindow(RibbonMainWindow):
         self.ribbonBar().setQuickAccessBarPosition(QUICK_ACCESS_BOTTOM_POSITION)
         self.update_quick_access_preview()
 
+    def set_quick_access_labels_visible(self, visible):
+        ribbon = self.ribbonBar()
+        quick_access_bar = ribbon.quickAccessBar()
+        quick_access_bar.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            if visible
+            else Qt.ToolButtonStyle.ToolButtonIconOnly
+        )
+        ribbon.setQuickAccessBarPosition(ribbon.quickAccessBarPosition())
+        self.update_quick_access_preview()
+
     def update_quick_access_preview(self):
         quick_access_bar = self.ribbonBar().quickAccessBar()
         visible = not quick_access_bar.isHidden()
@@ -916,11 +940,19 @@ class MainWindow(RibbonMainWindow):
         below_blocked = self.quick_access_below_action.blockSignals(True)
         self.quick_access_below_action.setChecked(not above)
         self.quick_access_below_action.blockSignals(below_blocked)
+        labels_visible = (
+            quick_access_bar.toolButtonStyle()
+            == Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
+        labels_blocked = self.quick_access_labels_action.blockSignals(True)
+        self.quick_access_labels_action.setChecked(labels_visible)
+        self.quick_access_labels_action.blockSignals(labels_blocked)
         visible_count = quick_access_bar.visibleCount() if visible else 0
         self.quick_access_status_preview.setText(
             f"QAT: {'Visible' if visible else 'Hidden'} "
             f"{visible_count}/{len(self.quick_access_actions)} | "
-            f"{'Above' if above else 'Below'}"
+            f"{'Above' if above else 'Below'} | "
+            f"{'Labels' if labels_visible else 'Icons'}"
         )
 
     def restore_classic_ribbon(self):
