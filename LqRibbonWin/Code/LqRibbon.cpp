@@ -2477,6 +2477,7 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_searchSuggestionModel(new QStringListModel(this))
     , m_searchCompleter(new QCompleter(m_searchSuggestionModel, this))
     , m_searchActionTriggerEnabled(true)
+    , m_suppressNextSearchFocusPopup(false)
     , m_recentSearchLimit(8)
     , m_frameThemeEnabled(false)
     , m_ribbonMinimized(false)
@@ -3952,22 +3953,31 @@ bool RibbonBar::eventFilter(QObject *object, QEvent *event)
 
     if (object == m_searchEdit && event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
-        if (keyEvent->key() == Qt::Key_Down) {
+        if (keyEvent->key() == Qt::Key_Down
+            || keyEvent->key() == Qt::Key_Up) {
             updateSearchPopup();
-            if (m_searchPopupView->isVisible()) {
+            const QModelIndex targetIndex =
+                keyEvent->key() == Qt::Key_Down
+                    ? firstSearchPopupSelectableIndex()
+                    : lastSearchPopupSelectableIndex();
+            if (m_searchPopupView->isVisible()
+                && targetIndex.isValid()) {
                 m_searchPopupView->setFocus();
-                m_searchPopupView->setCurrentIndex(
-                    m_searchPopupModel->index(1, 0));
+                m_searchPopupView->setCurrentIndex(targetIndex);
                 return true;
             }
         } else if (keyEvent->key() == Qt::Key_Escape) {
-            finishSearch();
+            cancelSearch();
             return true;
         }
     }
 
     if (object == m_searchEdit && event->type() == QEvent::FocusIn) {
-        updateSearchPopup();
+        if (m_suppressNextSearchFocusPopup) {
+            m_suppressNextSearchFocusPopup = false;
+        } else {
+            updateSearchPopup();
+        }
     }
 
     if (object == m_searchPopupView && event->type() == QEvent::KeyPress) {
@@ -3978,8 +3988,23 @@ bool RibbonBar::eventFilter(QObject *object, QEvent *event)
             return true;
         }
 
+        if (keyEvent->key() == Qt::Key_Down
+            || keyEvent->key() == Qt::Key_Up) {
+            const int step = keyEvent->key() == Qt::Key_Down ? 1 : -1;
+            const QModelIndex currentIndex = m_searchPopupView->currentIndex();
+            const int startRow = currentIndex.isValid()
+                ? currentIndex.row() + step
+                : (step > 0 ? 0 : m_searchPopupModel->rowCount() - 1);
+            const QModelIndex nextIndex =
+                nextSearchPopupSelectableIndex(startRow, step);
+            if (nextIndex.isValid()) {
+                m_searchPopupView->setCurrentIndex(nextIndex);
+            }
+            return true;
+        }
+
         if (keyEvent->key() == Qt::Key_Escape) {
-            finishSearch();
+            cancelSearch();
             return true;
         }
     }
@@ -4668,15 +4693,9 @@ void RibbonBar::updateSearchPopup()
     m_searchPopupView->show();
     m_searchPopupView->raise();
 
-    for (int row = 0; row < m_searchPopupModel->rowCount(); ++row) {
-        const QModelIndex index = m_searchPopupModel->index(row, 0);
-        const int itemKind = index.data(ribbonSearchPopupKindRole).toInt();
-        if (itemKind == SearchPopupActionItem
-            || itemKind == SearchPopupResultItem
-            || itemKind == SearchPopupHelpItem) {
-            m_searchPopupView->setCurrentIndex(index);
-            break;
-        }
+    const QModelIndex firstSelectableIndex = firstSearchPopupSelectableIndex();
+    if (firstSelectableIndex.isValid()) {
+        m_searchPopupView->setCurrentIndex(firstSelectableIndex);
     }
 }
 
@@ -4690,16 +4709,67 @@ void RibbonBar::hideSearchPopup()
 }
 
 ///
+/// \brief RibbonBar::cancelSearch
+/// Dismisses keyboard search navigation without accepting or clearing text.
+///
+void RibbonBar::cancelSearch()
+{
+    m_suppressNextSearchFocusPopup = true;
+    hideSearchPopup();
+    m_searchEdit->setFocus();
+    QTimer::singleShot(0, this, [this]() {
+        m_suppressNextSearchFocusPopup = false;
+    });
+}
+
+///
 /// \brief RibbonBar::finishSearch
 /// Closes the search UI and clears accepted text after a completed search.
 ///
 void RibbonBar::finishSearch()
 {
+    m_suppressNextSearchFocusPopup = true;
     hideSearchPopup();
     if (!m_searchEdit->text().isEmpty()) {
         m_searchEdit->clear();
     }
     m_searchEdit->setFocus();
+    QTimer::singleShot(0, this, [this]() {
+        m_suppressNextSearchFocusPopup = false;
+    });
+}
+
+QModelIndex RibbonBar::firstSearchPopupSelectableIndex() const
+{
+    return nextSearchPopupSelectableIndex(0, 1);
+}
+
+QModelIndex RibbonBar::lastSearchPopupSelectableIndex() const
+{
+    return nextSearchPopupSelectableIndex(m_searchPopupModel->rowCount() - 1,
+                                          -1);
+}
+
+QModelIndex RibbonBar::nextSearchPopupSelectableIndex(int startRow,
+                                                      int step) const
+{
+    if (step == 0) {
+        return QModelIndex();
+    }
+
+    for (int row = startRow;
+         row >= 0 && row < m_searchPopupModel->rowCount();
+         row += step) {
+        const QModelIndex index = m_searchPopupModel->index(row, 0);
+        const int itemKind = index.data(ribbonSearchPopupKindRole).toInt();
+        if (itemKind == SearchPopupActionItem
+            || itemKind == SearchPopupResultItem
+            || itemKind == SearchPopupHelpItem) {
+            return index;
+        }
+    }
+
+    return QModelIndex();
 }
 
 ///

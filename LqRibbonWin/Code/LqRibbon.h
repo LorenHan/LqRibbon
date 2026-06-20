@@ -768,7 +768,11 @@ private:
     int windowControlWidth() const;
     void updateSearchPopup();
     void hideSearchPopup();
+    void cancelSearch();
     void finishSearch();
+    QModelIndex firstSearchPopupSelectableIndex() const;
+    QModelIndex lastSearchPopupSelectableIndex() const;
+    QModelIndex nextSearchPopupSelectableIndex(int startRow, int step) const;
     void activateSearchPopupIndex(const QModelIndex &index);
     QList<QAction *> matchedSearchActions(const QString &strText) const;
     QStringList matchedSearchDocumentResults(const QString &strText) const;
@@ -829,6 +833,7 @@ private:
     QStringListModel *m_searchSuggestionModel;
     QCompleter *m_searchCompleter;
     bool m_searchActionTriggerEnabled;
+    bool m_suppressNextSearchFocusPopup;
     int m_recentSearchLimit;
     bool m_frameThemeEnabled;
     bool m_ribbonMinimized;

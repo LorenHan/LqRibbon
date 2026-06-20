@@ -70,7 +70,7 @@ Default style remains `Office 2016 Blue`.
 | 039 | Help result section | Search popup | Complete |
 | 040 | Related file result section | Search popup | Complete |
 | 041 | Search action trigger on Enter | Search popup | Complete |
-| 042 | Search keyboard navigation | Search popup | Planned |
+| 042 | Search keyboard navigation | Search popup | Complete |
 | 043 | Search command aliases | Search registry | Planned |
 | 044 | Search fuzzy phrase matching | Search registry | Planned |
 | 045 | Search no-result affordance | Search popup | Planned |

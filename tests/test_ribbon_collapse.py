@@ -470,6 +470,49 @@ def test_example_zero_query_search_groups_recent_actions():
     window.close()
 
 
+def test_example_search_keyboard_navigation_activates_popup_action():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    search = ribbon.searchLineEdit()
+
+    ribbon.clearRecentSearchActions()
+    search.setFocus()
+    search.clear()
+    search.showPopup("")
+    _app().processEvents()
+
+    QTest.keyClick(search, Qt.Key.Key_Down)
+    _app().processEvents()
+    assert search._popup.activeAction().text() == "Settings"
+
+    QTest.keyClick(search, Qt.Key.Key_Down)
+    _app().processEvents()
+    assert search._popup.activeAction().text() == "Connect"
+
+    QTest.keyClick(search, Qt.Key.Key_Down)
+    _app().processEvents()
+    assert search._popup.activeAction().text() == "Control Modes"
+
+    QTest.keyClick(search, Qt.Key.Key_Return)
+    _app().processEvents()
+    assert ribbon.recentSearchActions()[0] is window.control_modes_action
+    assert not search._popup.isVisible()
+    assert search.text() == ""
+    assert search.hasFocus()
+
+    search.setText("driver")
+    search.showPopup("driver")
+    _app().processEvents()
+    QTest.keyClick(search, Qt.Key.Key_Escape)
+    _app().processEvents()
+    assert not search._popup.isVisible()
+    assert search.text() == "driver"
+    assert search.hasFocus()
+    window.close()
+
+
 def test_example_search_shows_document_result_section():
     window = MainWindow()
     window.show()
@@ -1041,6 +1084,7 @@ def main():
         test_example_search_enter_triggers_registered_action,
         test_example_zero_query_search_shows_default_suggestions,
         test_example_zero_query_search_groups_recent_actions,
+        test_example_search_keyboard_navigation_activates_popup_action,
         test_example_search_shows_document_result_section,
         test_example_search_shows_help_result_section,
         test_example_search_shows_related_file_result_section,

@@ -518,6 +518,65 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     centerSearchAction->trigger();
     ribbonBar->clearRecentSearchActions();
 
+    ribbonBar->setSearchText(QString());
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    sendCollapseTestKey(ribbonBar->searchLineEdit(),
+                        Qt::Key_Down,
+                        Qt::NoModifier);
+    const QString firstKeyboardRow =
+        searchPopupView && searchPopupView->currentIndex().isValid()
+            ? searchPopupView->currentIndex()
+                  .data(Qt::DisplayRole)
+                  .toString()
+            : QString();
+    sendCollapseTestKey(searchPopupView, Qt::Key_Down, Qt::NoModifier);
+    const QString secondKeyboardRow =
+        searchPopupView && searchPopupView->currentIndex().isValid()
+            ? searchPopupView->currentIndex()
+                  .data(Qt::DisplayRole)
+                  .toString()
+            : QString();
+    sendCollapseTestKey(searchPopupView, Qt::Key_Down, Qt::NoModifier);
+    const QString thirdKeyboardRow =
+        searchPopupView && searchPopupView->currentIndex().isValid()
+            ? searchPopupView->currentIndex()
+                  .data(Qt::DisplayRole)
+                  .toString()
+            : QString();
+    sendCollapseTestKey(searchPopupView, Qt::Key_Return, Qt::NoModifier);
+    const QList<QAction *> keyboardRecentActions =
+        ribbonBar->recentSearchActions();
+    if (!require(firstKeyboardRow == QStringLiteral("Settings")
+                     && secondKeyboardRow == QStringLiteral("Connect")
+                     && thirdKeyboardRow == QStringLiteral("Control Modes")
+                     && !keyboardRecentActions.isEmpty()
+                     && keyboardRecentActions.first()->text()
+                         == QStringLiteral("Control Modes")
+                     && !searchPopupView->isVisible()
+                     && ribbonBar->searchText().isEmpty()
+                     && ribbonBar->searchLineEdit()->hasFocus(),
+                 QStringLiteral("search keyboard navigation triggers popup action"))) {
+        return 1;
+    }
+
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    ribbonBar->setSearchText(QStringLiteral("driver"));
+    processCollapseTestEvents();
+    sendCollapseTestKey(ribbonBar->searchLineEdit(),
+                        Qt::Key_Escape,
+                        Qt::NoModifier);
+    if (!require(!searchPopupView->isVisible()
+                     && ribbonBar->searchText() == QStringLiteral("driver")
+                     && ribbonBar->searchLineEdit()->hasFocus(),
+                 QStringLiteral("search keyboard Escape closes popup without accepting"))) {
+        return 1;
+    }
+    ribbonBar->searchLineEdit()->clear();
+    searchPopupView->hide();
+    ribbonBar->clearRecentSearchActions();
+    processCollapseTestEvents();
+
     reset();
     doubleClickCollapseTestTab(ribbonBar, firstIndex);
     if (!require(ribbonBar->isRibbonMinimized()

@@ -778,6 +778,9 @@ class LqRibbonSearchBar(QLineEdit):
         self._max_search_item_count = 8
         self._popup = QMenu(self)
         self._popup.setObjectName("lqRibbonSearchPopupMenu")
+        self._popup_query = ""
+        self._popup_keyboard_active = False
+        self._suppress_next_focus_popup = False
         self._icon = self.style().standardIcon(
             QStyle.StandardPixmap.SP_FileDialogContentsView
         )
@@ -891,7 +894,83 @@ class LqRibbonSearchBar(QLineEdit):
                 break
         return results
 
+    def _selectable_popup_actions(self):
+        return [
+            action
+            for action in self._popup.actions()
+            if action and action.isVisible() and action.isEnabled()
+            and not action.isSeparator()
+        ]
+
+    def _set_first_popup_action(self):
+        actions = self._selectable_popup_actions()
+        if not actions:
+            return False
+        self._popup.setActiveAction(actions[0])
+        return True
+
+    def _set_last_popup_action(self):
+        actions = self._selectable_popup_actions()
+        if not actions:
+            return False
+        self._popup.setActiveAction(actions[-1])
+        return True
+
+    def _move_popup_selection(self, step):
+        actions = self._selectable_popup_actions()
+        if not actions:
+            return False
+        current = self._popup.activeAction()
+        if current not in actions:
+            self._popup.setActiveAction(actions[0 if step > 0 else -1])
+            return True
+        next_index = actions.index(current) + step
+        next_index = max(0, min(next_index, len(actions) - 1))
+        self._popup.setActiveAction(actions[next_index])
+        return True
+
+    def _focus_without_popup(self):
+        self._suppress_next_focus_popup = True
+        self.setFocus()
+        QTimer.singleShot(0, lambda: setattr(self, "_suppress_next_focus_popup", False))
+
+    def _activate_popup_action(self, action):
+        if not action or action.isSeparator() or not action.isEnabled():
+            return False
+        role = action.property("lqRibbonSearchPopupRole")
+        text = action.text()
+        if role == "result":
+            if self.ribbon_bar:
+                self.ribbon_bar.searchSuggestionActivated.emit(text)
+            self._suppress_next_focus_popup = True
+            self.closePopup()
+            self.clear()
+            self._focus_without_popup()
+            return True
+        if role == "help":
+            self.show_help.emit(self.text().strip())
+            self._suppress_next_focus_popup = True
+            self.closePopup()
+            self.clear()
+            self._focus_without_popup()
+            return True
+        if self.ribbon_bar and self.ribbon_bar.triggerSearchAction(text):
+            self._suppress_next_focus_popup = True
+            self.closePopup()
+            self.clear()
+            self._focus_without_popup()
+            return True
+        action.trigger()
+        self._suppress_next_focus_popup = True
+        self.closePopup()
+        self.clear()
+        self._focus_without_popup()
+        return True
+
     def showPopup(self, text=""):
+        text = str(text)
+        self._popup_query = text
+        self._popup_keyboard_active = False
         self._popup.clear()
         normalized = text.strip().lower()
         count = 0
@@ -938,6 +1017,7 @@ class LqRibbonSearchBar(QLineEdit):
                 if self._max_search_item_count and count >= self._max_search_item_count:
                     break
                 result_action = self._popup.addAction(document_icon, result)
+                result_action.setProperty("lqRibbonSearchPopupRole", "result")
                 result_action.triggered.connect(
                     lambda _checked=False, value=result: (
                         self.ribbon_bar.searchSuggestionActivated.emit(value)
@@ -952,6 +1032,7 @@ class LqRibbonSearchBar(QLineEdit):
                 if self._max_search_item_count and count >= self._max_search_item_count:
                     break
                 result_action = self._popup.addAction(file_icon, result)
+                result_action.setProperty("lqRibbonSearchPopupRole", "result")
                 result_action.triggered.connect(
                     lambda _checked=False, value=result: (
                         self.ribbon_bar.searchSuggestionActivated.emit(value)
@@ -966,19 +1047,65 @@ class LqRibbonSearchBar(QLineEdit):
             if self._max_search_item_count and count >= self._max_search_item_count:
                 break
             self._popup.addAction(action)
+            action.setProperty("lqRibbonSearchPopupRole", "action")
             count += 1
         if self._help_enabled and text:
             self._popup.addSection(QtnRibbonSearchBarHelpString)
             help_action = self._popup.addAction(f'{QtnRibbonSearchBarGetHelpString} "{text}"')
+            help_action.setProperty("lqRibbonSearchPopupRole", "help")
             help_action.triggered.connect(lambda: self.show_help.emit(text))
         if not self._popup.isEmpty():
             self._popup.popup(self.mapToGlobal(QPoint(0, self.height())))
+            self._set_first_popup_action()
 
     def closePopup(self):
+        self._popup_keyboard_active = False
         self._popup.hide()
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        if key in (Qt.Key.Key_Down, Qt.Key.Key_Up):
+            if not self._popup.isVisible() or self._popup_query != self.text():
+                self.showPopup(self.text())
+            if key == Qt.Key.Key_Down:
+                handled = (
+                    self._move_popup_selection(1)
+                    if self._popup_keyboard_active
+                    else self._set_first_popup_action()
+                )
+            else:
+                handled = (
+                    self._move_popup_selection(-1)
+                    if self._popup_keyboard_active
+                    else self._set_last_popup_action()
+                )
+            if handled:
+                self._popup_keyboard_active = True
+                event.accept()
+                return
+        if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self._popup.isVisible():
+            if self._popup_query != self.text():
+                self.showPopup(self.text())
+            action = self._popup.activeAction()
+            if action not in self._selectable_popup_actions():
+                self._set_first_popup_action()
+                action = self._popup.activeAction()
+            if self._activate_popup_action(action):
+                event.accept()
+                return
+        if key == Qt.Key.Key_Escape:
+            self._suppress_next_focus_popup = True
+            self.closePopup()
+            self._focus_without_popup()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
+        if self._suppress_next_focus_popup:
+            self._suppress_next_focus_popup = False
+            return
         self.showPopup(self.text())
 
     def paintEvent(self, event):
