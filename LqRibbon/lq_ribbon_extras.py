@@ -2,7 +2,7 @@
 Additional LqRibbon widgets and compatibility helpers.
 """
 
-from PySide6.QtCore import Qt, QPoint, QRect, QSize, QTimer, Signal
+from PySide6.QtCore import Qt, QObject, QPoint, QRect, QSize, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFontComboBox,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -25,6 +26,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QScrollArea,
+    QSizePolicy,
     QSlider,
     QSpinBox,
     QStackedWidget,
@@ -252,6 +254,18 @@ class LqRibbonToolBarControl(LqRibbonControl):
     def addAction(self, *args):
         return self.toolbar.addAction(*args)
 
+    def addMenu(self, text_or_icon, text=None):
+        if text is None:
+            text = text_or_icon
+            icon = QIcon()
+        else:
+            icon = text_or_icon if isinstance(text_or_icon, QIcon) else QIcon(text_or_icon)
+        menu = QMenu(text, self)
+        action = QAction(icon, text, self)
+        action.setMenu(menu)
+        self.toolbar.addAction(action)
+        return menu
+
     def addWidget(self, widget):
         return self.toolbar.addWidget(widget)
 
@@ -269,7 +283,52 @@ class LqRibbonButtonControl(LqRibbonWidgetControl):
     def __init__(self, parent=None):
         from .lq_ribbon_button import LqRibbonButton
 
-        super().__init__(parent, LqRibbonButton(parent=self))
+        super().__init__(parent)
+        self.setContentWidget(LqRibbonButton(parent=self))
+        self._large_icon = QIcon()
+        self._small_icon = QIcon()
+        self._label = ""
+
+    def largeIcon(self):
+        return self._large_icon
+
+    def setLargeIcon(self, icon):
+        self._large_icon = icon if isinstance(icon, QIcon) else QIcon(icon)
+        self.widget().setIcon(self._large_icon)
+        self.widget().setLargeIcon(True)
+
+    def smallIcon(self):
+        return self._small_icon
+
+    def setSmallIcon(self, icon):
+        self._small_icon = icon if isinstance(icon, QIcon) else QIcon(icon)
+        self.widget().setIcon(self._small_icon)
+        self.widget().setLargeIcon(False)
+
+    def label(self):
+        return self._label
+
+    def setLabel(self, label):
+        self._label = str(label)
+        self.widget().setText(self._label)
+
+    def setMenu(self, menu):
+        self.widget().setMenu(menu)
+
+    def menu(self):
+        return self.widget().menu()
+
+    def setPopupMode(self, mode):
+        self.widget().setPopupMode(mode)
+
+    def popupMode(self):
+        return self.widget().popupMode()
+
+    def setToolButtonStyle(self, style):
+        self.widget().setToolButtonStyle(style)
+
+    def toolButtonStyle(self):
+        return self.widget().toolButtonStyle()
 
 
 class LqRibbonCheckBoxControl(LqRibbonWidgetControl):
@@ -325,6 +384,331 @@ class LqRibbonTimeEditControl(LqRibbonWidgetControl):
 class LqRibbonDateEditControl(LqRibbonWidgetControl):
     def __init__(self, parent=None):
         super().__init__(parent, QDateEdit())
+
+
+class LqRibbonGalleryItem:
+    def __init__(self, caption=QtnRibbonGalleryItemString, icon=None):
+        self._caption = str(caption)
+        self._icon = icon if isinstance(icon, QIcon) else QIcon(icon or "")
+        self._tool_tip = ""
+        self._status_tip = ""
+        self._data = {}
+        self._index = -1
+        self._separator = False
+        self._enabled = True
+        self._visible = True
+
+    def icon(self):
+        return self._icon
+
+    def setIcon(self, icon):
+        self._icon = icon if isinstance(icon, QIcon) else QIcon(icon)
+
+    def caption(self):
+        return self._caption
+
+    def setCaption(self, caption):
+        self._caption = str(caption)
+
+    def toolTip(self):
+        return self._tool_tip
+
+    def setToolTip(self, tool_tip):
+        self._tool_tip = str(tool_tip)
+
+    def statusTip(self):
+        return self._status_tip
+
+    def setStatusTip(self, status_tip):
+        self._status_tip = str(status_tip)
+
+    def getIndex(self):
+        return self._index
+
+    def isSeparator(self):
+        return self._separator
+
+    def setSeparator(self, on):
+        self._separator = bool(on)
+
+    def setEnabled(self, enabled):
+        self._enabled = bool(enabled)
+
+    def isEnabled(self):
+        return self._enabled
+
+    def setVisible(self, visible):
+        self._visible = bool(visible)
+
+    def isVisible(self):
+        return self._visible
+
+    def data(self, role=Qt.ItemDataRole.UserRole):
+        return self._data.get(int(role))
+
+    def setData(self, role, value):
+        self._data[int(role)] = value
+
+
+class LqRibbonGalleryGroup(QObject):
+    changed = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._items = []
+        self._size = QSize(QtnRibbonGalleryItemSize)
+
+    def _refresh_indexes(self):
+        for index, item in enumerate(self._items):
+            item._index = index
+
+    def addItem(self, caption=QtnRibbonGalleryItemString, icon=None, *args):
+        if isinstance(caption, LqRibbonGalleryItem):
+            item = caption
+        else:
+            item = LqRibbonGalleryItem(caption, icon)
+        self.appendItem(item)
+        return item
+
+    def addItemFromMap(self, caption, map_index, pixmap, map_size_image, transparent_color=QColor()):
+        del map_index, map_size_image, transparent_color
+        return self.addItem(caption, QIcon(pixmap) if isinstance(pixmap, QPixmap) else QIcon())
+
+    def appendItem(self, item):
+        if not isinstance(item, LqRibbonGalleryItem):
+            return
+        self._items.append(item)
+        self._refresh_indexes()
+        self.changed.emit()
+
+    def insertItem(self, index, item):
+        if not isinstance(item, LqRibbonGalleryItem):
+            return
+        index = max(0, min(int(index), len(self._items)))
+        self._items.insert(index, item)
+        self._refresh_indexes()
+        self.changed.emit()
+
+    def addSeparator(self, caption=QtnRibbonSeparatorString):
+        item = LqRibbonGalleryItem(caption)
+        item.setSeparator(True)
+        self.appendItem(item)
+        return item
+
+    def clear(self):
+        self._items.clear()
+        self.changed.emit()
+
+    def remove(self, index):
+        if 0 <= index < len(self._items):
+            self._items.pop(index)
+            self._refresh_indexes()
+            self.changed.emit()
+
+    def itemCount(self):
+        return len(self._items)
+
+    def item(self, index):
+        return self._items[index] if 0 <= index < len(self._items) else None
+
+    def takeItem(self, index):
+        if not (0 <= index < len(self._items)):
+            return None
+        item = self._items.pop(index)
+        item._index = -1
+        self._refresh_indexes()
+        self.changed.emit()
+        return item
+
+    def size(self):
+        return QSize(self._size)
+
+    def setSize(self, size):
+        self._size = QSize(size)
+        self.changed.emit()
+
+
+class LqRibbonGallery(QWidget):
+    itemPressed = Signal(object)
+    itemClicked = Signal(object)
+    currentItemChanged = Signal(object, object)
+    selectionChanged = Signal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("lqRibbonGallery")
+        self._group = None
+        self._column_count = 4
+        self._row_count = 2
+        self._selected_index = -1
+        self._checked_index = -1
+        self._popup_menu = None
+        self._buttons = []
+        self._layout = QGridLayout(self)
+        self._layout.setContentsMargins(2, 2, 2, 2)
+        self._layout.setHorizontalSpacing(2)
+        self._layout.setVerticalSpacing(2)
+        self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+
+    def setGalleryGroup(self, group):
+        if self._group is not None:
+            try:
+                self._group.changed.disconnect(self.updateLayout)
+            except RuntimeError:
+                pass
+        self._group = group
+        if self._group is not None:
+            self._group.changed.connect(self.updateLayout)
+        self.updateLayout()
+
+    def galleryGroup(self):
+        return self._group
+
+    def itemSize(self):
+        return self._group.size() if self._group is not None else QSize(QtnRibbonGalleryItemSize)
+
+    def setItemSize(self, size):
+        if self._group is None:
+            self.setGalleryGroup(LqRibbonGalleryGroup(self))
+        self._group.setSize(size)
+
+    def setPopupMenu(self, popup_menu):
+        self._popup_menu = popup_menu
+        action = QAction(self)
+        action.setMenu(popup_menu)
+        return action
+
+    def popupMenu(self):
+        return self._popup_menu
+
+    def setColumnCount(self, count):
+        self._column_count = max(1, int(count))
+        self.updateLayout()
+
+    def columnCount(self):
+        return self._column_count
+
+    def setRowCount(self, row):
+        self._row_count = max(1, int(row))
+        self.updateLayout()
+
+    def rowCount(self):
+        return self._row_count
+
+    def itemCount(self):
+        return self._group.itemCount() if self._group is not None else 0
+
+    def item(self, index):
+        return self._group.item(index) if self._group is not None else None
+
+    def setSelectedItem(self, index):
+        previous = self.item(self._selected_index)
+        self._selected_index = index if self.item(index) is not None else -1
+        self.selectionChanged.emit(self._selected_index)
+        self.currentItemChanged.emit(self.item(self._selected_index), previous)
+
+    def selectedItem(self):
+        return self._selected_index
+
+    def setCheckedIndex(self, index):
+        self._checked_index = index if self.item(index) is not None else -1
+        for item_index, button in enumerate(self._buttons):
+            button.setChecked(item_index == self._checked_index)
+
+    def checkedIndex(self):
+        return self._checked_index
+
+    def setCheckedItem(self, item):
+        self.setCheckedIndex(item.getIndex() if item else -1)
+
+    def checkedItem(self):
+        return self.item(self._checked_index)
+
+    def isItemSelected(self):
+        return self._selected_index >= 0
+
+    def ensureVisible(self, index):
+        self.setSelectedItem(index)
+
+    def hideSelection(self):
+        self._selected_index = -1
+        self.selectionChanged.emit(-1)
+
+    def updateLayout(self):
+        while self._layout.count():
+            child = self._layout.takeAt(0)
+            widget = child.widget()
+            if widget:
+                widget.deleteLater()
+        self._buttons.clear()
+        if self._group is None:
+            return
+
+        visible_index = 0
+        item_size = self.itemSize()
+        for item_index in range(self._group.itemCount()):
+            item = self._group.item(item_index)
+            if item is None or not item.isVisible():
+                continue
+            row = visible_index // self._column_count
+            column = visible_index % self._column_count
+            if row >= self._row_count:
+                break
+            if item.isSeparator():
+                separator = QFrame(self)
+                separator.setFrameShape(QFrame.Shape.HLine)
+                self._layout.addWidget(separator, row, column)
+                visible_index += 1
+                continue
+            button = QToolButton(self)
+            button.setText(item.caption())
+            button.setIcon(item.icon())
+            button.setToolTip(item.toolTip())
+            button.setStatusTip(item.statusTip())
+            button.setEnabled(item.isEnabled())
+            button.setCheckable(True)
+            button.setChecked(item_index == self._checked_index)
+            button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+            button.setIconSize(QSize(16, 16))
+            button.setFixedSize(item_size)
+            button.clicked.connect(lambda checked=False, idx=item_index: self._activate_item(idx))
+            self._layout.addWidget(button, row, column)
+            self._buttons.append(button)
+            visible_index += 1
+        self.updateGeometry()
+
+    def bestFit(self):
+        self.updateLayout()
+
+    def sizeHint(self):
+        item_size = self.itemSize()
+        width = self._column_count * item_size.width() + 6
+        height = self._row_count * item_size.height() + 6
+        return QSize(width, height)
+
+    def minimumSizeHint(self):
+        return self.sizeHint()
+
+    def _activate_item(self, index):
+        item = self.item(index)
+        if item is None:
+            return
+        self.itemPressed.emit(item)
+        self.setSelectedItem(index)
+        self.setCheckedIndex(index)
+        self.itemClicked.emit(item)
+
+
+class LqRibbonGalleryControl(LqRibbonWidgetControl):
+    def __init__(self, parent=None, gallery=None):
+        super().__init__(parent)
+        self.setContentWidget(gallery or LqRibbonGallery(self))
+
+    def widget(self):
+        return super().widget()
+
+    def setContentsMargins(self, top, bottom):
+        self.layout().setContentsMargins(0, int(top), 0, int(bottom))
 
 
 class LqRibbonQuickAccessBar(QToolBar):
@@ -440,6 +824,8 @@ class LqRibbonSearchBar(QLineEdit):
 class LqRibbonSliderPane(QWidget):
     value_changed = Signal(int)
     slider_moved = Signal(int)
+    valueChanged = Signal(int)
+    sliderMoved = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -454,7 +840,9 @@ class LqRibbonSliderPane(QWidget):
         self.decrement_button.clicked.connect(self.decrement)
         self.increment_button.clicked.connect(self.increment)
         self.slider.valueChanged.connect(self.value_changed)
+        self.slider.valueChanged.connect(self.valueChanged)
         self.slider.sliderMoved.connect(self.slider_moved)
+        self.slider.sliderMoved.connect(self.sliderMoved)
 
     def setRange(self, minimum, maximum):
         self.slider.setRange(minimum, maximum)
@@ -486,6 +874,15 @@ class LqRibbonSliderPane(QWidget):
 
     def decrement(self):
         self.slider.setValue(self.slider.value() - self.slider.singleStep())
+
+
+class LqRibbonSliderPaneControl(LqRibbonWidgetControl):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setContentWidget(LqRibbonSliderPane(parent=self))
+
+    def widget(self):
+        return super().widget()
 
 
 class LqRibbonProgressBar(QProgressBar):
@@ -753,6 +1150,7 @@ class LqOfficePopupMenu(QMenu):
 
 class LqPopupColorButton(QToolButton):
     color_changed = Signal(QColor)
+    colorChanged = Signal(QColor)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -764,6 +1162,7 @@ class LqPopupColorButton(QToolButton):
     def setColor(self, color):
         self._color = QColor(color)
         self.color_changed.emit(self._color)
+        self.colorChanged.emit(self._color)
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
@@ -975,6 +1374,34 @@ class LqRibbonCustomizeManager:
             page.detachGroup(group)
             page.insertGroup(new_index, group)
 
+    def setPageId(self, page, page_id):
+        self._ids[page] = page_id
+
+    def pageId(self, page):
+        return self._ids.get(page, "")
+
+    def setGroupId(self, group, group_id):
+        self._ids[group] = group_id
+
+    def groupId(self, group):
+        return self._ids.get(group, "")
+
+    def saveStateToDevice(self, device):
+        page_titles = [str(page.title) for page in self.ribbon_bar.pages()]
+        state = ("<ribbon pages=\"" + "|".join(page_titles) + "\"/>").encode("utf-8")
+        if hasattr(device, "write"):
+            return device.write(state) >= 0
+        return False
+
+    def loadStateFromDevice(self, device):
+        if hasattr(device, "readAll"):
+            device.readAll()
+            return True
+        if hasattr(device, "read"):
+            device.read()
+            return True
+        return False
+
 
 class LqRibbonCustomizeDialog(QDialog):
     def __init__(self, parent=None):
@@ -1064,9 +1491,14 @@ RibbonSliderControl = LqRibbonSliderControl
 RibbonDateTimeEditControl = LqRibbonDateTimeEditControl
 RibbonTimeEditControl = LqRibbonTimeEditControl
 RibbonDateEditControl = LqRibbonDateEditControl
+RibbonGalleryItem = LqRibbonGalleryItem
+RibbonGalleryGroup = LqRibbonGalleryGroup
+RibbonGallery = LqRibbonGallery
+RibbonGalleryControl = LqRibbonGalleryControl
 RibbonQuickAccessBar = LqRibbonQuickAccessBar
 RibbonSearchBar = LqRibbonSearchBar
 RibbonSliderPane = LqRibbonSliderPane
+RibbonSliderPaneControl = LqRibbonSliderPaneControl
 RibbonProgressBar = LqRibbonProgressBar
 RibbonStatusBarSwitchGroup = LqRibbonStatusBarSwitchGroup
 RibbonStatusBar = LqRibbonStatusBar
