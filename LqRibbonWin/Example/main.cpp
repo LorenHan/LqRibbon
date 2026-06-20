@@ -8,6 +8,7 @@
 #include <QFontDatabase>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QPalette>
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QMenu>
@@ -24,6 +25,8 @@
 #include "LqRibbon.h"
 
 namespace {
+
+constexpr int systemRibbonStyleComboValue = -1;
 
 void processCollapseTestEvents()
 {
@@ -324,6 +327,22 @@ LqRibbon::RibbonBar::RibbonStyle ribbonStyleFromText(
     return fallback;
 }
 
+LqRibbon::RibbonBar::RibbonStyle systemRibbonStyle()
+{
+    const QColor windowColor = qApp->palette().color(QPalette::Window);
+    return windowColor.lightness() < 128
+        ? LqRibbon::RibbonBar::Microsoft365Dark
+        : LqRibbon::RibbonBar::Microsoft365Light;
+}
+
+bool isSystemRibbonStyleText(const QString &strText)
+{
+    const QString key = strText.trimmed().toLower().remove(QLatin1Char('-'))
+        .remove(QLatin1Char('_')).remove(QLatin1Char(' '));
+    return key == QStringLiteral("system")
+        || key == QStringLiteral("systemdefault");
+}
+
 LqRibbon::RibbonBar::RibbonStyle requestedRibbonStyle(
     const QStringList &argumentList,
     LqRibbon::RibbonBar::RibbonStyle fallback =
@@ -331,6 +350,9 @@ LqRibbon::RibbonBar::RibbonStyle requestedRibbonStyle(
 {
     const int styleIndex = argumentList.indexOf(QStringLiteral("--style"));
     if (styleIndex >= 0 && styleIndex + 1 < argumentList.count()) {
+        if (isSystemRibbonStyleText(argumentList.at(styleIndex + 1))) {
+            return systemRibbonStyle();
+        }
         return ribbonStyleFromText(argumentList.at(styleIndex + 1), fallback);
     }
     return fallback;
@@ -403,6 +425,21 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QStringLiteral("example combo switches style"))) {
             return 1;
         }
+
+        const int systemIndex = styleCombo->findData(systemRibbonStyleComboValue);
+        if (!require(systemIndex >= 0,
+                     QStringLiteral("example combo exposes system style"))) {
+            return 1;
+        }
+        styleCombo->setCurrentIndex(systemIndex);
+        if (!require(styleCombo->currentText() == QStringLiteral("System"),
+                     QStringLiteral("system style remains visible in combo"))) {
+            return 1;
+        }
+        if (!require(ribbonBar->ribbonStyle() == systemRibbonStyle(),
+                     QStringLiteral("system style follows application palette"))) {
+            return 1;
+        }
     }
 
     return 0;
@@ -412,6 +449,12 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
 
 int main(int argc, char *argv[])
 {
+    QStringList rawArgumentList;
+    rawArgumentList.reserve(argc);
+    for (int index = 0; index < argc; ++index) {
+        rawArgumentList.append(QString::fromLocal8Bit(argv[index]));
+    }
+
     QApplication application(argc, argv);
     for (const QString &fontPath : {
              QStringLiteral("C:/Windows/Fonts/segoeui.ttf"),
@@ -426,7 +469,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    const QStringList argumentList = application.arguments();
+    const QStringList argumentList = rawArgumentList;
     const int previewIndex = argumentList.indexOf(QStringLiteral("--grab-preview"));
     const bool previewRequested = previewIndex >= 0
         && previewIndex + 1 < argumentList.count();
@@ -458,6 +501,10 @@ int main(int argc, char *argv[])
                              stylePreviewRequested
                                  ? LqRibbon::RibbonBar::Microsoft365Light
                                  : LqRibbon::RibbonBar::Office2016Blue);
+    const int styleArgumentIndex = argumentList.indexOf(QStringLiteral("--style"));
+    const bool systemStyleRequested =
+        styleArgumentIndex >= 0 && styleArgumentIndex + 1 < argumentList.count()
+        && isSystemRibbonStyleText(argumentList.at(styleArgumentIndex + 1));
 
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
@@ -510,13 +557,20 @@ int main(int argc, char *argv[])
                                 LqRibbon::RibbonBar::ribbonStyleName(style),
                                 Qt::ToolTipRole);
     }
+    styleCombo->addItem(QStringLiteral("System"), systemRibbonStyleComboValue);
+    styleCombo->setItemData(styleCombo->count() - 1,
+                            QObject::tr("Follow current system light/dark palette"),
+                            Qt::ToolTipRole);
     styleSwitchGroup->addWidget(styleComboControl);
     QObject::connect(styleCombo,
                      QOverload<int>::of(&QComboBox::currentIndexChanged),
                      [&mainWindow, styleCombo](int index) {
+                         const int value = styleCombo->itemData(index).toInt();
                          const LqRibbon::RibbonBar::RibbonStyle style =
-                             static_cast<LqRibbon::RibbonBar::RibbonStyle>(
-                                 styleCombo->itemData(index).toInt());
+                             value == systemRibbonStyleComboValue
+                                 ? systemRibbonStyle()
+                                 : static_cast<LqRibbon::RibbonBar::RibbonStyle>(
+                                       value);
                          mainWindow.setRibbonStyle(style);
                      });
 
@@ -1050,11 +1104,16 @@ int main(int argc, char *argv[])
     }
     mainWindow.setFrameThemeEnabled(true);
     const int styleComboIndex =
-        styleCombo->findData(static_cast<int>(previewRibbonStyle));
+        styleCombo->findData(systemStyleRequested
+                                 ? systemRibbonStyleComboValue
+                                 : static_cast<int>(previewRibbonStyle));
     if (styleComboIndex >= 0) {
         styleCombo->setCurrentIndex(styleComboIndex);
     }
     mainWindow.setRibbonStyle(previewRibbonStyle);
+    if (systemStyleRequested && styleComboIndex >= 0) {
+        styleCombo->setCurrentIndex(styleComboIndex);
+    }
     mainWindow.ribbonBar()->setSearchVisible(true);
     mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
     mainWindow.ribbonBar()->setRecentSearchLimit(5);

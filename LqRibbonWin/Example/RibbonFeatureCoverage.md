@@ -21,7 +21,7 @@ not copied implementation.
 | Status bar | Permanent area, switch group, sliders, progress | Complete | `--grab-preview` status area |
 | Workspace | Scroll area, MDI-aware workspace, tab/subwindow polish | Implemented basic API | `--grab-mdi-preview`, `--grab-tab-preview` |
 | Customization | Customize manager/page/dialog, save and restore layout | Implemented basic API | Planned customization example |
-| Style | Office-like metrics, colors, theme hooks, high-DPI behavior | Basic style switching implemented | `--grab-style-preview`, `--run-style-tests` |
+| Style | Office-like metrics, colors, theme hooks, high-DPI behavior | Basic style switching and system follow mode implemented | `--grab-style-preview`, `--run-style-tests` |
 
 ## Current Gap Summary
 
@@ -92,5 +92,5 @@ Python parity is source-level and behavior-level for normal PySide6 usage. It
 is not binary parity with Qtitan and does not implement Qtitan Designer plugins
 or proprietary style engines.
 
-The Python example mirrors the C++ style switcher with the same style names and
-default `Office 2016 Blue` behavior.
+The Python example mirrors the C++ style switcher with the same style names,
+system follow mode, and default `Office 2016 Blue` behavior.

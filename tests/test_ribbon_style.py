@@ -17,7 +17,7 @@ sys.path.insert(
 from PySide6.QtWidgets import QApplication
 
 from LqRibbon import RibbonMainWindow, RibbonStyle
-from main_window import MainWindow
+from main_window import MainWindow, SYSTEM_RIBBON_STYLE_VALUE
 
 
 def _app():
@@ -71,6 +71,19 @@ def test_example_combo_switches_style():
     window.close()
 
 
+def test_example_system_combo_follows_palette():
+    window = MainWindow()
+    combo = window.style_combo_control.widget()
+    system_index = combo.findData(SYSTEM_RIBBON_STYLE_VALUE)
+    assert system_index >= 0
+    combo.setCurrentIndex(system_index)
+    assert window.ribbonStyle() == window.system_ribbon_style()
+    window.set_ribbon_style("system")
+    assert combo.currentIndex() == system_index
+    assert window.ribbonStyle() == window.system_ribbon_style()
+    window.close()
+
+
 def main():
     _app()
     tests = [
@@ -79,6 +92,7 @@ def main():
         test_reapplying_same_style_emits_no_duplicate,
         test_window_style_pass_through_updates_full_stylesheet,
         test_example_combo_switches_style,
+        test_example_system_combo_follows_palette,
     ]
     for test in tests:
         test()

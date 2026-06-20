@@ -29,11 +29,11 @@ Default style remains `Office 2016 Blue`.
 
 | # | Iteration | Example target | Status |
 | --- | --- | --- | --- |
-| 001 | Style switcher with Office 2016 Blue default | C++ and Python style combo plus API | In progress |
-| 002 | Office 2019 Colorful theme option | C++ and Python style combo | Planned |
-| 003 | Microsoft 365 Light theme option | C++ and Python style combo | Planned |
-| 004 | Microsoft 365 Dark theme option | C++ and Python style combo | Planned |
-| 005 | System theme follow mode | Theme selector and system palette bridge | Planned |
+| 001 | Style switcher with Office 2016 Blue default | C++ and Python style combo plus API | Complete |
+| 002 | Office 2019 Colorful theme option | C++ and Python style combo | Complete |
+| 003 | Microsoft 365 Light theme option | C++ and Python style combo | Complete |
+| 004 | Microsoft 365 Dark theme option | C++ and Python style combo | Complete |
+| 005 | System theme follow mode | Theme selector and system palette bridge | Complete |
 | 006 | Theme live preview before apply | Preview swatch panel | Planned |
 | 007 | Persisted Office theme choice | Save/load example settings | Planned |
 | 008 | Fluent rounded tab geometry | Style preview page | Planned |

@@ -50,6 +50,8 @@ from LqRibbon import (
     RibbonToolBarControl,
 )
 
+SYSTEM_RIBBON_STYLE_VALUE = -1
+
 
 class MainWindow(RibbonMainWindow):
     """Ribbon demo window with the same feature surface as the C++ demo."""
@@ -150,12 +152,31 @@ class MainWindow(RibbonMainWindow):
                 LqStyle.ribbon_style_name(style),
                 Qt.ItemDataRole.ToolTipRole,
             )
+        style_combo.addItem("System", SYSTEM_RIBBON_STYLE_VALUE)
+        style_combo.setItemData(
+            style_combo.count() - 1,
+            "Follow current system light/dark palette",
+            Qt.ItemDataRole.ToolTipRole,
+        )
         style_group.addWidget(self.style_combo_control)
         style_combo.currentIndexChanged.connect(self._apply_selected_ribbon_style)
 
     def _apply_selected_ribbon_style(self, index):
         style_combo = self.style_combo_control.widget()
-        self.setRibbonStyle(style_combo.itemData(index))
+        value = style_combo.itemData(index)
+        self.setRibbonStyle(
+            self.system_ribbon_style()
+            if value == SYSTEM_RIBBON_STYLE_VALUE
+            else value
+        )
+
+    def system_ribbon_style(self):
+        window_color = self.palette().color(self.backgroundRole())
+        return (
+            RibbonStyle.Microsoft365Dark
+            if window_color.lightness() < 128
+            else RibbonStyle.Microsoft365Light
+        )
 
     def _create_controls_page(self):
         selector_group = self.controls_page.addGroup("Selectors")
@@ -552,6 +573,21 @@ class MainWindow(RibbonMainWindow):
         self.ribbonBar().setCurrentPageIndex(self.ribbonBar().pageIndex(page))
 
     def set_ribbon_style(self, style):
+        if isinstance(style, str):
+            key = (
+                style.strip()
+                .lower()
+                .replace("-", "")
+                .replace("_", "")
+                .replace(" ", "")
+            )
+            if key in {"system", "systemdefault"}:
+                self.setRibbonStyle(self.system_ribbon_style())
+                style_combo = self.style_combo_control.widget()
+                index = style_combo.findData(SYSTEM_RIBBON_STYLE_VALUE)
+                if index >= 0:
+                    style_combo.setCurrentIndex(index)
+                return
         style = LqStyle.coerce_style(style)
         self.setRibbonStyle(style)
         style_combo = self.style_combo_control.widget()
