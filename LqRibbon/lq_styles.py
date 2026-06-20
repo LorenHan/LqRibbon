@@ -39,6 +39,12 @@ class LqStyle:
     LARGE_ICON_SIZE = 28
     SMALL_ICON_SIZE = 16
     ICON_ONLY_ICON_SIZE = 18
+    SIMPLIFIED_RIBBON_HEIGHT = 64
+    SIMPLIFIED_GROUP_MIN_HEIGHT = 34
+    SIMPLIFIED_GROUP_LAYOUT_MARGINS = (3, 3, 3, 3)
+    SIMPLIFIED_BUTTON_MIN_WIDTH = 68
+    SIMPLIFIED_BUTTON_HEIGHT = 24
+    SIMPLIFIED_ICON_SIZE = 16
 
     @staticmethod
     def get_ribbon_style():
@@ -183,6 +189,17 @@ class LqStyle:
             background-color: transparent;
             min-height: 12px;
         }
+
+        QGroupBox[simplified="true"] {
+            padding: 2px 4px 2px 4px;
+            min-width: 0px;
+        }
+
+        QGroupBox[simplified="true"]::title {
+            color: transparent;
+            min-height: 0px;
+            padding: 0px;
+        }
         """
 
     @staticmethod
@@ -225,6 +242,22 @@ class LqStyle:
             min-height: 28px;
             max-width: 28px;
             max-height: 28px;
+        }
+
+        QToolButton[simplified="true"] {
+            min-height: 24px;
+            max-height: 24px;
+            qproperty-iconSize: 16px;
+        }
+
+        QToolButton[simplified="true"][buttonStyle="1"] {
+            min-width: 68px;
+            padding: 2px 6px;
+        }
+
+        QToolButton[simplified="true"][buttonStyle="2"] {
+            min-width: 28px;
+            max-width: 28px;
         }
 
         /* Hover Effect (Microsoft 365 Fluent highlight) */

@@ -13,9 +13,11 @@ class LqRibbonBar(QTabWidget):
     """Ribbon bar that contains multiple ribbon pages"""
 
     page_changed = Signal(int)  # Signal emitted when page changes
+    simplified_mode_changed = Signal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._simplified_mode = False
         self.init_ui()
         self.pages = []
 
@@ -30,8 +32,7 @@ class LqRibbonBar(QTabWidget):
         # Connect signals
         self.currentChanged.connect(self.on_page_changed)
 
-        # Set height for the classic Word-like ribbon area.
-        self.setFixedHeight(LqStyle.RIBBON_HEIGHT)
+        self._apply_ribbon_height()
 
     def paintEvent(self, event):
         """Custom paint event to draw blue background for tab bar area"""
@@ -40,6 +41,30 @@ class LqRibbonBar(QTabWidget):
         # Paint blue background for tab bar area
         painter = QPainter(self)
         painter.fillRect(0, 0, self.width(), LqStyle.TAB_BAR_HEIGHT, QBrush(QColor(LqStyle.PRIMARY_COLOR)))
+
+    def set_simplified_mode(self, simplified):
+        """Switch between classic and simplified ribbon layouts."""
+        simplified = bool(simplified)
+        if self._simplified_mode == simplified:
+            return
+
+        self._simplified_mode = simplified
+        self._apply_ribbon_height()
+        for page in self.pages:
+            page.set_simplified_mode(simplified)
+        self.simplified_mode_changed.emit(simplified)
+
+    def toggle_simplified_mode(self):
+        """Toggle the simplified ribbon state and return the new state."""
+        self.set_simplified_mode(not self._simplified_mode)
+        return self._simplified_mode
+
+    def is_simplified_mode(self):
+        return self._simplified_mode
+
+    def _apply_ribbon_height(self):
+        height = LqStyle.SIMPLIFIED_RIBBON_HEIGHT if self._simplified_mode else LqStyle.RIBBON_HEIGHT
+        self.setFixedHeight(height)
 
     def add_page(self, title):
         """Add a new ribbon page
@@ -53,6 +78,7 @@ class LqRibbonBar(QTabWidget):
         from .lq_ribbon_page import LqRibbonPage
 
         page = LqRibbonPage(title, self)
+        page.set_simplified_mode(self._simplified_mode)
         self.pages.append(page)
         self.addTab(page, title)
 

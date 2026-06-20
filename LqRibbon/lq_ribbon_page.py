@@ -15,6 +15,7 @@ class LqRibbonPage(QWidget):
         super().__init__(parent)
         self.title = title
         self.groups = []
+        self._simplified_mode = False
         self.init_ui()
 
     def init_ui(self):
@@ -57,10 +58,24 @@ class LqRibbonPage(QWidget):
         from .lq_ribbon_group import LqRibbonGroup
 
         group = LqRibbonGroup(title, self)
+        group.set_simplified_mode(self._simplified_mode)
         self.groups.append(group)
         self.groups_layout.addWidget(group)
 
         return group
+
+    def set_simplified_mode(self, simplified):
+        """Switch every group on this page to simplified ribbon layout."""
+        simplified = bool(simplified)
+        if self._simplified_mode == simplified:
+            return
+
+        self._simplified_mode = simplified
+        for group in self.groups:
+            group.set_simplified_mode(simplified)
+
+    def is_simplified_mode(self):
+        return self._simplified_mode
 
     def get_group(self, index):
         """Get a group by index

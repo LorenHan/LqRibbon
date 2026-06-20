@@ -15,6 +15,7 @@ class LqRibbonButton(QToolButton):
     def __init__(self, action=None, button_style=Qt.ToolButtonStyle.ToolButtonTextUnderIcon, parent=None):
         super().__init__(parent)
         self.button_style = button_style
+        self._simplified_mode = False
         self.init_ui()
 
         if action:
@@ -26,9 +27,11 @@ class LqRibbonButton(QToolButton):
         self.setMaximumSize(16777215, 16777215)
 
         # Set button properties based on style
-        self.setToolButtonStyle(self.button_style)
+        effective_style = self._effective_button_style()
+        self.setToolButtonStyle(effective_style)
+        self.setProperty("simplified", "true" if self._simplified_mode else "false")
 
-        if self.button_style == Qt.ToolButtonStyle.ToolButtonTextUnderIcon:
+        if effective_style == Qt.ToolButtonStyle.ToolButtonTextUnderIcon:
             # Large button with icon on top and text below
             self.setProperty("buttonStyle", "0")
             self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
@@ -36,15 +39,18 @@ class LqRibbonButton(QToolButton):
             self.setMaximumHeight(LqStyle.LARGE_BUTTON_MIN_HEIGHT + 2)
             self.setIconSize(QSize(LqStyle.LARGE_ICON_SIZE, LqStyle.LARGE_ICON_SIZE))
 
-        elif self.button_style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
+        elif effective_style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
             # Medium button with icon and text side by side
             self.setProperty("buttonStyle", "1")
             self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-            self.setMinimumSize(LqStyle.SMALL_BUTTON_MIN_WIDTH, LqStyle.SMALL_BUTTON_HEIGHT)
-            self.setMaximumHeight(LqStyle.SMALL_BUTTON_HEIGHT + 1)
-            self.setIconSize(QSize(LqStyle.SMALL_ICON_SIZE, LqStyle.SMALL_ICON_SIZE))
+            min_width = LqStyle.SIMPLIFIED_BUTTON_MIN_WIDTH if self._simplified_mode else LqStyle.SMALL_BUTTON_MIN_WIDTH
+            height = LqStyle.SIMPLIFIED_BUTTON_HEIGHT if self._simplified_mode else LqStyle.SMALL_BUTTON_HEIGHT
+            icon_size = LqStyle.SIMPLIFIED_ICON_SIZE if self._simplified_mode else LqStyle.SMALL_ICON_SIZE
+            self.setMinimumSize(min_width, height)
+            self.setMaximumHeight(height + 1)
+            self.setIconSize(QSize(icon_size, icon_size))
 
-        elif self.button_style == Qt.ToolButtonStyle.ToolButtonIconOnly:
+        elif effective_style == Qt.ToolButtonStyle.ToolButtonIconOnly:
             # Icon only button
             self.setProperty("buttonStyle", "2")
             self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -56,6 +62,17 @@ class LqRibbonButton(QToolButton):
 
         # Set popup mode to instant popup if needed
         self.setPopupMode(QToolButton.ToolButtonPopupMode.DelayedPopup)
+        self._refresh_style()
+
+    def _effective_button_style(self):
+        if self._simplified_mode and self.button_style == Qt.ToolButtonStyle.ToolButtonTextUnderIcon:
+            return Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        return self.button_style
+
+    def _refresh_style(self):
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.update()
 
     def set_button_style(self, style):
         """Change the button style
@@ -64,6 +81,14 @@ class LqRibbonButton(QToolButton):
             style: New button style (Qt.ToolButtonStyle)
         """
         self.button_style = style
+        self.init_ui()
+
+    def set_simplified_mode(self, simplified):
+        """Switch between classic and simplified ribbon presentation."""
+        simplified = bool(simplified)
+        if self._simplified_mode == simplified:
+            return
+        self._simplified_mode = simplified
         self.init_ui()
 
     def set_icon_size(self, size):

@@ -22,6 +22,7 @@ class LqRibbonGroup(QGroupBox):
         self.title = title
         self.buttons = []
         self.actions = []
+        self._simplified_mode = False
         self.init_ui()
 
     def init_ui(self):
@@ -43,6 +44,7 @@ class LqRibbonGroup(QGroupBox):
         self.grid_layout.setSpacing(LqStyle.GROUP_GRID_SPACING)
         self.grid_column = 0
         self.grid_row = 0
+        self._apply_density()
 
     def addAction(self, icon, text, tooltip=None, style=None):
         """Add an action button to the group (One-liner)
@@ -112,28 +114,73 @@ class LqRibbonGroup(QGroupBox):
 
         # Create button
         button = LqRibbonButton(action, button_style, self)
+        button.set_simplified_mode(self._simplified_mode)
         self.buttons.append(button)
         self.actions.append(action)
 
-        # Add to layout based on style
-        if button_style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
-            # Add to grid layout for ToolButtonTextBesideIcon buttons - vertical arrangement (3 rows per column)
-            self.grid_layout.addWidget(button, self.grid_row, self.grid_column)
-            self.grid_row += 1
-
-            # After 3 rows, move to next column
-            if self.grid_row >= 3:
-                self.grid_row = 0
-                self.grid_column += 1
-
-            # Ensure grid layout is added to main layout
-            if self.main_layout.indexOf(self.grid_layout) == -1:
-                self.main_layout.addLayout(self.grid_layout)
-        else:
-            # Add directly to main layout for large buttons (ToolButtonTextUnderIcon style)
-            self.main_layout.addWidget(button)
+        self._add_button_to_layout(button)
 
         return button
+
+    def set_simplified_mode(self, simplified):
+        """Switch the group between classic and simplified ribbon layout."""
+        simplified = bool(simplified)
+        if self._simplified_mode == simplified:
+            return
+
+        self._simplified_mode = simplified
+        for button in self.buttons:
+            button.set_simplified_mode(simplified)
+        self._apply_density()
+        self._reflow_buttons()
+
+    def is_simplified_mode(self):
+        return self._simplified_mode
+
+    def _apply_density(self):
+        self.setProperty("simplified", "true" if self._simplified_mode else "false")
+        if self._simplified_mode:
+            self.setMinimumHeight(LqStyle.SIMPLIFIED_GROUP_MIN_HEIGHT)
+            self.main_layout.setContentsMargins(*LqStyle.SIMPLIFIED_GROUP_LAYOUT_MARGINS)
+        else:
+            self.setMinimumHeight(LqStyle.GROUP_MIN_HEIGHT)
+            self.main_layout.setContentsMargins(*LqStyle.GROUP_LAYOUT_MARGINS)
+
+        self.main_layout.setSpacing(LqStyle.GROUP_BUTTON_SPACING)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.update()
+
+    def _add_button_to_layout(self, button):
+        if self._simplified_mode or button.button_style != Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
+            self.main_layout.addWidget(button)
+            return
+
+        self.grid_layout.addWidget(button, self.grid_row, self.grid_column)
+        self.grid_row += 1
+        if self.grid_row >= 3:
+            self.grid_row = 0
+            self.grid_column += 1
+
+        if self.main_layout.indexOf(self.grid_layout) == -1:
+            self.main_layout.addLayout(self.grid_layout)
+
+    def _remove_grid_layout(self):
+        index = self.main_layout.indexOf(self.grid_layout)
+        if index != -1:
+            self.main_layout.takeAt(index)
+
+    def _reflow_buttons(self):
+        for button in self.buttons:
+            self.main_layout.removeWidget(button)
+            self.grid_layout.removeWidget(button)
+
+        self._remove_grid_layout()
+        self.grid_row = 0
+        self.grid_column = 0
+
+        for button in self.buttons:
+            self._add_button_to_layout(button)
 
     def add_separator(self):
         """Add a vertical separator to the group"""
@@ -217,9 +264,12 @@ class LqRibbonGroup(QGroupBox):
         """Remove all actions from the group"""
         for button in self.buttons:
             self.main_layout.removeWidget(button)
+            self.grid_layout.removeWidget(button)
             button.deleteLater()
         self.buttons.clear()
         self.actions.clear()
+        self.grid_row = 0
+        self.grid_column = 0
 
     def set_title(self, title):
         """Set the group title
