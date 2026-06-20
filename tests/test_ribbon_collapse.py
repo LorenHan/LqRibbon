@@ -1,0 +1,230 @@
+"""
+Smoke tests for Ribbon collapse and temporary expansion behavior.
+
+Run with:
+    QT_QPA_PLATFORM=offscreen python tests/test_ribbon_collapse.py
+"""
+
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication, QLabel, QStackedWidget, QToolButton
+
+from LqRibbon import RibbonMainWindow
+
+
+def _app():
+    app = QApplication.instance()
+    return app or QApplication([])
+
+
+def _window():
+    window = RibbonMainWindow()
+    ribbon = window.ribbonBar()
+    first_page = ribbon.addPage("General")
+    first_group = first_page.addGroup("Actions")
+    action_hits = []
+    action = first_group.addAction(
+        window.style().standardIcon(window.style().StandardPixmap.SP_DialogApplyButton),
+        "Apply",
+        Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+    )
+    action.triggered.connect(lambda: action_hits.append("apply"))
+
+    second_page = ribbon.addPage("Driver")
+    second_group = second_page.addGroup("Driver Actions")
+    second_action = second_group.addAction(
+        window.style().standardIcon(window.style().StandardPixmap.SP_DialogApplyButton),
+        "Connect",
+        Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+    )
+    second_action.triggered.connect(lambda: action_hits.append("connect"))
+
+    content = QLabel("content")
+    window.setCentralWidget(content)
+    window.resize(700, 420)
+    window.show()
+    _app().processEvents()
+    return window, ribbon, action, second_action, action_hits
+
+
+def _tab_bar(ribbon):
+    return ribbon.tabBar()
+
+
+def _tab_center(ribbon, index):
+    return _tab_bar(ribbon).tabRect(index).center()
+
+
+def _stack(ribbon):
+    return ribbon.findChild(QStackedWidget)
+
+
+def _command_area_visible(ribbon):
+    stack = _stack(ribbon)
+    return stack is not None and stack.isVisible() and stack.height() > 0
+
+
+def _temporary_expanded(ribbon):
+    return bool(getattr(ribbon, "_ribbon_temporary_expanded", False))
+
+
+def _action_button(ribbon, action):
+    for button in ribbon.findChildren(QToolButton):
+        if button.defaultAction() is action:
+            return button
+    raise AssertionError(f"missing button for action {action.text()}")
+
+
+def _click_tab(ribbon, index=0):
+    QTest.mouseClick(
+        _tab_bar(ribbon),
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+        _tab_center(ribbon, index),
+    )
+    _app().processEvents()
+
+
+def _double_click_tab(ribbon, index=0):
+    QTest.mouseDClick(
+        _tab_bar(ribbon),
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+        _tab_center(ribbon, index),
+    )
+    _app().processEvents()
+
+
+def test_double_click_expanded_tab_collapses():
+    window, ribbon, *_ = _window()
+    _double_click_tab(ribbon, 0)
+    assert ribbon.isRibbonMinimized()
+    assert not _command_area_visible(ribbon)
+    window.close()
+
+
+def test_double_click_collapsed_tab_restores():
+    window, ribbon, *_ = _window()
+    ribbon.setRibbonMinimized(True)
+    _double_click_tab(ribbon, 0)
+    assert not ribbon.isRibbonMinimized()
+    assert _command_area_visible(ribbon)
+    window.close()
+
+
+def test_collapse_button_collapses():
+    window, ribbon, *_ = _window()
+    collapse_button = getattr(ribbon, "_collapse_button")
+    QTest.mouseClick(collapse_button, Qt.MouseButton.LeftButton)
+    _app().processEvents()
+    assert ribbon.isRibbonMinimized()
+    assert not _command_area_visible(ribbon)
+    window.close()
+
+
+def test_single_click_collapsed_tab_temporarily_expands():
+    window, ribbon, *_ = _window()
+    ribbon.setRibbonMinimized(True)
+    _click_tab(ribbon, 0)
+    assert ribbon.isRibbonMinimized()
+    assert _temporary_expanded(ribbon)
+    assert _command_area_visible(ribbon)
+    window.close()
+
+
+def test_action_triggers_while_temporarily_expanded():
+    window, ribbon, action, _, action_hits = _window()
+    ribbon.setRibbonMinimized(True)
+    _click_tab(ribbon, 0)
+    button = _action_button(ribbon, action)
+    QTest.mouseClick(button, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, button.rect().center())
+    _app().processEvents()
+    assert action_hits == ["apply"]
+    window.close()
+
+
+def test_action_hides_temporary_expansion():
+    window, ribbon, action, _, _ = _window()
+    ribbon.setRibbonMinimized(True)
+    _click_tab(ribbon, 0)
+    button = _action_button(ribbon, action)
+    QTest.mouseClick(button, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, button.rect().center())
+    _app().processEvents()
+    assert ribbon.isRibbonMinimized()
+    assert not _temporary_expanded(ribbon)
+    assert not _command_area_visible(ribbon)
+    window.close()
+
+
+def test_outside_click_hides_temporary_expansion():
+    window, ribbon, *_ = _window()
+    ribbon.setRibbonMinimized(True)
+    _click_tab(ribbon, 0)
+    QTest.mouseClick(window.centralWidget(), Qt.MouseButton.LeftButton)
+    _app().processEvents()
+    assert ribbon.isRibbonMinimized()
+    assert not _temporary_expanded(ribbon)
+    assert not _command_area_visible(ribbon)
+    window.close()
+
+
+def test_double_click_temporary_expanded_tab_restores_permanently():
+    window, ribbon, *_ = _window()
+    ribbon.setRibbonMinimized(True)
+    _click_tab(ribbon, 0)
+    _double_click_tab(ribbon, 0)
+    assert not ribbon.isRibbonMinimized()
+    assert not _temporary_expanded(ribbon)
+    assert _command_area_visible(ribbon)
+    window.close()
+
+
+def test_collapsed_click_other_page_temporarily_expands_selected_page():
+    window, ribbon, _, second_action, action_hits = _window()
+    ribbon.setRibbonMinimized(True)
+    _click_tab(ribbon, 1)
+    assert ribbon.currentIndex() == 1
+    assert ribbon.isRibbonMinimized()
+    assert _temporary_expanded(ribbon)
+    button = _action_button(ribbon, second_action)
+    QTest.mouseClick(button, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, button.rect().center())
+    _app().processEvents()
+    assert action_hits == ["connect"]
+    window.close()
+
+
+def test_minimization_disabled_blocks_collapse():
+    window, ribbon, *_ = _window()
+    ribbon.setMinimizationEnabled(False)
+    _double_click_tab(ribbon, 0)
+    assert not ribbon.isRibbonMinimized()
+    assert _command_area_visible(ribbon)
+    window.close()
+
+
+def main():
+    _app()
+    tests = [
+        test_double_click_expanded_tab_collapses,
+        test_double_click_collapsed_tab_restores,
+        test_collapse_button_collapses,
+        test_single_click_collapsed_tab_temporarily_expands,
+        test_action_triggers_while_temporarily_expanded,
+        test_action_hides_temporary_expansion,
+        test_outside_click_hides_temporary_expansion,
+        test_double_click_temporary_expanded_tab_restores_permanently,
+        test_collapsed_click_other_page_temporarily_expands_selected_page,
+        test_minimization_disabled_blocks_collapse,
+    ]
+    for test in tests:
+        test()
+        print(f"PASS {test.__name__}")
+
+
+if __name__ == "__main__":
+    main()
