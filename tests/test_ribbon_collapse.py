@@ -185,6 +185,8 @@ def test_simplified_mode_keeps_one_line_command_area():
     assert not ribbon.isRibbonMinimized()
     assert _command_area_visible(ribbon)
     assert ribbon.height() < full_height
+    assert ribbon.rowItemCount() == 3
+    assert ribbon.rowItemHeight() > 0
 
     ribbon.setSimplifiedMode(False)
     _app().processEvents()
@@ -290,6 +292,7 @@ def test_example_collapse_state_preview_tracks_modes():
     _app().processEvents()
     ribbon = window.ribbonBar()
     preview = window.collapse_state_preview
+    density_preview = window.density_status_preview
 
     assert "Expanded" in preview.text()
 
@@ -301,6 +304,8 @@ def test_example_collapse_state_preview_tracks_modes():
     ribbon.setSimplifiedMode(True)
     _app().processEvents()
     assert "Simplified" in preview.text()
+    assert "Compact" in density_preview.text()
+    assert str(ribbon.rowItemHeight()) in density_preview.text()
 
     window.pin_ribbon_action.trigger()
     _app().processEvents()

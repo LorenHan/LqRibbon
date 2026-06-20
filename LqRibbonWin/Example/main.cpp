@@ -162,7 +162,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *alwaysShowRibbonAction,
                      QAction *autoHideRibbonAction,
                      QLabel *collapseStatePreview,
-                     QLabel *doubleClickStatePreview)
+                     QLabel *doubleClickStatePreview,
+                     QLabel *densityStatusPreview)
 {
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     ribbonBar->setMinimizationEnabled(true);
@@ -271,6 +272,18 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && collapseTestCommandAreaVisible(ribbonBar)
                      && ribbonBar->height() < fullRibbonHeight,
                  QStringLiteral("simplified mode keeps one-line command area"))) {
+        return 1;
+    }
+    if (!require(ribbonBar->rowItemCount() == 3
+                     && ribbonBar->rowItemHeight() > 0,
+                 QStringLiteral("compact density metrics are available"))) {
+        return 1;
+    }
+    if (!require(densityStatusPreview->text().contains(
+                     QStringLiteral("Compact"))
+                     && densityStatusPreview->text().contains(
+                         QString::number(ribbonBar->rowItemHeight())),
+                 QStringLiteral("compact density preview tracks simplified mode"))) {
         return 1;
     }
     ribbonBar->setSimplifiedMode(false);
@@ -1597,11 +1610,12 @@ int main(int argc, char *argv[])
         Qt::ToolButtonTextBesideIcon);
     QLabel *collapseStatePreview = new QLabel(&mainWindow);
     collapseStatePreview->setObjectName(QStringLiteral("collapseStatePreview"));
-    collapseStatePreview->setMinimumWidth(170);
+    collapseStatePreview->setMinimumWidth(230);
+    collapseStatePreview->setFixedHeight(30);
     collapseStatePreview->setAlignment(Qt::AlignCenter);
     collapseStatePreview->setFrameShape(QFrame::StyledPanel);
     collapseStatePreview->setToolTip(
-        QObject::tr("Collapse and tab double-click state preview"));
+        QObject::tr("Ribbon state, tab double-click target, and command density"));
     windowGroup->addWidget(collapseStatePreview);
     QLabel *doubleClickStatePreview = collapseStatePreview;
 
@@ -1726,8 +1740,10 @@ int main(int argc, char *argv[])
     customizeManager->setPageId(shellPage, QStringLiteral("shell"));
     customizeManager->setGroupId(runtimeGroup, QStringLiteral("runtime"));
     QByteArray savedRibbonState;
+    QLabel *densityStatusPreview = nullptr;
 
-    auto updateCollapseStatePreview = [&mainWindow, collapseStatePreview]() {
+    auto updateCollapseStatePreview =
+        [&mainWindow, collapseStatePreview, &densityStatusPreview]() {
         LqRibbon::RibbonBar *bar = mainWindow.ribbonBar();
         QString stateText;
         if (!bar->isMinimizationEnabled()) {
@@ -1751,9 +1767,23 @@ int main(int argc, char *argv[])
         } else {
             doubleClickText = QObject::tr("Collapse");
         }
+
+        const QString densityText = bar->simplifiedMode()
+            ? QObject::tr("Compact %1px").arg(bar->rowItemHeight())
+            : QObject::tr("Classic %1x%2px")
+                  .arg(bar->rowItemCount())
+                  .arg(bar->rowItemHeight());
         collapseStatePreview->setText(
-            QObject::tr("State: %1\nDouble-click: %2")
-                .arg(stateText, doubleClickText));
+            bar->simplifiedMode()
+                ? QObject::tr("%1 | %2")
+                      .arg(stateText, densityText)
+                : QObject::tr("%1 | Tab: %2 | %3")
+                      .arg(stateText, doubleClickText, densityText));
+        collapseStatePreview->setVisible(!bar->simplifiedMode());
+        if (densityStatusPreview) {
+            densityStatusPreview->setText(
+                QObject::tr("Ribbon density: %1").arg(densityText));
+        }
     };
     QObject::connect(mainWindow.ribbonBar(),
                      &LqRibbon::RibbonBar::ribbonMinimizedChanged,
@@ -1958,6 +1988,11 @@ int main(int argc, char *argv[])
     ribbonStatusBar->addAction(QObject::tr("Ready"));
     ribbonStatusBar->addSeparator();
     ribbonStatusBar->addAction(QObject::tr("Online"));
+    densityStatusPreview = new QLabel(ribbonStatusBar);
+    densityStatusPreview->setObjectName(QStringLiteral("ribbonDensityStatusPreview"));
+    densityStatusPreview->setMinimumWidth(180);
+    ribbonStatusBar->addSeparator();
+    ribbonStatusBar->addWidget(densityStatusPreview);
 
     LqRibbon::RibbonStatusBarSwitchGroup *switchGroup =
         new LqRibbon::RibbonStatusBarSwitchGroup(ribbonStatusBar);
@@ -1994,6 +2029,7 @@ int main(int argc, char *argv[])
     ribbonStatusBar->addPermanentWidget(zoomSlider);
     ribbonStatusBar->addPermanentWidget(progressBar);
     mainWindow.setStatusBar(ribbonStatusBar);
+    updateCollapseStatePreview();
 
     QObject::connect(zoomSlider, &LqRibbon::RibbonSliderPane::valueChanged,
                      progressBar, &LqRibbon::RibbonProgressBar::setValueSafe);
@@ -2148,7 +2184,8 @@ int main(int argc, char *argv[])
                              alwaysShowRibbonAction,
                              autoHideRibbonAction,
                              collapseStatePreview,
-                             doubleClickStatePreview]() {
+                             doubleClickStatePreview,
+                             densityStatusPreview]() {
             qApp->exit(runCollapseTests(mainWindow,
                                          classicRibbonAction,
                                          pinRibbonAction,
@@ -2159,7 +2196,8 @@ int main(int argc, char *argv[])
                                          alwaysShowRibbonAction,
                                          autoHideRibbonAction,
                                          collapseStatePreview,
-                                         doubleClickStatePreview));
+                                         doubleClickStatePreview,
+                                         densityStatusPreview));
         });
         return application.exec();
     }

@@ -510,11 +510,12 @@ class MainWindow(RibbonMainWindow):
         )
         self.collapse_state_preview = QLabel(window_group)
         self.collapse_state_preview.setObjectName("collapseStatePreview")
-        self.collapse_state_preview.setMinimumWidth(170)
+        self.collapse_state_preview.setMinimumWidth(230)
+        self.collapse_state_preview.setFixedHeight(30)
         self.collapse_state_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.collapse_state_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.collapse_state_preview.setToolTip(
-            "Collapse and tab double-click state preview"
+            "Ribbon state, tab double-click target, and command density"
         )
         window_group.addWidget(self.collapse_state_preview)
         self.double_click_state_preview = self.collapse_state_preview
@@ -629,6 +630,11 @@ class MainWindow(RibbonMainWindow):
         status_bar.addWidget(QLabel("Ready", status_bar))
         status_bar.addWidget(QLabel("|", status_bar))
         status_bar.addWidget(QLabel("Online", status_bar))
+        status_bar.addWidget(QLabel("|", status_bar))
+        self.density_status_preview = QLabel(status_bar)
+        self.density_status_preview.setObjectName("ribbonDensityStatusPreview")
+        self.density_status_preview.setMinimumWidth(180)
+        status_bar.addWidget(self.density_status_preview)
 
         switch_group = RibbonStatusBarSwitchGroup(status_bar)
         view_actions = QActionGroup(switch_group)
@@ -861,9 +867,17 @@ class MainWindow(RibbonMainWindow):
             double_click_state = "Restore"
         else:
             double_click_state = "Collapse"
-        self.collapse_state_preview.setText(
-            f"State: {state}\nDouble-click: {double_click_state}"
-        )
+
+        if ribbon.simplifiedMode():
+            density_state = f"Compact {ribbon.rowItemHeight()}px"
+            preview_text = f"{state} | {density_state}"
+        else:
+            density_state = f"Classic {ribbon.rowItemCount()}x{ribbon.rowItemHeight()}px"
+            preview_text = f"{state} | Tab: {double_click_state} | {density_state}"
+        self.collapse_state_preview.setText(preview_text)
+        self.collapse_state_preview.setVisible(not ribbon.simplifiedMode())
+        if hasattr(self, "density_status_preview"):
+            self.density_status_preview.setText(f"Ribbon density: {density_state}")
 
     def install_default_content(self):
         content = QLabel("LqRibbon PySide6 example")
