@@ -54,6 +54,7 @@ const int ribbonWindowButtonWidth = 46;
 const int ribbonWindowButtonHeight = 30;
 const int ribbonCollapseButtonWidth = 32;
 const int ribbonCollapseButtonHeight = 24;
+const int ribbonQuickAccessBelowHeight = 28;
 const int ribbonMaximizedContentMargin = 3;
 const int ribbonMdiTitleHeight = 28;
 const int ribbonMdiTitleBottomOverlap = 2;
@@ -3234,7 +3235,7 @@ RibbonSearchBar *RibbonBar::searchBar() const
 void RibbonBar::setQuickAccessBarPosition(BarPosition position)
 {
     m_quickAccessBarPosition = position;
-    updateQuickAccessGeometry();
+    updateRibbonDisplayState();
 }
 
 RibbonBar::BarPosition RibbonBar::quickAccessBarPosition() const
@@ -4052,8 +4053,14 @@ void RibbonBar::updateRibbonTabGeometry()
     }
 
     const bool commandAreaVisible = isRibbonCommandAreaVisible();
+    const int quickAccessReserve =
+        commandAreaVisible
+            && m_quickAccessBarPosition == BottomPosition
+            && !m_quickAccessBar->isHidden()
+        ? ribbonQuickAccessBelowHeight
+        : 0;
     const int stackHeight = commandAreaVisible
-        ? qMax(0, height() - stackTop)
+        ? qMax(0, height() - stackTop - quickAccessReserve)
         : 0;
     stackedWidget->setGeometry(0, stackTop, width(), stackHeight);
     stackedWidget->setVisible(commandAreaVisible);
@@ -4097,11 +4104,31 @@ void RibbonBar::updateSearchGeometry()
 ///
 void RibbonBar::updateQuickAccessGeometry()
 {
-    const int preferredLeftMargin = 340;
     const int rightMargin = 12;
+    const int barHeight = 24;
+    if (m_quickAccessBarPosition == BottomPosition
+        && isRibbonCommandAreaVisible()) {
+        const int leftMargin = 8;
+        const int rightLimit =
+            width() - ribbonCollapseButtonWidth - rightMargin;
+        const int maxWidth = qMax(0, rightLimit - leftMargin);
+        const int barWidth =
+            qMin(m_quickAccessBar->sizeHint().width(), maxWidth);
+        const int topMargin = qMax(
+            0,
+            height() - ribbonQuickAccessBelowHeight
+                + ((ribbonQuickAccessBelowHeight - barHeight) / 2));
+        m_quickAccessBar->setGeometry(leftMargin,
+                                      topMargin,
+                                      barWidth,
+                                      barHeight);
+        m_quickAccessBar->raise();
+        return;
+    }
+
+    const int preferredLeftMargin = 340;
     const int itemGap = 8;
     const int controlWidth = windowControlWidth();
-    const int barHeight = 24;
     const int topMargin = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - barHeight) / 2);
     const int rightLimit = m_searchEdit->isVisible()
@@ -4159,8 +4186,16 @@ void RibbonBar::updateRibbonMetrics()
         : (m_frameThemeEnabled
                ? ribbonCaptionHeight + ribbonTabHeight
                : tabBar()->sizeHint().height());
-    if (height() != barHeight || minimumHeight() != barHeight) {
-        setFixedHeight(barHeight);
+    const int quickAccessReserve =
+        isRibbonCommandAreaVisible()
+            && m_quickAccessBarPosition == BottomPosition
+            && !m_quickAccessBar->isHidden()
+        ? ribbonQuickAccessBelowHeight
+        : 0;
+    const int adjustedBarHeight = barHeight + quickAccessReserve;
+    if (height() != adjustedBarHeight
+        || minimumHeight() != adjustedBarHeight) {
+        setFixedHeight(adjustedBarHeight);
     }
 }
 

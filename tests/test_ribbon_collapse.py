@@ -372,6 +372,7 @@ def test_example_quick_access_menu_controls_toolbar_visibility():
     window.populate_quick_access_menu(menu)
     assert window.show_quick_access_action in menu.actions()
     assert window.quick_access_above_action in menu.actions()
+    assert window.quick_access_below_action in menu.actions()
     assert window.show_quick_access_action.isChecked()
     assert window.quick_access_above_action.isChecked()
     assert window.ribbonBar().quickAccessBarPosition() == QUICK_ACCESS_TOP_POSITION
@@ -391,9 +392,13 @@ def test_example_quick_access_menu_controls_toolbar_visibility():
     assert not quick_access_bar.isHidden()
     assert window.show_quick_access_action.isChecked()
     assert "Visible 3/3" in status.text()
-    window.ribbonBar().setQuickAccessBarPosition(QUICK_ACCESS_BOTTOM_POSITION)
-    window.update_quick_access_preview()
+    window.quick_access_below_action.trigger()
+    _app().processEvents()
+    assert window.ribbonBar().quickAccessBarPosition() == QUICK_ACCESS_BOTTOM_POSITION
+    assert window.quick_access_below_action.isChecked()
+    assert not window.quick_access_above_action.isChecked()
     assert "Below" in status.text()
+    assert quick_access_bar.y() > window.ribbonBar().tabBar().geometry().bottom()
     window.quick_access_above_action.trigger()
     _app().processEvents()
     assert window.ribbonBar().quickAccessBarPosition() == QUICK_ACCESS_TOP_POSITION

@@ -68,6 +68,7 @@ def main():
     width_stress_preview = "--grab-width-stress-preview" in arguments
     quick_access_hidden_preview = "--grab-qat-hidden-preview" in arguments
     quick_access_above_preview = "--grab-qat-above-preview" in arguments
+    quick_access_below_preview = "--grab-qat-below-preview" in arguments
     style_preview = "--grab-style-preview" in arguments
     style_name = _option_value(arguments, "--style")
     deterministic_style = bool(preview_path)
@@ -89,6 +90,7 @@ def main():
         or width_stress_preview
         or quick_access_hidden_preview
         or quick_access_above_preview
+        or quick_access_below_preview
         or simplified_preview
         or temporary_preview
         or double_click_preview
@@ -100,6 +102,7 @@ def main():
         width_stress_preview
         or quick_access_hidden_preview
         or quick_access_above_preview
+        or quick_access_below_preview
     ):
         window.resize(1476, 560)
     if style_name:
@@ -118,6 +121,7 @@ def main():
             or width_stress_preview
             or quick_access_hidden_preview
             or quick_access_above_preview
+            or quick_access_below_preview
             or simplified_preview
             or temporary_preview
             or double_click_preview
@@ -156,6 +160,8 @@ def main():
         )
     if quick_access_above_preview:
         QTimer.singleShot(120, window.quick_access_above_action.trigger)
+    if quick_access_below_preview:
+        QTimer.singleShot(120, window.quick_access_below_action.trigger)
     if preview_path:
         QTimer.singleShot(300, lambda: (window.grab().save(preview_path), app.quit()))
 

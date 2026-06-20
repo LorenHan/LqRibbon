@@ -35,6 +35,7 @@ RIBBON_COLLAPSED_HEIGHT = RIBBON_CAPTION_HEIGHT + RIBBON_TAB_HEIGHT
 RIBBON_SIMPLIFIED_HEIGHT = RIBBON_COLLAPSED_HEIGHT + 48
 RIBBON_COLLAPSE_BUTTON_WIDTH = 32
 RIBBON_COLLAPSE_BUTTON_HEIGHT = 24
+RIBBON_QUICK_ACCESS_BELOW_HEIGHT = 28
 
 
 class _RibbonCollapseButton(QToolButton):
@@ -258,9 +259,22 @@ class LqRibbonBar(QTabWidget):
         command_area_visible = self._is_command_area_visible()
 
         stack = self.findChild(QStackedWidget)
+        quick_access_below = (
+            command_area_visible
+            and self._quick_access_position == 2
+            and not self._quick_access_bar.isHidden()
+        )
+        quick_access_reserve = (
+            RIBBON_QUICK_ACCESS_BELOW_HEIGHT if quick_access_below else 0
+        )
+
         if stack:
             stack_top = RIBBON_COLLAPSED_HEIGHT
-            stack_height = max(0, self.height() - stack_top) if command_area_visible else 0
+            stack_height = (
+                max(0, self.height() - stack_top - quick_access_reserve)
+                if command_area_visible
+                else 0
+            )
             stack.setGeometry(0, stack_top, self.width(), stack_height)
             stack.setVisible(command_area_visible)
 
@@ -287,6 +301,35 @@ class LqRibbonBar(QTabWidget):
         else:
             self._title_button_bar.hide()
 
+        if not self._quick_access_bar.isHidden():
+            quick_height = 24
+            if quick_access_below:
+                quick_x = 8
+                quick_y = max(
+                    0,
+                    self.height()
+                    - RIBBON_QUICK_ACCESS_BELOW_HEIGHT
+                    + ((RIBBON_QUICK_ACCESS_BELOW_HEIGHT - quick_height) // 2),
+                )
+                quick_width = min(
+                    self._quick_access_bar.sizeHint().width(),
+                    max(0, self.width() - RIBBON_COLLAPSE_BUTTON_WIDTH - 20),
+                )
+            else:
+                quick_x = 0
+                quick_y = 6
+                quick_width = min(
+                    self._quick_access_bar.sizeHint().width(),
+                    max(0, self.width() - 48),
+                )
+            self._quick_access_bar.setGeometry(
+                quick_x,
+                quick_y,
+                quick_width,
+                quick_height,
+            )
+            self._quick_access_bar.raise_()
+
         collapse_x = max(0, self.width() - RIBBON_COLLAPSE_BUTTON_WIDTH)
         collapse_y = max(0, self.height() - RIBBON_COLLAPSE_BUTTON_HEIGHT - 2)
         self._collapse_button.setGeometry(
@@ -307,6 +350,12 @@ class LqRibbonBar(QTabWidget):
             height = RIBBON_SIMPLIFIED_HEIGHT if self._simplified_mode else RIBBON_BAR_HEIGHT
         else:
             height = RIBBON_COLLAPSED_HEIGHT
+        if (
+            self._is_command_area_visible()
+            and self._quick_access_position == 2
+            and not self._quick_access_bar.isHidden()
+        ):
+            height += RIBBON_QUICK_ACCESS_BELOW_HEIGHT
         self.setFixedHeight(height)
         self._update_layout()
 
@@ -619,6 +668,7 @@ class LqRibbonBar(QTabWidget):
             action = QAction(icon if isinstance(icon, QIcon) else QIcon(icon), text, self)
         self._quick_access_bar.addAction(action)
         self._quick_access_bar.show()
+        self._apply_ribbon_height()
         return action
 
     def clearQuickAccessActions(self):
@@ -753,6 +803,7 @@ class LqRibbonBar(QTabWidget):
 
     def setQuickAccessBarPosition(self, position):
         self._quick_access_position = position
+        self._apply_ribbon_height()
 
     def quickAccessBarPosition(self):
         return self._quick_access_position
