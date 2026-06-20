@@ -404,11 +404,14 @@ def test_example_zero_query_search_shows_default_suggestions():
     _app().processEvents()
     popup_actions = [action.text() for action in search._popup.actions()]
 
-    assert popup_actions[:4] == [
+    assert popup_actions[:7] == [
+        "Suggested Actions",
         "Settings",
         "Connect",
         "Control Modes",
         "Center Search",
+        "Actions",
+        "Full Screen",
     ]
     assert search._popup.isVisible()
     search.closePopup()
@@ -434,12 +437,14 @@ def test_example_zero_query_search_groups_recent_actions():
         "Center Search",
         "Control Modes",
     ]
-    assert popup_rows[:5] == [
+    assert popup_rows[:7] == [
         "Recently Used",
         "Center Search",
         "Control Modes",
-        "Actions",
+        "Suggested Actions",
         "Settings",
+        "Connect",
+        "Actions",
     ]
     search.closePopup()
     window.close()

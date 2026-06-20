@@ -83,6 +83,8 @@ const RibbonTranslationEntry ribbonTranslationTable[] = {
     {"Actions", "\xE6\x93\x8D\xE4\xBD\x9C"},
     {"Recently Used",
      "\xE6\x9C\x80\xE8\xBF\x91\xE4\xBD\xBF\xE7\x94\xA8"},
+    {"Suggested Actions",
+     "\xE5\xBB\xBA\xE8\xAE\xAE\xE6\x93\x8D\xE4\xBD\x9C"},
     {"Help", "\xE5\xB8\xAE\xE5\x8A\xA9"},
     {"Get Help with \"%1\"",
      "\xE8\x8E\xB7\xE5\x8F\x96\x20\x22\x25\x31\x22\x20"
@@ -4460,10 +4462,31 @@ void RibbonBar::updateSearchPopup()
             defaultActionList.removeAll(action);
         }
 
+        QList<QAction *> suggestedActionList;
+        for (const QString &strSuggestion : m_searchSuggestionList) {
+            QAction *action = searchAction(strSuggestion);
+            if (defaultActionList.contains(action)
+                && !suggestedActionList.contains(action)) {
+                suggestedActionList.append(action);
+            }
+        }
+
+        for (QAction *action : suggestedActionList) {
+            defaultActionList.removeAll(action);
+        }
+
         if (!recentActionList.isEmpty()) {
             m_searchPopupModel->appendRow(
                 createSearchHeaderItem(ribbonText("Recently Used")));
             for (QAction *action : recentActionList) {
+                m_searchPopupModel->appendRow(createSearchActionItem(action));
+            }
+        }
+
+        if (!suggestedActionList.isEmpty()) {
+            m_searchPopupModel->appendRow(
+                createSearchHeaderItem(ribbonText("Suggested Actions")));
+            for (QAction *action : suggestedActionList) {
                 m_searchPopupModel->appendRow(createSearchActionItem(action));
             }
         }

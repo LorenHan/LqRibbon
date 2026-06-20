@@ -840,6 +840,19 @@ class LqRibbonSearchBar(QLineEdit):
         ordered.extend(action for action in actions if action not in ordered)
         return ordered
 
+    def _configured_suggested_actions(self, actions):
+        if not self.ribbon_bar or not hasattr(self.ribbon_bar, "searchSuggestions"):
+            return []
+        ordered = []
+        for suggestion in self.ribbon_bar.searchSuggestions():
+            normalized_suggestion = str(suggestion).replace("&", "").strip().lower()
+            for action in actions:
+                normalized_text = action.text().replace("&", "").strip().lower()
+                if action not in ordered and normalized_text == normalized_suggestion:
+                    ordered.append(action)
+                    break
+        return ordered
+
     def showPopup(self, text=""):
         self._popup.clear()
         normalized = text.strip().lower()
@@ -850,18 +863,30 @@ class LqRibbonSearchBar(QLineEdit):
                 action for action in self.ribbon_bar.recentSearchActions()
                 if action in actions
             ]
-            remaining_actions = [
-                action for action in actions if action not in recent_actions
+            suggested_actions = [
+                action for action in self._configured_suggested_actions(actions)
+                if action not in recent_actions
             ]
+            remaining_actions = [
+                action for action in actions
+                if action not in recent_actions and action not in suggested_actions
+            ]
+            grouped_actions = []
             if recent_actions:
                 self._popup.addSection(QtnRibbonSearchBarRecentActionsString)
-                actions = recent_actions
-                if remaining_actions:
-                    actions = recent_actions + [None] + remaining_actions
+                grouped_actions.extend(recent_actions)
+            if suggested_actions:
+                grouped_actions.append(QtnRibbonSearchBarSuggestedActionsString)
+                grouped_actions.extend(suggested_actions)
+            if remaining_actions:
+                grouped_actions.append(QtnRibbonSearchBarActionsString)
+                grouped_actions.extend(remaining_actions)
+            if grouped_actions:
+                actions = grouped_actions
 
         for action in actions:
-            if action is None:
-                self._popup.addSection(QtnRibbonSearchBarActionsString)
+            if isinstance(action, str):
+                self._popup.addSection(action)
                 continue
             self._popup.addAction(action)
             count += 1

@@ -61,6 +61,7 @@ def main():
     alt_q_search_preview = "--grab-alt-q-search-preview" in arguments
     zero_query_search_preview = "--grab-zero-query-search-preview" in arguments
     recent_search_preview = "--grab-recent-search-preview" in arguments
+    suggested_search_preview = "--grab-suggested-search-preview" in arguments
     collapsed_preview = "--grab-collapsed-preview" in arguments
     simplified_preview = "--grab-simplified-preview" in arguments
     temporary_preview = "--grab-temporary-preview" in arguments
@@ -102,6 +103,7 @@ def main():
         or alt_q_search_preview
         or zero_query_search_preview
         or recent_search_preview
+        or suggested_search_preview
         or controls_preview
         or gallery_preview
         or shell_preview
@@ -140,6 +142,7 @@ def main():
         or alt_q_search_preview
         or zero_query_search_preview
         or recent_search_preview
+        or suggested_search_preview
     ):
         window.resize(1476, 560)
     if style_name:
@@ -207,6 +210,13 @@ def main():
             window.ribbonBar().searchLineEdit().showPopup("")
 
         QTimer.singleShot(120, show_zero_query_search_preview)
+    if suggested_search_preview:
+        def show_suggested_search_preview():
+            window.focus_search_action.trigger()
+            window.ribbonBar().setSearchText("")
+            window.ribbonBar().searchLineEdit().showPopup("")
+
+        QTimer.singleShot(120, show_suggested_search_preview)
     if recent_search_preview:
         def show_recent_search_preview():
             window.ribbonBar().triggerSearchAction("Control Modes")
@@ -341,7 +351,7 @@ def main():
     if preview_path:
         def save_preview():
             preview = window.grab()
-            if zero_query_search_preview or recent_search_preview:
+            if zero_query_search_preview or recent_search_preview or suggested_search_preview:
                 popup = window.ribbonBar().searchLineEdit()._popup
                 if popup.isVisible():
                     painter = QPainter(preview)

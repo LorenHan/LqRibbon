@@ -397,12 +397,14 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         }
     }
     if (!require(searchPopupView && searchPopupView->isVisible()
-                     && zeroQueryRows.value(0) == QStringLiteral("Actions")
+                     && zeroQueryRows.value(0) == QStringLiteral("Suggested Actions")
                      && zeroQueryRows.value(1) == QStringLiteral("Settings")
                      && zeroQueryRows.value(2) == QStringLiteral("Connect")
                      && zeroQueryRows.value(3) == QStringLiteral("Control Modes")
-                     && zeroQueryRows.value(4) == QStringLiteral("Center Search"),
-                 QStringLiteral("zero-query search shows default suggestions"))) {
+                     && zeroQueryRows.value(4) == QStringLiteral("Center Search")
+                     && zeroQueryRows.value(5) == QStringLiteral("Actions")
+                     && zeroQueryRows.value(6) == QStringLiteral("Full Screen"),
+                 QStringLiteral("zero-query search shows suggested action section"))) {
         return 1;
     }
 
@@ -426,7 +428,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && zeroQueryRows.value(0) == QStringLiteral("Recently Used")
                      && zeroQueryRows.value(1) == QStringLiteral("Center Search")
                      && zeroQueryRows.value(2) == QStringLiteral("Control Modes")
-                     && zeroQueryRows.value(3) == QStringLiteral("Actions")
+                     && zeroQueryRows.value(3) == QStringLiteral("Suggested Actions")
                      && zeroQueryRows.value(4) == QStringLiteral("Settings"),
                  QStringLiteral("zero-query search groups recent actions"))) {
         return 1;
@@ -1871,6 +1873,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-zero-query-search-preview"));
     const bool recentSearchPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-recent-search-preview"));
+    const bool suggestedSearchPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-suggested-search-preview"));
     const bool collapsedPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
     const bool simplifiedPreviewRequested =
@@ -1969,6 +1973,7 @@ int main(int argc, char *argv[])
         || altQSearchPreviewRequested
         || zeroQuerySearchPreviewRequested
         || recentSearchPreviewRequested
+        || suggestedSearchPreviewRequested
         || searchPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
@@ -1987,7 +1992,8 @@ int main(int argc, char *argv[])
         || hiddenSearchPreviewRequested
         || altQSearchPreviewRequested
         || zeroQuerySearchPreviewRequested
-        || recentSearchPreviewRequested) {
+        || recentSearchPreviewRequested
+        || suggestedSearchPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -3682,9 +3688,12 @@ int main(int argc, char *argv[])
                            [&mainWindow,
                             strPreviewPath,
                             zeroQuerySearchPreviewRequested,
-                            recentSearchPreviewRequested]() {
+                            recentSearchPreviewRequested,
+                            suggestedSearchPreviewRequested]() {
             QPixmap preview = mainWindow.grab();
-            if (zeroQuerySearchPreviewRequested || recentSearchPreviewRequested) {
+            if (zeroQuerySearchPreviewRequested
+                || recentSearchPreviewRequested
+                || suggestedSearchPreviewRequested) {
                 QListView *searchPopupView =
                     mainWindow.ribbonBar()->findChild<QListView *>(
                         QStringLiteral("lqRibbonSearchPopupView"));
@@ -3727,6 +3736,16 @@ int main(int argc, char *argv[])
         });
     }
     if (zeroQuerySearchPreviewRequested) {
+        QTimer::singleShot(120,
+                           &mainWindow,
+                           [focusSearchAction, &mainWindow]() {
+            focusSearchAction->trigger();
+            mainWindow.ribbonBar()->setSearchText(QString());
+            mainWindow.ribbonBar()->searchLineEdit()->setFocus(
+                Qt::OtherFocusReason);
+        });
+    }
+    if (suggestedSearchPreviewRequested) {
         QTimer::singleShot(120,
                            &mainWindow,
                            [focusSearchAction, &mainWindow]() {
