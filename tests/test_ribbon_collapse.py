@@ -357,6 +357,44 @@ def test_example_double_click_preview_tracks_modes():
     window.close()
 
 
+def test_example_responsive_label_preview_hides_labels_under_stress():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    actions = [
+        window.rename_page_action,
+        window.move_gallery_action,
+        window.toggle_group_action,
+    ]
+    status = window.responsive_labels_status_preview
+
+    assert "0/3" in status.text()
+    for action in actions:
+        assert (
+            _action_button(ribbon, action).toolButtonStyle()
+            == Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
+
+    window.width_stress_action.trigger()
+    _app().processEvents()
+    assert "3/3" in status.text()
+    for action in actions:
+        button = _action_button(ribbon, action)
+        assert button.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+        assert button.property("responsiveLabelHidden") is True
+
+    window.width_stress_action.trigger()
+    _app().processEvents()
+    assert "0/3" in status.text()
+    for action in actions:
+        assert (
+            _action_button(ribbon, action).toolButtonStyle()
+            == Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
+    window.close()
+
+
 def test_single_click_collapsed_tab_temporarily_expands():
     window, ribbon, *_ = _window()
     ribbon.setRibbonMinimized(True)
@@ -453,6 +491,7 @@ def main():
         test_example_display_options_menu_controls_ribbon_modes,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
+        test_example_responsive_label_preview_hides_labels_under_stress,
         test_single_click_collapsed_tab_temporarily_expands,
         test_action_triggers_while_temporarily_expanded,
         test_action_hides_temporary_expansion,

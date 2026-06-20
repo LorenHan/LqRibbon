@@ -176,9 +176,14 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *showTabsOnlyAction,
                      QAction *alwaysShowRibbonAction,
                      QAction *autoHideRibbonAction,
+                     QAction *renamePageAction,
+                     QAction *moveGalleryAction,
+                     QAction *toggleGroupAction,
+                     QAction *widthStressAction,
                      QLabel *collapseStatePreview,
                      QLabel *doubleClickStatePreview,
-                     QLabel *densityStatusPreview)
+                     QLabel *densityStatusPreview,
+                     QLabel *responsiveLabelsStatusPreview)
 {
     qInfo().noquote() << "START collapse tests";
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
@@ -318,6 +323,59 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          QString::number(ribbonBar->rowItemHeight())),
                  QStringLiteral("expanded density preview tracks classic mode"))) {
         return 1;
+    }
+
+    reset();
+    widthStressAction->setChecked(false);
+    processCollapseTestEvents();
+    const QList<QAction *> responsiveActions = {
+        renamePageAction,
+        moveGalleryAction,
+        toggleGroupAction,
+    };
+    for (QAction *action : responsiveActions) {
+        QToolButton *button = collapseTestActionButton(ribbonBar, action);
+        if (!require(button != nullptr
+                         && button->toolButtonStyle()
+                             == Qt::ToolButtonTextBesideIcon,
+                     QStringLiteral("responsive label starts visible for %1")
+                         .arg(action->text()))) {
+            return 1;
+        }
+    }
+    if (!require(responsiveLabelsStatusPreview->text().contains(
+                     QStringLiteral("0/3")),
+                 QStringLiteral("responsive label preview starts wide"))) {
+        return 1;
+    }
+    widthStressAction->trigger();
+    processCollapseTestEvents();
+    for (QAction *action : responsiveActions) {
+        QToolButton *button = collapseTestActionButton(ribbonBar, action);
+        if (!require(button != nullptr
+                         && button->toolButtonStyle()
+                             == Qt::ToolButtonIconOnly,
+                     QStringLiteral("responsive label hides for %1")
+                         .arg(action->text()))) {
+            return 1;
+        }
+    }
+    if (!require(responsiveLabelsStatusPreview->text().contains(
+                     QStringLiteral("3/3")),
+                 QStringLiteral("responsive label preview tracks narrow width"))) {
+        return 1;
+    }
+    widthStressAction->trigger();
+    processCollapseTestEvents();
+    for (QAction *action : responsiveActions) {
+        QToolButton *button = collapseTestActionButton(ribbonBar, action);
+        if (!require(button != nullptr
+                         && button->toolButtonStyle()
+                             == Qt::ToolButtonTextBesideIcon,
+                     QStringLiteral("responsive label restores for %1")
+                         .arg(action->text()))) {
+            return 1;
+        }
     }
 
     reset();
@@ -1293,6 +1351,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-gallery-preview"));
     const bool shellPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-shell-preview"));
+    const bool widthStressPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-width-stress-preview"));
     const bool stylePreviewRequested =
         argumentList.contains(QStringLiteral("--grab-style-preview"));
     const bool collapseTestsRequested =
@@ -1335,9 +1395,13 @@ int main(int argc, char *argv[])
     mainWindow.resize(920, 560);
     if (controlsPreviewRequested || galleryPreviewRequested
         || shellPreviewRequested || simplifiedPreviewRequested
+        || widthStressPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
         mainWindow.resize(1180, 560);
+    }
+    if (widthStressPreviewRequested) {
+        mainWindow.resize(1476, 560);
     }
 
     LqRibbon::RibbonPage *generalPage = mainWindow.ribbonBar()->addPage(QObject::tr("General"));
@@ -1646,6 +1710,9 @@ int main(int argc, char *argv[])
     collapseStatePreview->setFrameShape(QFrame::StyledPanel);
     collapseStatePreview->setToolTip(
         QObject::tr("Ribbon state, tab double-click target, and command density"));
+    QWidget *collapseStatePreviewSpacer = new QWidget(windowGroup);
+    collapseStatePreviewSpacer->setFixedWidth(32);
+    windowGroup->addWidget(collapseStatePreviewSpacer);
     windowGroup->addWidget(collapseStatePreview);
     QLabel *doubleClickStatePreview = collapseStatePreview;
 
@@ -1667,6 +1734,11 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_DialogResetButton),
         QObject::tr("Toggle Specialist"),
         Qt::ToolButtonTextBesideIcon);
+    QAction *widthStressAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_ArrowLeft),
+        QObject::tr("Stress Width"),
+        Qt::ToolButtonTextBesideIcon);
+    widthStressAction->setCheckable(true);
 
     LqRibbon::RibbonGroup *popupGroup =
         shellPage->addGroup(QObject::tr("Popups"));
@@ -1765,12 +1837,19 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), classicRibbonAction);
     customizeManager->addToCategory(QObject::tr("Actions"), pinRibbonAction);
     customizeManager->addToCategory(QObject::tr("Actions"), unpinRibbonAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), widthStressAction);
     customizeManager->addToCategory(QObject::tr("Actions"), officePopupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), showCustomizeAction);
     customizeManager->setPageId(shellPage, QStringLiteral("shell"));
     customizeManager->setGroupId(runtimeGroup, QStringLiteral("runtime"));
     QByteArray savedRibbonState;
     QLabel *densityStatusPreview = nullptr;
+    QLabel *responsiveLabelsStatusPreview = nullptr;
+    const QList<QAction *> responsiveLabelActions = {
+        renamePageAction,
+        moveGalleryAction,
+        toggleGroupAction,
+    };
 
     auto updateCollapseStatePreview =
         [&mainWindow, collapseStatePreview, &densityStatusPreview]() {
@@ -1838,6 +1917,54 @@ int main(int argc, char *argv[])
                          updateCollapseStatePreview();
                      });
     updateCollapseStatePreview();
+
+    auto updateResponsiveLabelsPreview =
+        [&mainWindow,
+         responsiveLabelActions,
+         widthStressAction,
+         &responsiveLabelsStatusPreview]() {
+        int hiddenCount = 0;
+        int buttonCount = 0;
+        const bool compressed = widthStressAction->isChecked();
+
+        for (QAction *action : responsiveLabelActions) {
+            QToolButton *button =
+                collapseTestActionButton(mainWindow.ribbonBar(), action);
+            if (!button) {
+                continue;
+            }
+            ++buttonCount;
+            button->setToolButtonStyle(compressed
+                                           ? Qt::ToolButtonIconOnly
+                                           : Qt::ToolButtonTextBesideIcon);
+            button->setProperty("responsiveLabelHidden", compressed);
+            button->setToolTip(action->text());
+            if (compressed) {
+                ++hiddenCount;
+            }
+        }
+        if (QToolButton *stressButton =
+                collapseTestActionButton(mainWindow.ribbonBar(),
+                                         widthStressAction)) {
+            stressButton->setToolButtonStyle(compressed
+                                                 ? Qt::ToolButtonIconOnly
+                                                 : Qt::ToolButtonTextBesideIcon);
+            stressButton->setToolTip(widthStressAction->text());
+        }
+
+        if (responsiveLabelsStatusPreview) {
+            responsiveLabelsStatusPreview->setText(
+                QObject::tr("Labels hidden: %1/%2")
+                    .arg(hiddenCount)
+                    .arg(buttonCount));
+        }
+    };
+    QObject::connect(widthStressAction,
+                     &QAction::toggled,
+                     collapseStatePreview,
+                     [updateResponsiveLabelsPreview](bool) {
+                         updateResponsiveLabelsPreview();
+                     });
 
     QObject::connect(fullScreenAction, &QAction::triggered, [&mainWindow]() {
         mainWindow.setWindowState(mainWindow.windowState() ^ Qt::WindowFullScreen);
@@ -2027,6 +2154,12 @@ int main(int argc, char *argv[])
     densityStatusPreview->setMinimumWidth(180);
     ribbonStatusBar->addSeparator();
     ribbonStatusBar->addWidget(densityStatusPreview);
+    responsiveLabelsStatusPreview = new QLabel(ribbonStatusBar);
+    responsiveLabelsStatusPreview->setObjectName(
+        QStringLiteral("responsiveLabelsStatusPreview"));
+    responsiveLabelsStatusPreview->setMinimumWidth(140);
+    ribbonStatusBar->addSeparator();
+    ribbonStatusBar->addWidget(responsiveLabelsStatusPreview);
 
     LqRibbon::RibbonStatusBarSwitchGroup *switchGroup =
         new LqRibbon::RibbonStatusBarSwitchGroup(ribbonStatusBar);
@@ -2064,6 +2197,7 @@ int main(int argc, char *argv[])
     ribbonStatusBar->addPermanentWidget(progressBar);
     mainWindow.setStatusBar(ribbonStatusBar);
     updateCollapseStatePreview();
+    updateResponsiveLabelsPreview();
 
     QObject::connect(zoomSlider, &LqRibbon::RibbonSliderPane::valueChanged,
                      progressBar, &LqRibbon::RibbonProgressBar::setValueSafe);
@@ -2075,6 +2209,7 @@ int main(int argc, char *argv[])
     if (stylePreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(generalPageIndex);
     } else if (shellPreviewRequested
+               || widthStressPreviewRequested
                || simplifiedPreviewRequested
                || temporaryPreviewRequested
                || doubleClickPreviewRequested) {
@@ -2117,6 +2252,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(renamePageAction);
     mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
     mainWindow.ribbonBar()->registerSearchAction(toggleGroupAction);
+    mainWindow.ribbonBar()->registerSearchAction(widthStressAction);
     mainWindow.ribbonBar()->registerSearchAction(officePopupAction);
     mainWindow.ribbonBar()->registerSearchAction(officeMenuAction);
     mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
@@ -2215,9 +2351,14 @@ int main(int argc, char *argv[])
                                 showTabsOnlyAction,
                                 alwaysShowRibbonAction,
                                 autoHideRibbonAction,
+                                renamePageAction,
+                                moveGalleryAction,
+                                toggleGroupAction,
+                                widthStressAction,
                                 collapseStatePreview,
                                 doubleClickStatePreview,
-                                densityStatusPreview);
+                                densityStatusPreview,
+                                responsiveLabelsStatusPreview);
     }
 
     if (styleTestsRequested) {
@@ -2258,6 +2399,12 @@ int main(int argc, char *argv[])
             mainWindow.ribbonBar()->setRibbonMinimized(true);
             clickCollapseTestTab(mainWindow.ribbonBar(),
                                  mainWindow.ribbonBar()->currentIndex());
+        });
+    }
+
+    if (widthStressPreviewRequested) {
+        QTimer::singleShot(120, &mainWindow, [widthStressAction]() {
+            widthStressAction->setChecked(true);
         });
     }
 

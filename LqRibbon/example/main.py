@@ -65,6 +65,7 @@ def main():
     controls_preview = "--grab-controls-preview" in arguments
     gallery_preview = "--grab-gallery-preview" in arguments
     shell_preview = "--grab-shell-preview" in arguments
+    width_stress_preview = "--grab-width-stress-preview" in arguments
     style_preview = "--grab-style-preview" in arguments
     style_name = _option_value(arguments, "--style")
     deterministic_style = bool(preview_path)
@@ -83,6 +84,7 @@ def main():
         controls_preview
         or gallery_preview
         or shell_preview
+        or width_stress_preview
         or simplified_preview
         or temporary_preview
         or double_click_preview
@@ -90,6 +92,8 @@ def main():
         window.resize(1180, 560)
     if style_preview:
         window.resize(1180, 560)
+    if width_stress_preview:
+        window.resize(1476, 560)
     if style_name:
         window.set_ribbon_style(style_name)
     elif style_preview:
@@ -103,6 +107,7 @@ def main():
         gallery=gallery_preview,
         shell=(
             shell_preview
+            or width_stress_preview
             or simplified_preview
             or temporary_preview
             or double_click_preview
@@ -132,6 +137,8 @@ def main():
         QTimer.singleShot(120, lambda: window.ribbonBar().setSimplifiedMode(True))
     if temporary_preview:
         QTimer.singleShot(120, show_temporary_preview)
+    if width_stress_preview:
+        QTimer.singleShot(120, lambda: window.width_stress_action.setChecked(True))
     if preview_path:
         QTimer.singleShot(300, lambda: (window.grab().save(preview_path), app.quit()))
 

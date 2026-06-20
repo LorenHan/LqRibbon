@@ -542,6 +542,18 @@ class MainWindow(RibbonMainWindow):
             "Toggle Specialist",
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
+        self.width_stress_action = self._add_group_action(
+            self.runtime_group,
+            QStyle.StandardPixmap.SP_ArrowLeft,
+            "Stress Width",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.width_stress_action.setCheckable(True)
+        self.responsive_label_actions = [
+            self.rename_page_action,
+            self.move_gallery_action,
+            self.toggle_group_action,
+        ]
 
         popup_group = self.shell_page.addGroup("Popups")
         self.office_popup_action = self._add_group_action(
@@ -635,6 +647,13 @@ class MainWindow(RibbonMainWindow):
         self.density_status_preview.setObjectName("ribbonDensityStatusPreview")
         self.density_status_preview.setMinimumWidth(180)
         status_bar.addWidget(self.density_status_preview)
+        status_bar.addWidget(QLabel("|", status_bar))
+        self.responsive_labels_status_preview = QLabel(status_bar)
+        self.responsive_labels_status_preview.setObjectName(
+            "responsiveLabelsStatusPreview"
+        )
+        self.responsive_labels_status_preview.setMinimumWidth(140)
+        status_bar.addWidget(self.responsive_labels_status_preview)
 
         switch_group = RibbonStatusBarSwitchGroup(status_bar)
         view_actions = QActionGroup(switch_group)
@@ -714,6 +733,9 @@ class MainWindow(RibbonMainWindow):
         self.rename_page_action.triggered.connect(self.rename_driver_page)
         self.move_gallery_action.triggered.connect(self.move_gallery_page)
         self.toggle_group_action.triggered.connect(self.toggle_specialist_group)
+        self.width_stress_action.toggled.connect(
+            lambda _checked: self.update_responsive_label_preview()
+        )
         self.office_popup_action.triggered.connect(self.show_office_popup)
         self.office_menu_action.triggered.connect(self.show_office_menu)
         self.color_button.colorChanged.connect(
@@ -782,6 +804,7 @@ class MainWindow(RibbonMainWindow):
             lambda _enabled: self.update_collapse_state_preview()
         )
         self.update_collapse_state_preview()
+        self.update_responsive_label_preview()
 
     def _configure_search_and_quick_access(self):
         self.search_actions = [
@@ -801,6 +824,7 @@ class MainWindow(RibbonMainWindow):
             self.rename_page_action,
             self.move_gallery_action,
             self.toggle_group_action,
+            self.width_stress_action,
             self.office_popup_action,
             self.office_menu_action,
             self.show_customize_action,
@@ -879,6 +903,42 @@ class MainWindow(RibbonMainWindow):
         self.collapse_state_preview.setVisible(not ribbon.simplifiedMode())
         if hasattr(self, "density_status_preview"):
             self.density_status_preview.setText(f"Ribbon density: {density_state}")
+
+    def _ribbon_button_for_action(self, action):
+        for button in self.ribbonBar().findChildren(QToolButton):
+            if button.defaultAction() is action:
+                return button
+        return None
+
+    def update_responsive_label_preview(self):
+        compressed = self.width_stress_action.isChecked()
+        hidden_count = 0
+        button_count = 0
+        for action in self.responsive_label_actions:
+            button = self._ribbon_button_for_action(action)
+            if button is None:
+                continue
+            button_count += 1
+            button.setToolButtonStyle(
+                Qt.ToolButtonStyle.ToolButtonIconOnly
+                if compressed
+                else Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            )
+            button.setProperty("responsiveLabelHidden", compressed)
+            button.setToolTip(action.text())
+            if compressed:
+                hidden_count += 1
+        stress_button = self._ribbon_button_for_action(self.width_stress_action)
+        if stress_button is not None:
+            stress_button.setToolButtonStyle(
+                Qt.ToolButtonStyle.ToolButtonIconOnly
+                if compressed
+                else Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            )
+            stress_button.setToolTip(self.width_stress_action.text())
+        self.responsive_labels_status_preview.setText(
+            f"Labels hidden: {hidden_count}/{button_count}"
+        )
 
     def install_default_content(self):
         content = QLabel("LqRibbon PySide6 example")
