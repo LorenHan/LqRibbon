@@ -47,7 +47,7 @@ Default style remains `Office 2016 Blue`.
 | 016 | Temporary ribbon expansion on tab click | Shell page | Complete |
 | 017 | Double-click tab minimize behavior | Shell page | Complete |
 | 018 | Compact command row density | Simplified ribbon preview | Complete |
-| 019 | Expanded command row density | Classic ribbon preview | Planned |
+| 019 | Expanded command row density | Classic ribbon preview | Complete |
 | 020 | Responsive command label hiding | Width stress preview | Planned |
 | 021 | Quick Access Toolbar show/hide | QAT menu | Planned |
 | 022 | QAT above-ribbon position | QAT menu | Planned |

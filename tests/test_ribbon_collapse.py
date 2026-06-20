@@ -295,6 +295,9 @@ def test_example_collapse_state_preview_tracks_modes():
     density_preview = window.density_status_preview
 
     assert "Expanded" in preview.text()
+    assert "Expanded" in density_preview.text()
+    assert str(ribbon.rowItemCount()) in density_preview.text()
+    assert str(ribbon.rowItemHeight()) in density_preview.text()
 
     ribbon.setRibbonMinimized(True)
     _app().processEvents()
@@ -305,6 +308,12 @@ def test_example_collapse_state_preview_tracks_modes():
     _app().processEvents()
     assert "Simplified" in preview.text()
     assert "Compact" in density_preview.text()
+    assert str(ribbon.rowItemHeight()) in density_preview.text()
+
+    ribbon.setSimplifiedMode(False)
+    _app().processEvents()
+    assert "Expanded" in density_preview.text()
+    assert str(ribbon.rowItemCount()) in density_preview.text()
     assert str(ribbon.rowItemHeight()) in density_preview.text()
 
     window.pin_ribbon_action.trigger()

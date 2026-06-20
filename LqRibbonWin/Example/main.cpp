@@ -4,7 +4,9 @@
 #include <QComboBox>
 #include <QDate>
 #include <QDebug>
+#include <QDir>
 #include <QEventLoop>
+#include <QFile>
 #include <QFormLayout>
 #include <QFontDatabase>
 #include <QFrame>
@@ -23,6 +25,7 @@
 #include <QTabBar>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QTextStream>
 #include <QTimer>
 #include <QToolButton>
 #include <QToolBar>
@@ -65,6 +68,18 @@ enum class FluentPreviewPhase
     Hover,
     Pressed
 };
+
+void exampleTestMessageHandler(QtMsgType,
+                               const QMessageLogContext &,
+                               const QString &message)
+{
+    QFile file(QDir::temp().filePath(QStringLiteral("LqRibbonExample-test.log")));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        return;
+    }
+    QTextStream stream(&file);
+    stream << message << '\n';
+}
 
 void processCollapseTestEvents()
 {
@@ -165,6 +180,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *doubleClickStatePreview,
                      QLabel *densityStatusPreview)
 {
+    qInfo().noquote() << "START collapse tests";
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     ribbonBar->setMinimizationEnabled(true);
     mainWindow.setFrameThemeEnabled(true);
@@ -292,6 +308,15 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && !ribbonBar->simplifiedAction()->isChecked()
                      && ribbonBar->height() >= fullRibbonHeight,
                  QStringLiteral("classic mode restores full command area"))) {
+        return 1;
+    }
+    if (!require(densityStatusPreview->text().contains(
+                     QStringLiteral("Expanded"))
+                     && densityStatusPreview->text().contains(
+                         QString::number(ribbonBar->rowItemCount()))
+                     && densityStatusPreview->text().contains(
+                         QString::number(ribbonBar->rowItemHeight())),
+                 QStringLiteral("expanded density preview tracks classic mode"))) {
         return 1;
     }
 
@@ -1274,6 +1299,11 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--run-collapse-tests"));
     const bool styleTestsRequested =
         argumentList.contains(QStringLiteral("--run-style-tests"));
+    if (collapseTestsRequested || styleTestsRequested) {
+        QFile::remove(QDir::temp().filePath(QStringLiteral("LqRibbonExample-test.log")));
+        qInstallMessageHandler(exampleTestMessageHandler);
+        qInfo().noquote() << "START example test mode";
+    }
     const bool deterministicStyleRequested =
         previewRequested || collapseTestsRequested || styleTestsRequested;
     QSettings settings;
@@ -1768,9 +1798,13 @@ int main(int argc, char *argv[])
             doubleClickText = QObject::tr("Collapse");
         }
 
+        const QString densityMetricText =
+            QObject::tr("%1x%2px")
+                .arg(bar->rowItemCount())
+                .arg(bar->rowItemHeight());
         const QString densityText = bar->simplifiedMode()
             ? QObject::tr("Compact %1px").arg(bar->rowItemHeight())
-            : QObject::tr("Classic %1x%2px")
+            : QObject::tr("Expanded %1x%2px")
                   .arg(bar->rowItemCount())
                   .arg(bar->rowItemHeight());
         collapseStatePreview->setText(
@@ -1778,7 +1812,7 @@ int main(int argc, char *argv[])
                 ? QObject::tr("%1 | %2")
                       .arg(stateText, densityText)
                 : QObject::tr("%1 | Tab: %2 | %3")
-                      .arg(stateText, doubleClickText, densityText));
+                      .arg(stateText, doubleClickText, densityMetricText));
         collapseStatePreview->setVisible(!bar->simplifiedMode());
         if (densityStatusPreview) {
             densityStatusPreview->setText(
@@ -2172,49 +2206,25 @@ int main(int argc, char *argv[])
     mainWindow.show();
 
     if (collapseTestsRequested) {
-        QTimer::singleShot(0,
-                           &mainWindow,
-                           [&mainWindow,
-                            classicRibbonAction,
-                            pinRibbonAction,
-                            unpinRibbonAction,
-                            displayOptionsTitleAction,
-                            showTabsAndCommandsAction,
-                            showTabsOnlyAction,
-                             alwaysShowRibbonAction,
-                             autoHideRibbonAction,
-                             collapseStatePreview,
-                             doubleClickStatePreview,
-                             densityStatusPreview]() {
-            qApp->exit(runCollapseTests(mainWindow,
-                                         classicRibbonAction,
-                                         pinRibbonAction,
-                                         unpinRibbonAction,
-                                         displayOptionsTitleAction,
-                                         showTabsAndCommandsAction,
-                                         showTabsOnlyAction,
-                                         alwaysShowRibbonAction,
-                                         autoHideRibbonAction,
-                                         collapseStatePreview,
-                                         doubleClickStatePreview,
-                                         densityStatusPreview));
-        });
-        return application.exec();
+        return runCollapseTests(mainWindow,
+                                classicRibbonAction,
+                                pinRibbonAction,
+                                unpinRibbonAction,
+                                displayOptionsTitleAction,
+                                showTabsAndCommandsAction,
+                                showTabsOnlyAction,
+                                alwaysShowRibbonAction,
+                                autoHideRibbonAction,
+                                collapseStatePreview,
+                                doubleClickStatePreview,
+                                densityStatusPreview);
     }
 
     if (styleTestsRequested) {
-        QTimer::singleShot(0,
-                           &mainWindow,
-                           [&mainWindow,
-                            styleCombo,
-                            stylePreview,
-                            stateTimingPreview]() {
-            qApp->exit(runStyleTests(mainWindow,
-                                     styleCombo,
-                                     stylePreview,
-                                     stateTimingPreview));
-        });
-        return application.exec();
+        return runStyleTests(mainWindow,
+                             styleCombo,
+                             stylePreview,
+                             stateTimingPreview);
     }
 
     if (!strPreviewPath.isEmpty()) {

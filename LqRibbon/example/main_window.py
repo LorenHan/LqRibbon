@@ -872,8 +872,9 @@ class MainWindow(RibbonMainWindow):
             density_state = f"Compact {ribbon.rowItemHeight()}px"
             preview_text = f"{state} | {density_state}"
         else:
-            density_state = f"Classic {ribbon.rowItemCount()}x{ribbon.rowItemHeight()}px"
-            preview_text = f"{state} | Tab: {double_click_state} | {density_state}"
+            density_metric = f"{ribbon.rowItemCount()}x{ribbon.rowItemHeight()}px"
+            density_state = f"Expanded {density_metric}"
+            preview_text = f"{state} | Tab: {double_click_state} | {density_metric}"
         self.collapse_state_preview.setText(preview_text)
         self.collapse_state_preview.setVisible(not ribbon.simplifiedMode())
         if hasattr(self, "density_status_preview"):
