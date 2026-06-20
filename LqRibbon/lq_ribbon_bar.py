@@ -666,7 +666,8 @@ class LqRibbonBar(QTabWidget):
             icon = args[0] if args else QIcon()
             text = args[1] if len(args) > 1 else ""
             action = QAction(icon if isinstance(icon, QIcon) else QIcon(icon), text, self)
-        self._quick_access_bar.addAction(action)
+        if action not in self._quick_access_bar.actions():
+            self._quick_access_bar.addAction(action)
         self._quick_access_bar.show()
         self._apply_ribbon_height()
         return action

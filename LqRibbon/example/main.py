@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from PySide6.QtCore import QSettings, QTimer, Qt
 from PySide6.QtGui import QFont, QFontDatabase
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMenu
 
 from LqRibbon import RibbonStyle
 from main_window import (
@@ -70,6 +70,7 @@ def main():
     quick_access_above_preview = "--grab-qat-above-preview" in arguments
     quick_access_below_preview = "--grab-qat-below-preview" in arguments
     quick_access_labels_preview = "--grab-qat-labels-preview" in arguments
+    add_to_quick_access_preview = "--grab-add-to-qat-preview" in arguments
     style_preview = "--grab-style-preview" in arguments
     style_name = _option_value(arguments, "--style")
     deterministic_style = bool(preview_path)
@@ -93,6 +94,7 @@ def main():
         or quick_access_above_preview
         or quick_access_below_preview
         or quick_access_labels_preview
+        or add_to_quick_access_preview
         or simplified_preview
         or temporary_preview
         or double_click_preview
@@ -106,6 +108,7 @@ def main():
         or quick_access_above_preview
         or quick_access_below_preview
         or quick_access_labels_preview
+        or add_to_quick_access_preview
     ):
         window.resize(1476, 560)
     if style_name:
@@ -126,6 +129,7 @@ def main():
             or quick_access_above_preview
             or quick_access_below_preview
             or quick_access_labels_preview
+            or add_to_quick_access_preview
             or simplified_preview
             or temporary_preview
             or double_click_preview
@@ -172,6 +176,19 @@ def main():
             window.quick_access_labels_action.setChecked(True)
 
         QTimer.singleShot(120, show_quick_access_labels_preview)
+    if add_to_quick_access_preview:
+        def show_add_to_quick_access_preview():
+            menu = QMenu(window)
+            add_action = window.populate_action_context_menu(
+                menu, window.rename_page_action
+            )
+            if add_action is not None:
+                add_action.trigger()
+            window.quick_access_below_action.trigger()
+            window.quick_access_labels_action.setChecked(True)
+            window.statusBar().clearMessage()
+
+        QTimer.singleShot(120, show_add_to_quick_access_preview)
     if preview_path:
         QTimer.singleShot(300, lambda: (window.grab().save(preview_path), app.quit()))
 

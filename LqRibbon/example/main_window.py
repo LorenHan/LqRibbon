@@ -256,6 +256,7 @@ class MainWindow(RibbonMainWindow):
         self._create_customize_state()
         self._connect_actions()
         self._configure_search_and_quick_access()
+        self._configure_action_context_menus()
 
         ribbon.setCurrentPageIndex(ribbon.pageIndex(self.driver_page))
         self.setFrameThemeEnabled(True)
@@ -901,6 +902,67 @@ class MainWindow(RibbonMainWindow):
         menu.addAction(self.quick_access_below_action)
         menu.addSeparator()
         menu.addAction(self.quick_access_labels_action)
+
+    def _configure_action_context_menus(self):
+        self.action_context_menu_actions = [
+            self.rename_page_action,
+            self.move_gallery_action,
+            self.toggle_group_action,
+        ]
+        for action in self.action_context_menu_actions:
+            button = self._ribbon_button_for_action(action)
+            if button is None:
+                continue
+            button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            button.customContextMenuRequested.connect(
+                lambda pos, act=action, source=button: self.show_action_context_menu(
+                    act, source.mapToGlobal(pos)
+                )
+            )
+
+    def populate_action_context_menu(self, menu, command_action):
+        if menu is None or command_action is None or command_action.isSeparator():
+            return None
+        quick_access_bar = self.ribbonBar().quickAccessBar()
+        already_added = (
+            command_action in self.quick_access_actions
+            or command_action in quick_access_bar.actions()
+        )
+        if menu.actions():
+            menu.addSeparator()
+        add_action = menu.addAction(
+            self._icon(QStyle.StandardPixmap.SP_ArrowUp),
+            "Already in Quick Access Toolbar"
+            if already_added
+            else "Add to Quick Access Toolbar",
+        )
+        add_action.setObjectName("addToQuickAccessContextAction")
+        add_action.setEnabled(not already_added)
+        add_action.triggered.connect(
+            lambda _checked=False, action=command_action: self.add_action_to_quick_access(
+                action
+            )
+        )
+        return add_action
+
+    def show_action_context_menu(self, command_action, global_pos):
+        menu = QMenu(self)
+        self.populate_action_context_menu(menu, command_action)
+        if not menu.isEmpty():
+            menu.exec(global_pos)
+
+    def add_action_to_quick_access(self, command_action):
+        if command_action is None:
+            return
+        if command_action not in self.quick_access_actions:
+            self.quick_access_actions.append(command_action)
+        quick_access_bar = self.ribbonBar().quickAccessBar()
+        self.ribbonBar().addQuickAccessAction(command_action)
+        quick_access_bar.setActionVisible(command_action, True)
+        self.update_quick_access_preview()
+        self.statusBar().showMessage(
+            f"Added {command_action.text()} to Quick Access Toolbar", 2500
+        )
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()

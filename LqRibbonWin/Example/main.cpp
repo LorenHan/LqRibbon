@@ -2,6 +2,7 @@
 #include <QActionGroup>
 #include <QBuffer>
 #include <QComboBox>
+#include <QContextMenuEvent>
 #include <QDate>
 #include <QDebug>
 #include <QDir>
@@ -22,6 +23,7 @@
 #include <QSettings>
 #include <QStyle>
 #include <QStackedWidget>
+#include <QStatusBar>
 #include <QTabBar>
 #include <QTableWidget>
 #include <QTemporaryDir>
@@ -183,6 +185,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *quickAccessBelowAction,
                      QAction *quickAccessLabelsAction,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
+                     const std::function<void(QMenu *, QAction *)> &populateActionContextMenu,
                      QAction *renamePageAction,
                      QAction *moveGalleryAction,
                      QAction *toggleGroupAction,
@@ -570,6 +573,44 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && quickAccessStatusPreview->text().contains(
                          QStringLiteral("Icons")),
                  QStringLiteral("quick access labels action hides labels"))) {
+        return 1;
+    }
+    QMenu renameContextMenu;
+    populateActionContextMenu(&renameContextMenu, renamePageAction);
+    QAction *addRenameToQuickAccessAction = nullptr;
+    for (QAction *action : renameContextMenu.actions()) {
+        if (action->objectName()
+            == QStringLiteral("addToQuickAccessContextAction")) {
+            addRenameToQuickAccessAction = action;
+            break;
+        }
+    }
+    if (!require(addRenameToQuickAccessAction
+                     && addRenameToQuickAccessAction->isEnabled(),
+                 QStringLiteral("action context menu exposes add to quick access"))) {
+        return 1;
+    }
+    addRenameToQuickAccessAction->trigger();
+    processCollapseTestEvents();
+    if (!require(quickAccessBar->actions().contains(renamePageAction)
+                     && quickAccessBar->visibleCount() == 4
+                     && quickAccessStatusPreview->text().contains(
+                         QStringLiteral("Visible 4/4")),
+                 QStringLiteral("action context menu adds command to quick access"))) {
+        return 1;
+    }
+    QMenu duplicateRenameContextMenu;
+    populateActionContextMenu(&duplicateRenameContextMenu, renamePageAction);
+    QAction *duplicateAddAction = nullptr;
+    for (QAction *action : duplicateRenameContextMenu.actions()) {
+        if (action->objectName()
+            == QStringLiteral("addToQuickAccessContextAction")) {
+            duplicateAddAction = action;
+            break;
+        }
+    }
+    if (!require(duplicateAddAction && !duplicateAddAction->isEnabled(),
+                 QStringLiteral("action context menu prevents duplicate quick access add"))) {
         return 1;
     }
 
@@ -1472,6 +1513,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-qat-below-preview"));
     const bool quickAccessLabelsPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-qat-labels-preview"));
+    const bool addToQuickAccessPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-add-to-qat-preview"));
     const bool stylePreviewRequested =
         argumentList.contains(QStringLiteral("--grab-style-preview"));
     const bool collapseTestsRequested =
@@ -1519,13 +1562,15 @@ int main(int argc, char *argv[])
         || quickAccessAbovePreviewRequested
         || quickAccessBelowPreviewRequested
         || quickAccessLabelsPreviewRequested
+        || addToQuickAccessPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
         mainWindow.resize(1180, 560);
     }
     if (widthStressPreviewRequested || quickAccessHiddenPreviewRequested
         || quickAccessAbovePreviewRequested || quickAccessBelowPreviewRequested
-        || quickAccessLabelsPreviewRequested) {
+        || quickAccessLabelsPreviewRequested
+        || addToQuickAccessPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -2007,7 +2052,7 @@ int main(int argc, char *argv[])
     QLabel *densityStatusPreview = nullptr;
     QLabel *quickAccessStatusPreview = nullptr;
     QLabel *responsiveLabelsStatusPreview = nullptr;
-    const QList<QAction *> quickAccessActions = {
+    QList<QAction *> quickAccessActions = {
         fullScreenAction,
         connectAction,
         minimizeRibbonAction,
@@ -2139,7 +2184,7 @@ int main(int argc, char *argv[])
          quickAccessAboveAction,
          quickAccessBelowAction,
          quickAccessLabelsAction,
-         quickAccessActions,
+         &quickAccessActions,
          &quickAccessStatusPreview]() {
         LqRibbon::RibbonQuickAccessBar *quickAccessBar =
             mainWindow.ribbonBar()->quickAccessBar();
@@ -2186,6 +2231,54 @@ int main(int argc, char *argv[])
         }
         mainWindow.ribbonBar()->update();
     };
+    auto populateActionContextMenu =
+        [&mainWindow,
+         &quickAccessActions,
+         updateQuickAccessPreview](QMenu *menu, QAction *commandAction) {
+        if (!menu || !commandAction || commandAction->isSeparator()) {
+            return;
+        }
+
+        LqRibbon::RibbonQuickAccessBar *quickAccessBar =
+            mainWindow.ribbonBar()->quickAccessBar();
+        const bool alreadyInQuickAccess =
+            quickAccessActions.contains(commandAction)
+            || quickAccessBar->actions().contains(commandAction);
+
+        if (!menu->isEmpty()) {
+            menu->addSeparator();
+        }
+        QAction *addToQuickAccessAction = menu->addAction(
+            mainWindow.style()->standardIcon(QStyle::SP_ArrowUp),
+            alreadyInQuickAccess
+                ? QObject::tr("Already in Quick Access Toolbar")
+                : QObject::tr("Add to Quick Access Toolbar"));
+        addToQuickAccessAction->setObjectName(
+            QStringLiteral("addToQuickAccessContextAction"));
+        addToQuickAccessAction->setEnabled(!alreadyInQuickAccess);
+        QObject::connect(addToQuickAccessAction,
+                         &QAction::triggered,
+                         &mainWindow,
+                         [&mainWindow,
+                          &quickAccessActions,
+                          commandAction,
+                          updateQuickAccessPreview]() {
+            if (!quickAccessActions.contains(commandAction)) {
+                quickAccessActions.append(commandAction);
+            }
+            LqRibbon::RibbonQuickAccessBar *quickAccessBar =
+                mainWindow.ribbonBar()->quickAccessBar();
+            mainWindow.ribbonBar()->addQuickAccessAction(commandAction);
+            quickAccessBar->setActionVisible(commandAction, true);
+            updateQuickAccessPreview();
+            if (mainWindow.statusBar()) {
+                mainWindow.statusBar()->showMessage(
+                    QObject::tr("Added %1 to Quick Access Toolbar")
+                        .arg(commandAction->text()),
+                    2500);
+            }
+        });
+    };
     auto populateQuickAccessMenu =
         [showQuickAccessBarAction,
          quickAccessAboveAction,
@@ -2203,6 +2296,30 @@ int main(int argc, char *argv[])
         menu->addSeparator();
         menu->addAction(quickAccessLabelsAction);
     };
+    auto commandForContextEvent =
+        [&mainWindow](QContextMenuEvent *event) -> QAction * {
+        if (!event) {
+            return nullptr;
+        }
+        QWidget *widget = mainWindow.ribbonBar()->childAt(event->pos());
+        while (widget && widget != mainWindow.ribbonBar()) {
+            if (QToolButton *button = qobject_cast<QToolButton *>(widget)) {
+                QAction *action = button->defaultAction();
+                if (action && !action->isSeparator()) {
+                    return action;
+                }
+            }
+            widget = widget->parentWidget();
+        }
+        return nullptr;
+    };
+    QObject::connect(mainWindow.ribbonBar(),
+                     &LqRibbon::RibbonBar::showRibbonContextMenu,
+                     &mainWindow,
+                     [populateActionContextMenu, commandForContextEvent](
+                         QMenu *menu, QContextMenuEvent *event) {
+        populateActionContextMenu(menu, commandForContextEvent(event));
+    });
     QObject::connect(showQuickAccessBarAction,
                      &QAction::toggled,
                      &mainWindow,
@@ -2503,6 +2620,7 @@ int main(int argc, char *argv[])
                || quickAccessAbovePreviewRequested
                || quickAccessBelowPreviewRequested
                || quickAccessLabelsPreviewRequested
+               || addToQuickAccessPreviewRequested
                || simplifiedPreviewRequested
                || temporaryPreviewRequested
                || doubleClickPreviewRequested) {
@@ -2654,6 +2772,7 @@ int main(int argc, char *argv[])
                                 quickAccessBelowAction,
                                 quickAccessLabelsAction,
                                 populateQuickAccessMenu,
+                                populateActionContextMenu,
                                 renamePageAction,
                                 moveGalleryAction,
                                 toggleGroupAction,
@@ -2732,6 +2851,31 @@ int main(int argc, char *argv[])
                            [quickAccessBelowAction, quickAccessLabelsAction]() {
             quickAccessBelowAction->trigger();
             quickAccessLabelsAction->setChecked(true);
+        });
+    }
+    if (addToQuickAccessPreviewRequested) {
+        QTimer::singleShot(
+            120,
+            &mainWindow,
+            [renamePageAction,
+             quickAccessBelowAction,
+             quickAccessLabelsAction,
+             &mainWindow,
+             populateActionContextMenu]() {
+            QMenu menu;
+            populateActionContextMenu(&menu, renamePageAction);
+            for (QAction *action : menu.actions()) {
+                if (action->objectName()
+                    == QStringLiteral("addToQuickAccessContextAction")) {
+                    action->trigger();
+                    break;
+                }
+            }
+            quickAccessBelowAction->trigger();
+            quickAccessLabelsAction->setChecked(true);
+            if (mainWindow.statusBar()) {
+                mainWindow.statusBar()->clearMessage();
+            }
         });
     }
 

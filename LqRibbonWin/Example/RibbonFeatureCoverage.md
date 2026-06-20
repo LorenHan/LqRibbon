@@ -8,7 +8,7 @@ not copied implementation.
 | --- | --- | --- | --- |
 | Main window | Ribbon host, central widget, themed frame, native gestures | Partial | `main.cpp`, `--grab-preview`, `--grab-mdi-preview` |
 | Ribbon bar | Pages, current page, minimized mode, temporary tab expansion, tab double-click minimize/restore preview, simplified one-line mode, compact and expanded command density previews, responsive command label hiding preview, classic multi-line restore, pin/unpin display policy, display options menu, collapse button state preview, title background, tab moving, elide mode | Partial | `main.cpp`, `--grab-collapsed-preview`, `--grab-temporary-preview`, `--grab-double-click-preview`, `--grab-simplified-preview`, `--grab-width-stress-preview`, `--run-collapse-tests` |
-| Quick access | Toolbar actions, QAT menu show/hide control, QAT above/below ribbon positions, command label toggle, customization entry points, top/bottom placement | Partial | `main.cpp`, `--grab-qat-hidden-preview`, `--grab-qat-above-preview`, `--grab-qat-below-preview`, `--grab-qat-labels-preview`, preview screenshot |
+| Quick access | Toolbar actions, QAT menu show/hide control, QAT above/below ribbon positions, command label toggle, action context add command, customization entry points, top/bottom placement | Partial | `main.cpp`, `--grab-qat-hidden-preview`, `--grab-qat-above-preview`, `--grab-qat-below-preview`, `--grab-qat-labels-preview`, `--grab-add-to-qat-preview`, preview screenshot |
 | Title widgets | Caption-row buttons and custom title controls | Implemented | `main.cpp`, preview screenshot |
 | Pages | Add/insert/remove pages, visible/enabled state, contextual page groups | Missing contextual groups | Planned example tab coverage |
 | Groups | Command groups, option button, row layout, group collapse/scroll | Partial | `main.cpp`, planned scroll preview |
@@ -98,7 +98,7 @@ system follow mode, live preview swatch, persisted theme choice, Fluent rounded
   simplified one-line ribbon display, compact and expanded command density previews,
   responsive command label hiding preview, Quick Access Toolbar show/hide menu,
   Quick Access Toolbar above-ribbon and below-ribbon menu positions, QAT command
-  label toggle,
+  label toggle, action context menu add-to-QAT command,
   temporary tab expansion state, tab double-click minimize/restore preview,
   classic multi-line restore, ribbon pin/unpin display policy, caption display
   options menu, collapse state preview, and default `Office 2016 Blue`
