@@ -3888,12 +3888,13 @@ void RibbonBar::paintEvent(QPaintEvent *event)
     }
 
     const QIcon windowIcon = topLevelWidget->windowIcon();
+    const bool captionTitleVisible = !m_searchEdit->isVisible();
     const int iconLeft = 7;
     const int iconSize = 16;
     const int titleIconGap = 20;
     const int iconTop = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - iconSize) / 2);
-    if (!windowIcon.isNull()) {
+    if (captionTitleVisible && !windowIcon.isNull()) {
         windowIcon.paint(&painter, QRect(iconLeft, iconTop, iconSize, iconSize));
     }
 
@@ -3904,7 +3905,7 @@ void RibbonBar::paintEvent(QPaintEvent *event)
         ? m_searchEdit->x() - 12
         : width() - windowControlWidth() - 12;
     const int titleWidth = qMax(0, titleRight - titleLeft);
-    if (titleWidth > 0) {
+    if (captionTitleVisible && titleWidth > 0) {
         painter.setPen(QColor(palette.captionText));
         painter.drawText(QRect(titleLeft,
                                ribbonCaptionTopMargin,
