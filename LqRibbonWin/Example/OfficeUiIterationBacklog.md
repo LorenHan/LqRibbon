@@ -34,7 +34,7 @@ Default style remains `Office 2016 Blue`.
 | 003 | Microsoft 365 Light theme option | C++ and Python style combo | Complete |
 | 004 | Microsoft 365 Dark theme option | C++ and Python style combo | Complete |
 | 005 | System theme follow mode | Theme selector and system palette bridge | Complete |
-| 006 | Theme live preview before apply | Preview swatch panel | Planned |
+| 006 | Theme live preview before apply | Preview swatch panel | Complete |
 | 007 | Persisted Office theme choice | Save/load example settings | Planned |
 | 008 | Fluent rounded tab geometry | Style preview page | Planned |
 | 009 | Fluent softer border model | Style preview page | Planned |

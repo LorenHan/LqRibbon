@@ -8,6 +8,8 @@ from PySide6.QtCore import QDate, QPoint, QSize, Qt
 from PySide6.QtGui import QAction, QActionGroup, QColor
 from PySide6.QtWidgets import (
     QFormLayout,
+    QFrame,
+    QHBoxLayout,
     QLabel,
     QMdiArea,
     QMenu,
@@ -159,16 +161,68 @@ class MainWindow(RibbonMainWindow):
             Qt.ItemDataRole.ToolTipRole,
         )
         style_group.addWidget(self.style_combo_control)
+        self.style_preview_widget = self._create_style_preview_widget(style_group)
+        self._update_style_preview(RibbonStyle.Office2016Blue)
+        style_group.addWidget(self.style_preview_widget)
+        style_combo.highlighted.connect(self._preview_selected_ribbon_style)
         style_combo.currentIndexChanged.connect(self._apply_selected_ribbon_style)
 
-    def _apply_selected_ribbon_style(self, index):
+    def _create_style_preview_widget(self, parent):
+        preview = QWidget(parent)
+        preview.setObjectName("lqRibbonStylePreview")
+        preview.setFixedSize(128, 24)
+        layout = QHBoxLayout(preview)
+        layout.setContentsMargins(0, 2, 0, 2)
+        layout.setSpacing(4)
+        for name in [
+            "lqRibbonStylePreviewAccent",
+            "lqRibbonStylePreviewRibbon",
+            "lqRibbonStylePreviewField",
+            "lqRibbonStylePreviewText",
+        ]:
+            swatch = QFrame(preview)
+            swatch.setObjectName(name)
+            swatch.setFixedSize(24, 18)
+            layout.addWidget(swatch)
+        return preview
+
+    def _style_from_combo_index(self, index):
         style_combo = self.style_combo_control.widget()
         value = style_combo.itemData(index)
-        self.setRibbonStyle(
+        return (
             self.system_ribbon_style()
             if value == SYSTEM_RIBBON_STYLE_VALUE
-            else value
+            else LqStyle.coerce_style(value)
         )
+
+    def _update_style_preview(self, style):
+        style = LqStyle.coerce_style(style)
+        palette = LqStyle.palette(style)
+        self.style_preview_widget.setProperty("previewStyle", int(style))
+        self.style_preview_widget.setToolTip(LqStyle.ribbon_style_name(style))
+        for object_name, palette_key in [
+            ("lqRibbonStylePreviewAccent", "accent"),
+            ("lqRibbonStylePreviewRibbon", "ribbon_bg"),
+            ("lqRibbonStylePreviewField", "field_bg"),
+            ("lqRibbonStylePreviewText", "text"),
+        ]:
+            swatch = self.style_preview_widget.findChild(QFrame, object_name)
+            if swatch is None:
+                continue
+            color = palette[palette_key]
+            swatch.setProperty("previewColor", color)
+            border = palette["border"]
+            swatch.setStyleSheet(
+                f"QFrame {{ background: {color}; border: 1px solid {border}; }}"
+            )
+
+    def _preview_selected_ribbon_style(self, index):
+        self._update_style_preview(self._style_from_combo_index(index))
+
+    def _apply_selected_ribbon_style(self, index):
+        style = self._style_from_combo_index(index)
+        self._update_style_preview(style)
+        self.setRibbonStyle(style)
 
     def system_ribbon_style(self):
         window_color = self.palette().color(self.backgroundRole())
@@ -582,7 +636,9 @@ class MainWindow(RibbonMainWindow):
                 .replace(" ", "")
             )
             if key in {"system", "systemdefault"}:
-                self.setRibbonStyle(self.system_ribbon_style())
+                style = self.system_ribbon_style()
+                self.setRibbonStyle(style)
+                self._update_style_preview(style)
                 style_combo = self.style_combo_control.widget()
                 index = style_combo.findData(SYSTEM_RIBBON_STYLE_VALUE)
                 if index >= 0:
@@ -590,6 +646,7 @@ class MainWindow(RibbonMainWindow):
                 return
         style = LqStyle.coerce_style(style)
         self.setRibbonStyle(style)
+        self._update_style_preview(style)
         style_combo = self.style_combo_control.widget()
         index = style_combo.findData(int(style))
         if index >= 0:

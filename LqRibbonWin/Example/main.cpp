@@ -6,6 +6,8 @@
 #include <QDebug>
 #include <QFormLayout>
 #include <QFontDatabase>
+#include <QFrame>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QMouseEvent>
 #include <QPalette>
@@ -27,6 +29,15 @@
 namespace {
 
 constexpr int systemRibbonStyleComboValue = -1;
+
+struct RibbonStylePreviewPalette
+{
+    QString accent;
+    QString ribbon;
+    QString field;
+    QString text;
+    QString border;
+};
 
 void processCollapseTestEvents()
 {
@@ -343,6 +354,137 @@ bool isSystemRibbonStyleText(const QString &strText)
         || key == QStringLiteral("systemdefault");
 }
 
+RibbonStylePreviewPalette ribbonStylePreviewPalette(
+    LqRibbon::RibbonBar::RibbonStyle style)
+{
+    switch (style) {
+    case LqRibbon::RibbonBar::Office2019Colorful:
+        return {
+            QStringLiteral("#185abd"),
+            QStringLiteral("#f3f2f1"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#202020"),
+            QStringLiteral("#c8c8c8")
+        };
+    case LqRibbon::RibbonBar::Microsoft365Light:
+        return {
+            QStringLiteral("#0f6cbd"),
+            QStringLiteral("#fbfbfb"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#242424"),
+            QStringLiteral("#d1d1d1")
+        };
+    case LqRibbon::RibbonBar::Microsoft365Dark:
+        return {
+            QStringLiteral("#60cdff"),
+            QStringLiteral("#1f1f1f"),
+            QStringLiteral("#2d2d2d"),
+            QStringLiteral("#f3f2f1"),
+            QStringLiteral("#525252")
+        };
+    case LqRibbon::RibbonBar::Office2016Blue:
+    default:
+        return {
+            QStringLiteral("#2b579a"),
+            QStringLiteral("#f3f3f3"),
+            QStringLiteral("#ffffff"),
+            QStringLiteral("#202020"),
+            QStringLiteral("#c8c8c8")
+        };
+    }
+}
+
+QString ribbonStylePreviewSwatchSheet(const QString &color,
+                                      const QString &border)
+{
+    return QStringLiteral(
+               "QFrame { background: %1; border: 1px solid %2; }")
+        .arg(color, border);
+}
+
+QFrame *ribbonStylePreviewSwatch(QWidget *parent, const QString &name)
+{
+    QFrame *swatch = new QFrame(parent);
+    swatch->setObjectName(name);
+    swatch->setFixedSize(24, 18);
+    swatch->setFrameShape(QFrame::NoFrame);
+    swatch->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    return swatch;
+}
+
+QWidget *createRibbonStylePreview(QWidget *parent)
+{
+    QWidget *preview = new QWidget(parent);
+    preview->setObjectName(QStringLiteral("lqRibbonStylePreview"));
+    preview->setFixedSize(128, 24);
+    preview->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+
+    QHBoxLayout *layout = new QHBoxLayout(preview);
+    layout->setContentsMargins(0, 2, 0, 2);
+    layout->setSpacing(4);
+    layout->addWidget(ribbonStylePreviewSwatch(
+        preview, QStringLiteral("lqRibbonStylePreviewAccent")));
+    layout->addWidget(ribbonStylePreviewSwatch(
+        preview, QStringLiteral("lqRibbonStylePreviewRibbon")));
+    layout->addWidget(ribbonStylePreviewSwatch(
+        preview, QStringLiteral("lqRibbonStylePreviewField")));
+    layout->addWidget(ribbonStylePreviewSwatch(
+        preview, QStringLiteral("lqRibbonStylePreviewText")));
+    return preview;
+}
+
+void setRibbonStylePreviewColor(QWidget *preview,
+                                const QString &name,
+                                const QString &color,
+                                const QString &border)
+{
+    QFrame *swatch = preview->findChild<QFrame *>(name);
+    if (!swatch) {
+        return;
+    }
+    swatch->setProperty("previewColor", color);
+    swatch->setStyleSheet(ribbonStylePreviewSwatchSheet(color, border));
+}
+
+void updateRibbonStylePreview(QWidget *preview,
+                              LqRibbon::RibbonBar::RibbonStyle style)
+{
+    if (!preview) {
+        return;
+    }
+
+    const RibbonStylePreviewPalette palette =
+        ribbonStylePreviewPalette(style);
+    preview->setProperty("previewStyle", static_cast<int>(style));
+    preview->setToolTip(LqRibbon::RibbonBar::ribbonStyleName(style));
+    setRibbonStylePreviewColor(preview,
+                               QStringLiteral("lqRibbonStylePreviewAccent"),
+                               palette.accent,
+                               palette.border);
+    setRibbonStylePreviewColor(preview,
+                               QStringLiteral("lqRibbonStylePreviewRibbon"),
+                               palette.ribbon,
+                               palette.border);
+    setRibbonStylePreviewColor(preview,
+                               QStringLiteral("lqRibbonStylePreviewField"),
+                               palette.field,
+                               palette.border);
+    setRibbonStylePreviewColor(preview,
+                               QStringLiteral("lqRibbonStylePreviewText"),
+                               palette.text,
+                               palette.border);
+}
+
+LqRibbon::RibbonBar::RibbonStyle ribbonStyleFromComboIndex(
+    const QComboBox *combo,
+    int index)
+{
+    const int value = combo->itemData(index).toInt();
+    return value == systemRibbonStyleComboValue
+        ? systemRibbonStyle()
+        : static_cast<LqRibbon::RibbonBar::RibbonStyle>(value);
+}
+
 LqRibbon::RibbonBar::RibbonStyle requestedRibbonStyle(
     const QStringList &argumentList,
     LqRibbon::RibbonBar::RibbonStyle fallback =
@@ -359,7 +501,8 @@ LqRibbon::RibbonBar::RibbonStyle requestedRibbonStyle(
 }
 
 int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
-                  QComboBox *styleCombo)
+                  QComboBox *styleCombo,
+                  QWidget *stylePreview)
 {
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     auto require = [](bool condition, const QString &name) {
@@ -376,6 +519,15 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("default style is Office 2016 Blue"))) {
         return 1;
     }
+    if (!require(stylePreview != nullptr,
+                 QStringLiteral("example exposes style preview"))) {
+        return 1;
+    }
+    if (!require(stylePreview->property("previewStyle").toInt()
+                     == static_cast<int>(LqRibbon::RibbonBar::Office2016Blue),
+                 QStringLiteral("style preview defaults to Office 2016 Blue"))) {
+        return 1;
+    }
 
     const LqRibbon::RibbonBar::RibbonStyle styles[] = {
         LqRibbon::RibbonBar::Office2016Blue,
@@ -388,6 +540,13 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
         mainWindow.setRibbonStyle(style);
         if (!require(ribbonBar->ribbonStyle() == style,
                      QStringLiteral("set style %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        updateRibbonStylePreview(stylePreview, style);
+        if (!require(stylePreview->property("previewStyle").toInt()
+                         == static_cast<int>(style),
+                     QStringLiteral("preview swatch updates for %1")
                          .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
             return 1;
         }
@@ -425,6 +584,12 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QStringLiteral("example combo switches style"))) {
             return 1;
         }
+        if (!require(stylePreview->property("previewStyle").toInt()
+                         == static_cast<int>(
+                             LqRibbon::RibbonBar::Microsoft365Dark),
+                     QStringLiteral("style preview tracks combo selection"))) {
+            return 1;
+        }
 
         const int systemIndex = styleCombo->findData(systemRibbonStyleComboValue);
         if (!require(systemIndex >= 0,
@@ -438,6 +603,11 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
         }
         if (!require(ribbonBar->ribbonStyle() == systemRibbonStyle(),
                      QStringLiteral("system style follows application palette"))) {
+            return 1;
+        }
+        if (!require(stylePreview->property("previewStyle").toInt()
+                         == static_cast<int>(systemRibbonStyle()),
+                     QStringLiteral("style preview tracks system style"))) {
             return 1;
         }
     }
@@ -562,15 +732,22 @@ int main(int argc, char *argv[])
                             QObject::tr("Follow current system light/dark palette"),
                             Qt::ToolTipRole);
     styleSwitchGroup->addWidget(styleComboControl);
+    QWidget *stylePreview = createRibbonStylePreview(styleSwitchGroup);
+    updateRibbonStylePreview(stylePreview, LqRibbon::RibbonBar::Office2016Blue);
+    styleSwitchGroup->addWidget(stylePreview);
+    QObject::connect(styleCombo,
+                     QOverload<int>::of(&QComboBox::highlighted),
+                     [styleCombo, stylePreview](int index) {
+                         updateRibbonStylePreview(
+                             stylePreview,
+                             ribbonStyleFromComboIndex(styleCombo, index));
+                     });
     QObject::connect(styleCombo,
                      QOverload<int>::of(&QComboBox::currentIndexChanged),
-                     [&mainWindow, styleCombo](int index) {
-                         const int value = styleCombo->itemData(index).toInt();
+                     [&mainWindow, styleCombo, stylePreview](int index) {
                          const LqRibbon::RibbonBar::RibbonStyle style =
-                             value == systemRibbonStyleComboValue
-                                 ? systemRibbonStyle()
-                                 : static_cast<LqRibbon::RibbonBar::RibbonStyle>(
-                                       value);
+                             ribbonStyleFromComboIndex(styleCombo, index);
+                         updateRibbonStylePreview(stylePreview, style);
                          mainWindow.setRibbonStyle(style);
                      });
 
@@ -1171,8 +1348,8 @@ int main(int argc, char *argv[])
     }
 
     if (styleTestsRequested) {
-        QTimer::singleShot(0, &mainWindow, [&mainWindow, styleCombo]() {
-            qApp->exit(runStyleTests(mainWindow, styleCombo));
+        QTimer::singleShot(0, &mainWindow, [&mainWindow, styleCombo, stylePreview]() {
+            qApp->exit(runStyleTests(mainWindow, styleCombo, stylePreview));
         });
         return application.exec();
     }

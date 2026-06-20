@@ -14,7 +14,7 @@ sys.path.insert(
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "LqRibbon", "example"),
 )
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QFrame
 
 from LqRibbon import RibbonMainWindow, RibbonStyle
 from main_window import MainWindow, SYSTEM_RIBBON_STYLE_VALUE
@@ -84,6 +84,23 @@ def test_example_system_combo_follows_palette():
     window.close()
 
 
+def test_example_style_preview_tracks_combo():
+    window = MainWindow()
+    combo = window.style_combo_control.widget()
+    preview = window.style_preview_widget
+    accent = preview.findChild(QFrame, "lqRibbonStylePreviewAccent")
+    assert preview.property("previewStyle") == int(RibbonStyle.Office2016Blue)
+    assert accent.property("previewColor") == "#2b579a"
+    dark_index = combo.findData(int(RibbonStyle.Microsoft365Dark))
+    combo.setCurrentIndex(dark_index)
+    assert preview.property("previewStyle") == int(RibbonStyle.Microsoft365Dark)
+    assert accent.property("previewColor") == "#60cdff"
+    system_index = combo.findData(SYSTEM_RIBBON_STYLE_VALUE)
+    combo.setCurrentIndex(system_index)
+    assert preview.property("previewStyle") == int(window.system_ribbon_style())
+    window.close()
+
+
 def main():
     _app()
     tests = [
@@ -93,6 +110,7 @@ def main():
         test_window_style_pass_through_updates_full_stylesheet,
         test_example_combo_switches_style,
         test_example_system_combo_follows_palette,
+        test_example_style_preview_tracks_combo,
     ]
     for test in tests:
         test()
