@@ -64,6 +64,7 @@ def main():
     suggested_search_preview = "--grab-suggested-search-preview" in arguments
     document_search_preview = "--grab-document-search-preview" in arguments
     help_search_preview = "--grab-help-search-preview" in arguments
+    related_file_search_preview = "--grab-related-file-search-preview" in arguments
     collapsed_preview = "--grab-collapsed-preview" in arguments
     simplified_preview = "--grab-simplified-preview" in arguments
     temporary_preview = "--grab-temporary-preview" in arguments
@@ -108,6 +109,7 @@ def main():
         or suggested_search_preview
         or document_search_preview
         or help_search_preview
+        or related_file_search_preview
         or controls_preview
         or gallery_preview
         or shell_preview
@@ -149,6 +151,7 @@ def main():
         or suggested_search_preview
         or document_search_preview
         or help_search_preview
+        or related_file_search_preview
     ):
         window.resize(1476, 560)
     if style_name:
@@ -246,6 +249,13 @@ def main():
             window.ribbonBar().searchLineEdit().showPopup("sensor")
 
         QTimer.singleShot(120, show_help_search_preview)
+    if related_file_search_preview:
+        def show_related_file_search_preview():
+            window.focus_search_action.trigger()
+            window.ribbonBar().setSearchText("project")
+            window.ribbonBar().searchLineEdit().showPopup("project")
+
+        QTimer.singleShot(120, show_related_file_search_preview)
     if collapsed_preview:
         QTimer.singleShot(120, lambda: window.ribbonBar().setRibbonMinimized(True))
     if simplified_preview:
@@ -377,6 +387,7 @@ def main():
                 or suggested_search_preview
                 or document_search_preview
                 or help_search_preview
+                or related_file_search_preview
             ):
                 popup = window.ribbonBar().searchLineEdit()._popup
                 if popup.isVisible():

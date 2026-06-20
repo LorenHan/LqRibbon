@@ -483,6 +483,23 @@ public:
     ///
     void clearSearchDocumentResults();
     ///
+    /// \brief RibbonBar::setSearchRelatedFiles
+    /// Replaces the related file result list shown for matching search text.
+    /// \param strList Related file result strings.
+    ///
+    void setSearchRelatedFiles(const QStringList &strList);
+    ///
+    /// \brief RibbonBar::searchRelatedFiles
+    /// Returns the configured related file result strings.
+    /// \return Related file result strings.
+    ///
+    QStringList searchRelatedFiles() const;
+    ///
+    /// \brief RibbonBar::clearSearchRelatedFiles
+    /// Removes all configured related file search results.
+    ///
+    void clearSearchRelatedFiles();
+    ///
     /// \brief RibbonBar::registerSearchAction
     /// Registers an action so it can be found and triggered by search.
     /// \param action Action to include in Ribbon search results.
@@ -755,6 +772,7 @@ private:
     void activateSearchPopupIndex(const QModelIndex &index);
     QList<QAction *> matchedSearchActions(const QString &strText) const;
     QStringList matchedSearchDocumentResults(const QString &strText) const;
+    QStringList matchedSearchRelatedFiles(const QString &strText) const;
     bool isSearchableAction(QAction *action) const;
     bool searchActionMatches(QAction *action, const QString &strNormalizedText) const;
     void appendSearchActionIfMatches(QList<QAction *> &actionList,
@@ -804,6 +822,7 @@ private:
     QToolButton *m_collapseButton;
     QStringList m_searchSuggestionList;
     QStringList m_searchDocumentResultList;
+    QStringList m_searchRelatedFileList;
     QList<SearchCommand> m_searchCommandList;
     QHash<QString, QPointer<QAction>> m_searchActionIndex;
     QList<QPointer<QAction>> m_recentSearchActionList;

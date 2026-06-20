@@ -68,7 +68,7 @@ Default style remains `Office 2016 Blue`.
 | 037 | Suggested action section | Search popup | Complete |
 | 038 | Document/find result section | Search popup | Complete |
 | 039 | Help result section | Search popup | Complete |
-| 040 | Related file result section | Search popup | Planned |
+| 040 | Related file result section | Search popup | Complete |
 | 041 | Search action trigger on Enter | Search popup | Planned |
 | 042 | Search keyboard navigation | Search popup | Planned |
 | 043 | Search command aliases | Search registry | Planned |

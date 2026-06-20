@@ -135,6 +135,7 @@ class LqRibbonBar(QTabWidget):
         self._simplified_action.toggled.connect(self.setSimplifiedMode)
         self._search_suggestions = []
         self._search_document_results = []
+        self._search_related_files = []
         self._search_actions = []
         self._recent_search_actions = []
         self._recent_search_limit = 8
@@ -607,6 +608,15 @@ class LqRibbonBar(QTabWidget):
 
     def clearSearchDocumentResults(self):
         self._search_document_results.clear()
+
+    def setSearchRelatedFiles(self, files):
+        self._search_related_files = list(files)
+
+    def searchRelatedFiles(self):
+        return list(self._search_related_files)
+
+    def clearSearchRelatedFiles(self):
+        self._search_related_files.clear()
 
     def registerSearchAction(self, action, keywords=None):
         if action not in self._search_actions:

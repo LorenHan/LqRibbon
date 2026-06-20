@@ -61,6 +61,7 @@ QtnRibbonSearchBarActionsString = "Actions"
 QtnRibbonSearchBarRecentActionsString = "Recently Used"
 QtnRibbonSearchBarSuggestedActionsString = "Suggested Actions"
 QtnRibbonSearchBarDocumentResultsString = "Document Results"
+QtnRibbonSearchBarRelatedFilesString = "Related Files"
 QtnRibbonGalleryItemSize = QSize(72, 56)
 QtnRibbonGalleryItemString = "Gallery Item"
 
@@ -872,12 +873,31 @@ class LqRibbonSearchBar(QLineEdit):
                 break
         return results
 
+    def _matched_related_files(self, normalized):
+        if (
+            not normalized
+            or not self.ribbon_bar
+            or not hasattr(self.ribbon_bar, "searchRelatedFiles")
+        ):
+            return []
+        results = []
+        for result in self.ribbon_bar.searchRelatedFiles():
+            text = str(result).strip()
+            if text and normalized in text.replace("&", "").lower():
+                results.append(text)
+            if self._max_search_item_count and len(results) >= max(
+                1, self._max_search_item_count // 2
+            ):
+                break
+        return results
+
     def showPopup(self, text=""):
         self._popup.clear()
         normalized = text.strip().lower()
         count = 0
         actions = self._ordered_popup_actions(normalized)
         document_results = self._matched_document_results(normalized)
+        related_files = self._matched_related_files(normalized)
         if not normalized and self.ribbon_bar and hasattr(self.ribbon_bar, "recentSearchActions"):
             recent_actions = [
                 action for action in self.ribbon_bar.recentSearchActions()
@@ -918,6 +938,20 @@ class LqRibbonSearchBar(QLineEdit):
                 if self._max_search_item_count and count >= self._max_search_item_count:
                     break
                 result_action = self._popup.addAction(document_icon, result)
+                result_action.triggered.connect(
+                    lambda _checked=False, value=result: (
+                        self.ribbon_bar.searchSuggestionActivated.emit(value)
+                    )
+                )
+                count += 1
+
+        if related_files:
+            self._popup.addSection(QtnRibbonSearchBarRelatedFilesString)
+            file_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon)
+            for result in related_files:
+                if self._max_search_item_count and count >= self._max_search_item_count:
+                    break
+                result_action = self._popup.addAction(file_icon, result)
                 result_action.triggered.connect(
                     lambda _checked=False, value=result: (
                         self.ribbon_bar.searchSuggestionActivated.emit(value)

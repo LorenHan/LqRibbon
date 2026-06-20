@@ -88,6 +88,8 @@ const RibbonTranslationEntry ribbonTranslationTable[] = {
      "\xE5\xBB\xBA\xE8\xAE\xAE\xE6\x93\x8D\xE4\xBD\x9C"},
     {"Document Results",
      "\xE6\x96\x87\xE6\xA1\xA3\xE7\xBB\x93\xE6\x9E\x9C"},
+    {"Related Files",
+     "\xE7\x9B\xB8\xE5\x85\xB3\xE6\x96\x87\xE4\xBB\xB6"},
     {"Help", "\xE5\xB8\xAE\xE5\x8A\xA9"},
     {"Get Help with \"%1\"",
      "\xE8\x8E\xB7\xE5\x8F\x96\x20\x22\x25\x31\x22\x20"
@@ -3057,6 +3059,37 @@ void RibbonBar::clearSearchDocumentResults()
 }
 
 ///
+/// \brief RibbonBar::setSearchRelatedFiles
+/// Replaces related file rows shown when search text matches them.
+/// \param strList Related file strings.
+///
+void RibbonBar::setSearchRelatedFiles(const QStringList &strList)
+{
+    m_searchRelatedFileList = strList;
+    updateSearchPopup();
+}
+
+///
+/// \brief RibbonBar::searchRelatedFiles
+/// Returns configured related file rows.
+/// \return Related file strings.
+///
+QStringList RibbonBar::searchRelatedFiles() const
+{
+    return m_searchRelatedFileList;
+}
+
+///
+/// \brief RibbonBar::clearSearchRelatedFiles
+/// Clears configured related file rows.
+///
+void RibbonBar::clearSearchRelatedFiles()
+{
+    m_searchRelatedFileList.clear();
+    updateSearchPopup();
+}
+
+///
 /// \brief RibbonBar::registerSearchAction
 /// Adds an action to the searchable command index.
 /// \param action Action that can be found and triggered by search.
@@ -4496,6 +4529,7 @@ void RibbonBar::updateSearchPopup()
     const QList<QAction *> actionList = matchedSearchActions(strText);
     const QStringList strDocumentResultList =
         matchedSearchDocumentResults(strText);
+    const QStringList strRelatedFileList = matchedSearchRelatedFiles(strText);
     m_searchPopupModel->clear();
 
     if (!actionList.isEmpty() && strText.isEmpty()) {
@@ -4557,6 +4591,16 @@ void RibbonBar::updateSearchPopup()
             for (const QString &strResult : strDocumentResultList) {
                 m_searchPopupModel->appendRow(
                     createSearchResultItem(strResult, documentIcon));
+            }
+        }
+        if (!strRelatedFileList.isEmpty()) {
+            const QIcon relatedFileIcon =
+                style()->standardIcon(QStyle::SP_FileIcon);
+            m_searchPopupModel->appendRow(
+                createSearchHeaderItem(ribbonText("Related Files")));
+            for (const QString &strResult : strRelatedFileList) {
+                m_searchPopupModel->appendRow(
+                    createSearchResultItem(strResult, relatedFileIcon));
             }
         }
     }
@@ -4801,6 +4845,38 @@ QStringList RibbonBar::matchedSearchDocumentResults(const QString &strText) cons
     const int maxResultCount =
         qMax(1, m_searchCompleter->maxVisibleItems() / 2);
     for (const QString &strResult : m_searchDocumentResultList) {
+        const QString strCleanResult = strResult.trimmed();
+        if (strCleanResult.isEmpty()
+            || !normalizedSearchText(strCleanResult).contains(strNormalizedText)) {
+            continue;
+        }
+
+        strResultList.append(strCleanResult);
+        if (strResultList.count() >= maxResultCount) {
+            break;
+        }
+    }
+
+    return strResultList;
+}
+
+///
+/// \brief RibbonBar::matchedSearchRelatedFiles
+/// Finds configured related file rows whose text matches the search text.
+/// \param strText Search text entered by the user.
+/// \return Matching related file result strings.
+///
+QStringList RibbonBar::matchedSearchRelatedFiles(const QString &strText) const
+{
+    QStringList strResultList;
+    const QString strNormalizedText = normalizedSearchText(strText);
+    if (strNormalizedText.isEmpty()) {
+        return strResultList;
+    }
+
+    const int maxResultCount =
+        qMax(1, m_searchCompleter->maxVisibleItems() / 2);
+    for (const QString &strResult : m_searchRelatedFileList) {
         const QString strCleanResult = strResult.trimmed();
         if (strCleanResult.isEmpty()
             || !normalizedSearchText(strCleanResult).contains(strNormalizedText)) {

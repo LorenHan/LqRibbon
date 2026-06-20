@@ -494,6 +494,27 @@ def test_example_search_shows_help_result_section():
     window.close()
 
 
+def test_example_search_shows_related_file_result_section():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    search = window.ribbonBar().searchLineEdit()
+
+    search.setFocus()
+    search.setText("project")
+    search.showPopup("project")
+    _app().processEvents()
+    popup_rows = [action.text() for action in search._popup.actions()]
+
+    assert popup_rows[:2] == [
+        "Related Files",
+        "Servo project notes.one",
+    ]
+    assert popup_rows.index("Help") > popup_rows.index("Related Files")
+    search.closePopup()
+    window.close()
+
+
 def test_example_collapse_state_preview_tracks_modes():
     window = MainWindow()
     window.show()
@@ -1001,6 +1022,7 @@ def main():
         test_example_zero_query_search_groups_recent_actions,
         test_example_search_shows_document_result_section,
         test_example_search_shows_help_result_section,
+        test_example_search_shows_related_file_result_section,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,

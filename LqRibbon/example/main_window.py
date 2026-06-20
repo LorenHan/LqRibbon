@@ -278,6 +278,13 @@ class MainWindow(RibbonMainWindow):
                 "Find result: alarm reset procedure",
             ]
         )
+        ribbon.setSearchRelatedFiles(
+            [
+                "Servo project notes.one",
+                "Alarm history export.csv",
+                "Control loop sample.lqribbon",
+            ]
+        )
 
     def _create_style_switch_group(self):
         style_group = self.general_page.addGroup("Style")

@@ -476,6 +476,27 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         return 1;
     }
 
+    ribbonBar->setSearchText(QStringLiteral("project"));
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    QStringList relatedFileRows;
+    if (searchPopupView && searchPopupView->model()) {
+        QAbstractItemModel *popupModel = searchPopupView->model();
+        for (int row = 0; row < popupModel->rowCount(); ++row) {
+            relatedFileRows.append(
+                popupModel->index(row, 0).data(Qt::DisplayRole).toString());
+        }
+    }
+    if (!require(searchPopupView && searchPopupView->isVisible()
+                     && relatedFileRows.value(0)
+                         == QStringLiteral("Related Files")
+                     && relatedFileRows.value(1)
+                         == QStringLiteral("Servo project notes.one")
+                     && relatedFileRows.indexOf(QStringLiteral("Help")) > 1,
+                 QStringLiteral("search shows related file result section"))) {
+        return 1;
+    }
+
     reset();
     doubleClickCollapseTestTab(ribbonBar, firstIndex);
     if (!require(ribbonBar->isRibbonMinimized()
@@ -1921,6 +1942,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-document-search-preview"));
     const bool helpSearchPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-help-search-preview"));
+    const bool relatedFileSearchPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-related-file-search-preview"));
     const bool collapsedPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
     const bool simplifiedPreviewRequested =
@@ -2022,6 +2045,7 @@ int main(int argc, char *argv[])
         || suggestedSearchPreviewRequested
         || documentSearchPreviewRequested
         || helpSearchPreviewRequested
+        || relatedFileSearchPreviewRequested
         || searchPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
@@ -2043,7 +2067,8 @@ int main(int argc, char *argv[])
         || recentSearchPreviewRequested
         || suggestedSearchPreviewRequested
         || documentSearchPreviewRequested
-        || helpSearchPreviewRequested) {
+        || helpSearchPreviewRequested
+        || relatedFileSearchPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -3570,6 +3595,10 @@ int main(int argc, char *argv[])
         << QObject::tr("Driver commissioning checklist")
         << QObject::tr("Servo tuning guide: velocity loop")
         << QObject::tr("Find result: alarm reset procedure"));
+    mainWindow.ribbonBar()->setSearchRelatedFiles(QStringList()
+        << QObject::tr("Servo project notes.one")
+        << QObject::tr("Alarm history export.csv")
+        << QObject::tr("Control loop sample.lqribbon"));
     mainWindow.ribbonBar()->registerSearchAction(fullScreenAction);
     mainWindow.ribbonBar()->registerSearchAction(mdiAction);
     mainWindow.ribbonBar()->registerSearchAction(tabAction);
@@ -3745,13 +3774,15 @@ int main(int argc, char *argv[])
                             recentSearchPreviewRequested,
                             suggestedSearchPreviewRequested,
                             documentSearchPreviewRequested,
-                            helpSearchPreviewRequested]() {
+                            helpSearchPreviewRequested,
+                            relatedFileSearchPreviewRequested]() {
             QPixmap preview = mainWindow.grab();
             if (zeroQuerySearchPreviewRequested
                 || recentSearchPreviewRequested
                 || suggestedSearchPreviewRequested
                 || documentSearchPreviewRequested
-                || helpSearchPreviewRequested) {
+                || helpSearchPreviewRequested
+                || relatedFileSearchPreviewRequested) {
                 QListView *searchPopupView =
                     mainWindow.ribbonBar()->findChild<QListView *>(
                         QStringLiteral("lqRibbonSearchPopupView"));
@@ -3841,6 +3872,16 @@ int main(int argc, char *argv[])
                            [focusSearchAction, &mainWindow]() {
             focusSearchAction->trigger();
             mainWindow.ribbonBar()->setSearchText(QStringLiteral("sensor"));
+            mainWindow.ribbonBar()->searchLineEdit()->setFocus(
+                Qt::OtherFocusReason);
+        });
+    }
+    if (relatedFileSearchPreviewRequested) {
+        QTimer::singleShot(120,
+                           &mainWindow,
+                           [focusSearchAction, &mainWindow]() {
+            focusSearchAction->trigger();
+            mainWindow.ribbonBar()->setSearchText(QStringLiteral("project"));
             mainWindow.ribbonBar()->searchLineEdit()->setFocus(
                 Qt::OtherFocusReason);
         });
