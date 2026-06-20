@@ -91,7 +91,8 @@ def main():
             )
         )
     if (
-        controls_preview
+        search_preview
+        or controls_preview
         or gallery_preview
         or shell_preview
         or width_stress_preview

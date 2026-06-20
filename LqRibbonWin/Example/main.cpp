@@ -279,6 +279,19 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         return true;
     };
 
+    const QRect searchGeometry = ribbonBar->searchLineEdit()->geometry();
+    if (!require(ribbonBar->searchBarAppearance()
+                         == LqRibbon::RibbonBar::SearchBarCentral
+                     && ribbonBar->searchLineEdit()->isVisible()
+                     && ribbonBar->searchLineEdit()->placeholderText()
+                         == QStringLiteral("Search commands")
+                     && searchGeometry.width() >= 120
+                     && qAbs(searchGeometry.center().x()
+                             - ribbonBar->rect().center().x()) <= 2,
+                 QStringLiteral("caption search defaults to centered Microsoft box"))) {
+        return 1;
+    }
+
     reset();
     doubleClickCollapseTestTab(ribbonBar, firstIndex);
     if (!require(ribbonBar->isRibbonMinimized()
@@ -1801,6 +1814,7 @@ int main(int argc, char *argv[])
         || resetQuickAccessPreviewRequested
         || exportQuickAccessPreviewRequested
         || importQuickAccessPreviewRequested
+        || searchPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
         mainWindow.resize(1180, 560);
@@ -3253,7 +3267,8 @@ int main(int argc, char *argv[])
     if (systemStyleRequested && styleComboIndex >= 0) {
         styleCombo->setCurrentIndex(styleComboIndex);
     }
-    mainWindow.ribbonBar()->setSearchVisible(true);
+    mainWindow.ribbonBar()->setSearchBarAppearance(
+        LqRibbon::RibbonBar::SearchBarCentral);
     mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
     mainWindow.ribbonBar()->setRecentSearchLimit(5);
     mainWindow.ribbonBar()->registerSearchAction(fullScreenAction);

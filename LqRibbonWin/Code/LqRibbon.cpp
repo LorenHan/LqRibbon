@@ -4085,11 +4085,20 @@ void RibbonBar::updateSearchGeometry()
         ? width() - controlWidth - titleButtonReserve - 24
         : width() - 10;
     const int availableWidth = qMax(0, rightLimit);
-    const int searchWidth = qMin(preferredSearchWidth, availableWidth);
-    const int centeredX = qMax(0, (width() - searchWidth) / 2);
-    const int maxX = qMax(0, rightLimit - qMax(searchWidth,
-                                               minimumUsefulSearchWidth));
-    const int x = qMin(centeredX, maxX);
+    int searchWidth = qMin(preferredSearchWidth, availableWidth);
+    int x = qMax(0, (width() - searchWidth) / 2);
+
+    if (x + searchWidth > rightLimit) {
+        const int centerX = width() / 2;
+        const int centeredWidth =
+            qMin(preferredSearchWidth, qMax(0, rightLimit - centerX) * 2);
+        if (centeredWidth >= minimumUsefulSearchWidth) {
+            searchWidth = centeredWidth;
+            x = qMax(0, (width() - searchWidth) / 2);
+        } else {
+            x = qMin(x, qMax(0, rightLimit - searchWidth));
+        }
+    }
 
     m_searchEdit->setGeometry(x, topMargin, searchWidth, searchHeight);
     m_searchEdit->raise();

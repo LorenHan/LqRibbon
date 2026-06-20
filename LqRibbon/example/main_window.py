@@ -56,6 +56,7 @@ from LqRibbon import (
 SYSTEM_RIBBON_STYLE_VALUE = -1
 QUICK_ACCESS_TOP_POSITION = 1
 QUICK_ACCESS_BOTTOM_POSITION = 2
+SEARCH_BAR_CENTRAL = 1
 RIBBON_STYLE_SETTINGS_KEY = "Ribbon/Style"
 
 
@@ -262,7 +263,7 @@ class MainWindow(RibbonMainWindow):
 
         ribbon.setCurrentPageIndex(ribbon.pageIndex(self.driver_page))
         self.setFrameThemeEnabled(True)
-        ribbon.setSearchVisible(True)
+        ribbon.setSearchBarAppearance(SEARCH_BAR_CENTRAL)
         ribbon.setSearchPlaceholderText("Search commands")
         ribbon.setRecentSearchLimit(5)
 

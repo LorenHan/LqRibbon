@@ -29,6 +29,7 @@ from main_window import (
     MainWindow,
     QUICK_ACCESS_BOTTOM_POSITION,
     QUICK_ACCESS_TOP_POSITION,
+    SEARCH_BAR_CENTRAL,
 )
 
 
@@ -288,6 +289,22 @@ def test_example_display_options_menu_controls_ribbon_modes():
     assert not ribbon.simplifiedMode()
     assert ribbon.isRibbonMinimized()
     assert not _command_area_visible(ribbon)
+    window.close()
+
+
+def test_example_caption_search_defaults_to_centered_microsoft_box():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    search = ribbon.searchLineEdit()
+    search_geometry = search.geometry()
+
+    assert ribbon.searchBarAppearance() == SEARCH_BAR_CENTRAL
+    assert search.isVisible()
+    assert search.placeholderText() == "Search commands"
+    assert search_geometry.width() >= 120
+    assert abs(search_geometry.center().x() - ribbon.rect().center().x()) <= 2
     window.close()
 
 
@@ -790,6 +807,7 @@ def main():
         test_example_classic_action_restores_multi_line_ribbon,
         test_example_pin_unpin_actions_control_display_policy,
         test_example_display_options_menu_controls_ribbon_modes,
+        test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,
