@@ -135,8 +135,21 @@ class MainWindow(RibbonMainWindow):
         self.style_combo_control = RibbonComboBoxControl(style_group)
         style_combo = self.style_combo_control.widget()
         style_combo.setObjectName("lqRibbonStyleCombo")
+        style_combo.setMinimumWidth(220)
         for style in RibbonStyle:
-            style_combo.addItem(LqStyle.ribbon_style_name(style), int(style))
+            combo_text = (
+                "M365 Light"
+                if style == RibbonStyle.Microsoft365Light
+                else "M365 Dark"
+                if style == RibbonStyle.Microsoft365Dark
+                else LqStyle.ribbon_style_name(style)
+            )
+            style_combo.addItem(combo_text, int(style))
+            style_combo.setItemData(
+                style_combo.count() - 1,
+                LqStyle.ribbon_style_name(style),
+                Qt.ItemDataRole.ToolTipRole,
+            )
         style_group.addWidget(self.style_combo_control)
         style_combo.currentIndexChanged.connect(self._apply_selected_ribbon_style)
 

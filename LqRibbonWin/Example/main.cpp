@@ -491,6 +491,7 @@ int main(int argc, char *argv[])
         new LqRibbon::RibbonComboBoxControl(styleSwitchGroup);
     QComboBox *styleCombo = styleComboControl->widget();
     styleCombo->setObjectName(QStringLiteral("lqRibbonStyleCombo"));
+    styleCombo->setMinimumWidth(220);
     const LqRibbon::RibbonBar::RibbonStyle styleItems[] = {
         LqRibbon::RibbonBar::Office2016Blue,
         LqRibbon::RibbonBar::Office2019Colorful,
@@ -498,8 +499,16 @@ int main(int argc, char *argv[])
         LqRibbon::RibbonBar::Microsoft365Dark
     };
     for (LqRibbon::RibbonBar::RibbonStyle style : styleItems) {
-        styleCombo->addItem(LqRibbon::RibbonBar::ribbonStyleName(style),
-                            static_cast<int>(style));
+        const QString strComboText =
+            style == LqRibbon::RibbonBar::Microsoft365Light
+                ? QStringLiteral("M365 Light")
+                : style == LqRibbon::RibbonBar::Microsoft365Dark
+                    ? QStringLiteral("M365 Dark")
+                    : LqRibbon::RibbonBar::ribbonStyleName(style);
+        styleCombo->addItem(strComboText, static_cast<int>(style));
+        styleCombo->setItemData(styleCombo->count() - 1,
+                                LqRibbon::RibbonBar::ribbonStyleName(style),
+                                Qt::ToolTipRole);
     }
     styleSwitchGroup->addWidget(styleComboControl);
     QObject::connect(styleCombo,
