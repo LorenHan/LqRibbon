@@ -3888,14 +3888,18 @@ void RibbonBar::paintEvent(QPaintEvent *event)
     }
 
     const QIcon windowIcon = topLevelWidget->windowIcon();
+    const int iconLeft = 7;
     const int iconSize = 16;
+    const int titleIconGap = 20;
     const int iconTop = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - iconSize) / 2);
     if (!windowIcon.isNull()) {
-        windowIcon.paint(&painter, QRect(7, iconTop, iconSize, iconSize));
+        windowIcon.paint(&painter, QRect(iconLeft, iconTop, iconSize, iconSize));
     }
 
-    const int titleLeft = 34;
+    const int titleLeft = windowIcon.isNull()
+        ? 12
+        : iconLeft + iconSize + titleIconGap;
     const int titleRight = m_searchEdit->isVisible()
         ? m_searchEdit->x() - 12
         : width() - windowControlWidth() - 12;
