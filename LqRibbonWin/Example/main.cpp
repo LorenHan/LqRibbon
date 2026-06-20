@@ -3,6 +3,7 @@
 #include <QBuffer>
 #include <QDate>
 #include <QFormLayout>
+#include <QFontDatabase>
 #include <QLabel>
 #include <QMdiArea>
 #include <QMdiSubWindow>
@@ -20,6 +21,19 @@
 int main(int argc, char *argv[])
 {
     QApplication application(argc, argv);
+    for (const QString &fontPath : {
+             QStringLiteral("C:/Windows/Fonts/segoeui.ttf"),
+             QStringLiteral("C:/Windows/Fonts/arial.ttf"),
+         }) {
+        const int fontId = QFontDatabase::addApplicationFont(fontPath);
+        const QStringList families =
+            QFontDatabase::applicationFontFamilies(fontId);
+        if (!families.isEmpty()) {
+            application.setFont(QFont(families.constFirst(), 9));
+            break;
+        }
+    }
+
     const QStringList argumentList = application.arguments();
     const int previewIndex = argumentList.indexOf(QStringLiteral("--grab-preview"));
     const bool previewRequested = previewIndex >= 0
