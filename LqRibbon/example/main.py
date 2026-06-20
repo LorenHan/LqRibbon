@@ -1,37 +1,81 @@
 """
-LqRibbon Example Application - Main entry point
+LqRibbon Example Application - Main entry point.
 """
 
-import sys
 import os
+import sys
 
-# Add parent directory to path to import LqRibbon
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from PySide6.QtCore import QTimer, Qt
+from PySide6.QtGui import QFont, QFontDatabase
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
 
 from main_window import MainWindow
-import picture_rc  # Import qrc resources
+import picture_rc  # noqa: F401
+
+
+def _option_value(arguments, option):
+    try:
+        index = arguments.index(option)
+    except ValueError:
+        return ""
+    return arguments[index + 1] if index + 1 < len(arguments) else ""
+
+
+def _install_demo_font(app):
+    for path in [
+        r"C:\Windows\Fonts\segoeui.ttf",
+        r"C:\Windows\Fonts\arial.ttf",
+    ]:
+        if not os.path.exists(path):
+            continue
+        font_id = QFontDatabase.addApplicationFont(path)
+        families = QFontDatabase.applicationFontFamilies(font_id)
+        if families:
+            app.setFont(QFont(families[0], 9))
+            return
 
 
 def main():
-    """Main application entry point"""
-    # Enable high DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
 
-    # Create application
     app = QApplication(sys.argv)
     app.setApplicationName("LqRibbon Example")
     app.setOrganizationName("LqRibbon")
+    _install_demo_font(app)
 
-    # Create and show main window
+    arguments = sys.argv[1:]
+    preview_path = _option_value(arguments, "--grab-preview")
+    search_preview = "--grab-search-preview" in arguments
+    collapsed_preview = "--grab-collapsed-preview" in arguments
+    mdi_preview = "--grab-mdi-preview" in arguments
+    tab_preview = "--grab-tab-preview" in arguments
+    controls_preview = "--grab-controls-preview" in arguments
+    gallery_preview = "--grab-gallery-preview" in arguments
+    shell_preview = "--grab-shell-preview" in arguments
+
     window = MainWindow()
+    if controls_preview or gallery_preview or shell_preview:
+        window.resize(1180, 560)
+    if mdi_preview or tab_preview:
+        window.show_mdi_content(tabbed=tab_preview)
+    window.select_preview_page(
+        controls=controls_preview,
+        gallery=gallery_preview,
+        shell=shell_preview,
+    )
     window.show()
 
-    # Run application
+    if search_preview:
+        QTimer.singleShot(120, window.focus_search_preview)
+    if collapsed_preview:
+        QTimer.singleShot(120, lambda: window.ribbonBar().setRibbonMinimized(True))
+    if preview_path:
+        QTimer.singleShot(300, lambda: (window.grab().save(preview_path), app.quit()))
+
     sys.exit(app.exec())
 
 
