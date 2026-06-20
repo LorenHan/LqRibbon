@@ -16,6 +16,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QKeyEvent>
+#include <QKeySequence>
 #include <QLabel>
 #include <QMouseEvent>
 #include <QPalette>
@@ -126,6 +128,17 @@ void sendCollapseTestMouse(QWidget *widget,
     processCollapseTestEvents();
 }
 
+void sendCollapseTestKey(QWidget *widget,
+                         int key,
+                         Qt::KeyboardModifiers modifiers)
+{
+    QKeyEvent pressEvent(QEvent::KeyPress, key, modifiers);
+    QApplication::sendEvent(widget, &pressEvent);
+    QKeyEvent releaseEvent(QEvent::KeyRelease, key, modifiers);
+    QApplication::sendEvent(widget, &releaseEvent);
+    processCollapseTestEvents();
+}
+
 void clickCollapseTestWidget(QWidget *widget, const QPoint &pos)
 {
     sendCollapseTestMouse(widget,
@@ -194,6 +207,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *centerSearchAction,
                      QAction *compactSearchAction,
                      QAction *hiddenSearchAction,
+                     QAction *focusSearchAction,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
                      const std::function<void(QMenu *, QAction *)> &populateActionContextMenu,
                      const std::function<void(QMenu *, QAction *)> &populateQuickAccessActionContextMenu,
@@ -347,6 +361,23 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && ribbonBar->searchLineEdit()->isVisible()
                      && !ribbonBar->searchBar()->isCompact(),
                  QStringLiteral("center search mode restores hidden box"))) {
+        return 1;
+    }
+
+    hiddenSearchAction->trigger();
+    ribbonBar->searchLineEdit()->clearFocus();
+    mainWindow.activateWindow();
+    mainWindow.setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    sendCollapseTestKey(&mainWindow, Qt::Key_Q, Qt::AltModifier);
+    if (!require(ribbonBar->searchBarAppearance()
+                         == LqRibbon::RibbonBar::SearchBarCentral
+                     && focusSearchAction->shortcut()
+                         == QKeySequence(Qt::ALT | Qt::Key_Q)
+                     && centerSearchAction->isChecked()
+                     && ribbonBar->searchLineEdit()->isVisible()
+                     && ribbonBar->searchLineEdit()->hasFocus(),
+                 QStringLiteral("Alt+Q restores and focuses caption search"))) {
         return 1;
     }
 
@@ -1783,6 +1814,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-search-compact-preview"));
     const bool hiddenSearchPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-search-hidden-preview"));
+    const bool altQSearchPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-alt-q-search-preview"));
     const bool collapsedPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
     const bool simplifiedPreviewRequested =
@@ -1878,6 +1911,7 @@ int main(int argc, char *argv[])
         || importQuickAccessPreviewRequested
         || compactSearchPreviewRequested
         || hiddenSearchPreviewRequested
+        || altQSearchPreviewRequested
         || searchPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
@@ -1893,7 +1927,8 @@ int main(int argc, char *argv[])
         || exportQuickAccessPreviewRequested
         || importQuickAccessPreviewRequested
         || compactSearchPreviewRequested
-        || hiddenSearchPreviewRequested) {
+        || hiddenSearchPreviewRequested
+        || altQSearchPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -2256,6 +2291,14 @@ int main(int argc, char *argv[])
     hiddenSearchAction->setObjectName(QStringLiteral("hiddenSearchAction"));
     hiddenSearchAction->setCheckable(true);
     searchModeGroup->addAction(hiddenSearchAction);
+    QAction *focusSearchAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogContentsView),
+        QObject::tr("Focus Search"),
+        Qt::ToolButtonTextBesideIcon);
+    focusSearchAction->setObjectName(QStringLiteral("focusSearchAction"));
+    focusSearchAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_Q));
+    focusSearchAction->setShortcutContext(Qt::WindowShortcut);
+    mainWindow.addAction(focusSearchAction);
     QAction *showQuickAccessBarAction = new QAction(
         mainWindow.style()->standardIcon(QStyle::SP_TitleBarNormalButton),
         QObject::tr("Show Quick Access Toolbar"),
@@ -2410,6 +2453,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), centerSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"), compactSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"), hiddenSearchAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), focusSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     showQuickAccessBarAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
@@ -2597,6 +2641,17 @@ int main(int argc, char *argv[])
                      [&mainWindow]() {
         mainWindow.ribbonBar()->setSearchBarAppearance(
             LqRibbon::RibbonBar::SearchBarHidden);
+    });
+    QObject::connect(focusSearchAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow, centerSearchAction]() {
+        centerSearchAction->setChecked(true);
+        mainWindow.ribbonBar()->setSearchBarAppearance(
+            LqRibbon::RibbonBar::SearchBarCentral);
+        mainWindow.ribbonBar()->searchLineEdit()->setFocus(
+            Qt::ShortcutFocusReason);
+        mainWindow.ribbonBar()->searchLineEdit()->selectAll();
     });
 
     auto updateQuickAccessPreview =
@@ -3405,6 +3460,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(centerSearchAction);
     mainWindow.ribbonBar()->registerSearchAction(compactSearchAction);
     mainWindow.ribbonBar()->registerSearchAction(hiddenSearchAction);
+    mainWindow.ribbonBar()->registerSearchAction(focusSearchAction);
     mainWindow.ribbonBar()->registerSearchAction(showQuickAccessBarAction);
     mainWindow.ribbonBar()->registerSearchAction(quickAccessAboveAction);
     mainWindow.ribbonBar()->registerSearchAction(quickAccessBelowAction);
@@ -3525,6 +3581,7 @@ int main(int argc, char *argv[])
                                 centerSearchAction,
                                 compactSearchAction,
                                 hiddenSearchAction,
+                                focusSearchAction,
                                 populateQuickAccessMenu,
                                 populateActionContextMenu,
                                 populateQuickAccessActionContextMenu,
@@ -3569,6 +3626,15 @@ int main(int argc, char *argv[])
     if (hiddenSearchPreviewRequested) {
         QTimer::singleShot(120, &mainWindow, [hiddenSearchAction]() {
             hiddenSearchAction->trigger();
+        });
+    }
+    if (altQSearchPreviewRequested) {
+        QTimer::singleShot(120,
+                           &mainWindow,
+                           [hiddenSearchAction, focusSearchAction, &mainWindow]() {
+            hiddenSearchAction->trigger();
+            focusSearchAction->trigger();
+            mainWindow.ribbonBar()->setSearchText(QStringLiteral("ba"));
         });
     }
 

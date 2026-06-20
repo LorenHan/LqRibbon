@@ -365,6 +365,33 @@ def test_example_hidden_search_action_removes_caption_search_box():
     window.close()
 
 
+def test_example_alt_q_restores_and_focuses_caption_search():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    search = ribbon.searchLineEdit()
+
+    window.hidden_search_action.trigger()
+    search.clearFocus()
+    window.setFocus()
+    _app().processEvents()
+    assert not search.isVisible()
+
+    QTest.keyClick(
+        window,
+        Qt.Key.Key_Q,
+        Qt.KeyboardModifier.AltModifier,
+    )
+    _app().processEvents()
+    assert ribbon.searchBarAppearance() == SEARCH_BAR_CENTRAL
+    assert window.focus_search_action.shortcut().toString() == "Alt+Q"
+    assert window.center_search_action.isChecked()
+    assert search.isVisible()
+    assert search.hasFocus()
+    window.close()
+
+
 def test_example_collapse_state_preview_tracks_modes():
     window = MainWindow()
     window.show()
@@ -867,6 +894,7 @@ def main():
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,
+        test_example_alt_q_restores_and_focuses_caption_search,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,

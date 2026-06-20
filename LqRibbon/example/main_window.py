@@ -6,7 +6,7 @@ import io
 import json
 
 from PySide6.QtCore import QDate, QPoint, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QActionGroup, QColor
+from PySide6.QtGui import QAction, QActionGroup, QColor, QKeySequence
 from PySide6.QtWidgets import (
     QFormLayout,
     QFrame,
@@ -587,6 +587,16 @@ class MainWindow(RibbonMainWindow):
         self.hidden_search_action.setObjectName("hiddenSearchAction")
         self.hidden_search_action.setCheckable(True)
         self.search_mode_group.addAction(self.hidden_search_action)
+        self.focus_search_action = self._add_group_action(
+            self.runtime_group,
+            QStyle.StandardPixmap.SP_FileDialogContentsView,
+            "Focus Search",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.focus_search_action.setObjectName("focusSearchAction")
+        self.focus_search_action.setShortcut(QKeySequence("Alt+Q"))
+        self.focus_search_action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+        self.addAction(self.focus_search_action)
         self.responsive_label_actions = [
             self.rename_page_action,
             self.move_gallery_action,
@@ -780,6 +790,7 @@ class MainWindow(RibbonMainWindow):
             self.center_search_action,
             self.compact_search_action,
             self.hidden_search_action,
+            self.focus_search_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
             self.export_quick_access_action,
@@ -822,6 +833,9 @@ class MainWindow(RibbonMainWindow):
         )
         self.hidden_search_action.triggered.connect(
             lambda _checked=False: self.set_search_bar_appearance(SEARCH_BAR_HIDDEN)
+        )
+        self.focus_search_action.triggered.connect(
+            lambda _checked=False: self.focus_caption_search()
         )
         self.office_popup_action.triggered.connect(self.show_office_popup)
         self.office_menu_action.triggered.connect(self.show_office_menu)
@@ -990,6 +1004,7 @@ class MainWindow(RibbonMainWindow):
             self.center_search_action,
             self.compact_search_action,
             self.hidden_search_action,
+            self.focus_search_action,
             self.show_quick_access_action,
             self.quick_access_above_action,
             self.quick_access_below_action,
@@ -1286,6 +1301,12 @@ class MainWindow(RibbonMainWindow):
         hidden_blocked = self.hidden_search_action.blockSignals(True)
         self.hidden_search_action.setChecked(appearance == SEARCH_BAR_HIDDEN)
         self.hidden_search_action.blockSignals(hidden_blocked)
+
+    def focus_caption_search(self):
+        self.set_search_bar_appearance(SEARCH_BAR_CENTRAL)
+        search = self.ribbonBar().searchLineEdit()
+        search.setFocus(Qt.FocusReason.ShortcutFocusReason)
+        search.selectAll()
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()
