@@ -316,6 +316,33 @@ def test_example_collapse_state_preview_tracks_modes():
     window.close()
 
 
+def test_example_double_click_preview_tracks_modes():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    preview = window.double_click_state_preview
+
+    assert "Collapse" in preview.text()
+
+    ribbon.setRibbonMinimized(True)
+    _app().processEvents()
+    assert "Restore" in preview.text()
+
+    _click_tab(ribbon, 0)
+    assert ribbon.isRibbonTemporaryExpanded()
+    assert "Restore" in preview.text()
+
+    _double_click_tab(ribbon, 0)
+    assert not ribbon.isRibbonMinimized()
+    assert "Collapse" in preview.text()
+
+    window.pin_ribbon_action.trigger()
+    _app().processEvents()
+    assert "Locked" in preview.text()
+    window.close()
+
+
 def test_single_click_collapsed_tab_temporarily_expands():
     window, ribbon, *_ = _window()
     ribbon.setRibbonMinimized(True)
@@ -411,6 +438,7 @@ def main():
         test_example_pin_unpin_actions_control_display_policy,
         test_example_display_options_menu_controls_ribbon_modes,
         test_example_collapse_state_preview_tracks_modes,
+        test_example_double_click_preview_tracks_modes,
         test_single_click_collapsed_tab_temporarily_expands,
         test_action_triggers_while_temporarily_expanded,
         test_action_hides_temporary_expansion,

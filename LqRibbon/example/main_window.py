@@ -510,11 +510,14 @@ class MainWindow(RibbonMainWindow):
         )
         self.collapse_state_preview = QLabel(window_group)
         self.collapse_state_preview.setObjectName("collapseStatePreview")
-        self.collapse_state_preview.setMinimumWidth(112)
+        self.collapse_state_preview.setMinimumWidth(170)
         self.collapse_state_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.collapse_state_preview.setFrameShape(QFrame.Shape.StyledPanel)
-        self.collapse_state_preview.setToolTip("Collapse button state preview")
+        self.collapse_state_preview.setToolTip(
+            "Collapse and tab double-click state preview"
+        )
         window_group.addWidget(self.collapse_state_preview)
+        self.double_click_state_preview = self.collapse_state_preview
 
         self.runtime_group = self.shell_page.addGroup("Runtime")
         self.add_page_action = self._add_group_action(
@@ -851,7 +854,16 @@ class MainWindow(RibbonMainWindow):
             state = "Collapsed"
         else:
             state = "Expanded"
-        self.collapse_state_preview.setText(f"State: {state}")
+
+        if not ribbon.isMinimizationEnabled():
+            double_click_state = "Locked"
+        elif ribbon.isRibbonMinimized() or ribbon.isRibbonTemporaryExpanded():
+            double_click_state = "Restore"
+        else:
+            double_click_state = "Collapse"
+        self.collapse_state_preview.setText(
+            f"State: {state}\nDouble-click: {double_click_state}"
+        )
 
     def install_default_content(self):
         content = QLabel("LqRibbon PySide6 example")

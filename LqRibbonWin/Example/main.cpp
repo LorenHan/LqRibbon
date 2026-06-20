@@ -161,7 +161,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *showTabsOnlyAction,
                      QAction *alwaysShowRibbonAction,
                      QAction *autoHideRibbonAction,
-                     QLabel *collapseStatePreview)
+                     QLabel *collapseStatePreview,
+                     QLabel *doubleClickStatePreview)
 {
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     ribbonBar->setMinimizationEnabled(true);
@@ -400,6 +401,33 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && collapseStatePreview->text().contains(
                          QStringLiteral("Temporary")),
                  QStringLiteral("collapse state preview tracks temporary expansion"))) {
+        return 1;
+    }
+
+    reset();
+    if (!require(doubleClickStatePreview->text().contains(
+                     QStringLiteral("Collapse")),
+                 QStringLiteral("double click preview starts with collapse target"))) {
+        return 1;
+    }
+    ribbonBar->setRibbonMinimized(true);
+    processCollapseTestEvents();
+    if (!require(doubleClickStatePreview->text().contains(
+                     QStringLiteral("Restore")),
+                 QStringLiteral("double click preview tracks collapsed restore target"))) {
+        return 1;
+    }
+    clickCollapseTestTab(ribbonBar, firstIndex);
+    if (!require(doubleClickStatePreview->text().contains(
+                     QStringLiteral("Restore")),
+                 QStringLiteral("double click preview tracks temporary restore target"))) {
+        return 1;
+    }
+    pinRibbonAction->trigger();
+    processCollapseTestEvents();
+    if (!require(doubleClickStatePreview->text().contains(
+                     QStringLiteral("Locked")),
+                 QStringLiteral("double click preview tracks pinned lock state"))) {
         return 1;
     }
 
@@ -1215,6 +1243,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-simplified-preview"));
     const bool temporaryPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-temporary-preview"));
+    const bool doubleClickPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-double-click-preview"));
     const bool mdiPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-mdi-preview"));
     const bool tabPreviewRequested =
@@ -1262,7 +1292,8 @@ int main(int argc, char *argv[])
     mainWindow.resize(920, 560);
     if (controlsPreviewRequested || galleryPreviewRequested
         || shellPreviewRequested || simplifiedPreviewRequested
-        || temporaryPreviewRequested || stylePreviewRequested) {
+        || temporaryPreviewRequested || doubleClickPreviewRequested
+        || stylePreviewRequested) {
         mainWindow.resize(1180, 560);
     }
 
@@ -1566,11 +1597,13 @@ int main(int argc, char *argv[])
         Qt::ToolButtonTextBesideIcon);
     QLabel *collapseStatePreview = new QLabel(&mainWindow);
     collapseStatePreview->setObjectName(QStringLiteral("collapseStatePreview"));
-    collapseStatePreview->setMinimumWidth(112);
+    collapseStatePreview->setMinimumWidth(170);
     collapseStatePreview->setAlignment(Qt::AlignCenter);
     collapseStatePreview->setFrameShape(QFrame::StyledPanel);
-    collapseStatePreview->setToolTip(QObject::tr("Collapse button state preview"));
+    collapseStatePreview->setToolTip(
+        QObject::tr("Collapse and tab double-click state preview"));
     windowGroup->addWidget(collapseStatePreview);
+    QLabel *doubleClickStatePreview = collapseStatePreview;
 
     LqRibbon::RibbonGroup *runtimeGroup =
         shellPage->addGroup(QObject::tr("Runtime"));
@@ -1708,7 +1741,19 @@ int main(int argc, char *argv[])
         } else {
             stateText = QObject::tr("Expanded");
         }
-        collapseStatePreview->setText(QObject::tr("State: %1").arg(stateText));
+
+        QString doubleClickText;
+        if (!bar->isMinimizationEnabled()) {
+            doubleClickText = QObject::tr("Locked");
+        } else if (bar->isRibbonMinimized()
+                   || bar->isRibbonTemporaryExpanded()) {
+            doubleClickText = QObject::tr("Restore");
+        } else {
+            doubleClickText = QObject::tr("Collapse");
+        }
+        collapseStatePreview->setText(
+            QObject::tr("State: %1\nDouble-click: %2")
+                .arg(stateText, doubleClickText));
     };
     QObject::connect(mainWindow.ribbonBar(),
                      &LqRibbon::RibbonBar::ribbonMinimizedChanged,
@@ -1961,7 +2006,8 @@ int main(int argc, char *argv[])
         mainWindow.ribbonBar()->setCurrentPageIndex(generalPageIndex);
     } else if (shellPreviewRequested
                || simplifiedPreviewRequested
-               || temporaryPreviewRequested) {
+               || temporaryPreviewRequested
+               || doubleClickPreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(shellPageIndex);
     } else if (galleryPreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(galleryPageIndex);
@@ -2099,19 +2145,21 @@ int main(int argc, char *argv[])
                             displayOptionsTitleAction,
                             showTabsAndCommandsAction,
                             showTabsOnlyAction,
-                            alwaysShowRibbonAction,
-                            autoHideRibbonAction,
-                            collapseStatePreview]() {
+                             alwaysShowRibbonAction,
+                             autoHideRibbonAction,
+                             collapseStatePreview,
+                             doubleClickStatePreview]() {
             qApp->exit(runCollapseTests(mainWindow,
-                                        classicRibbonAction,
-                                        pinRibbonAction,
-                                        unpinRibbonAction,
-                                        displayOptionsTitleAction,
-                                        showTabsAndCommandsAction,
-                                        showTabsOnlyAction,
-                                        alwaysShowRibbonAction,
-                                        autoHideRibbonAction,
-                                        collapseStatePreview));
+                                         classicRibbonAction,
+                                         pinRibbonAction,
+                                         unpinRibbonAction,
+                                         displayOptionsTitleAction,
+                                         showTabsAndCommandsAction,
+                                         showTabsOnlyAction,
+                                         alwaysShowRibbonAction,
+                                         autoHideRibbonAction,
+                                         collapseStatePreview,
+                                         doubleClickStatePreview));
         });
         return application.exec();
     }

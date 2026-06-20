@@ -59,6 +59,7 @@ def main():
     collapsed_preview = "--grab-collapsed-preview" in arguments
     simplified_preview = "--grab-simplified-preview" in arguments
     temporary_preview = "--grab-temporary-preview" in arguments
+    double_click_preview = "--grab-double-click-preview" in arguments
     mdi_preview = "--grab-mdi-preview" in arguments
     tab_preview = "--grab-tab-preview" in arguments
     controls_preview = "--grab-controls-preview" in arguments
@@ -84,6 +85,7 @@ def main():
         or shell_preview
         or simplified_preview
         or temporary_preview
+        or double_click_preview
     ):
         window.resize(1180, 560)
     if style_preview:
@@ -99,7 +101,12 @@ def main():
     window.select_preview_page(
         controls=controls_preview,
         gallery=gallery_preview,
-        shell=shell_preview or simplified_preview or temporary_preview,
+        shell=(
+            shell_preview
+            or simplified_preview
+            or temporary_preview
+            or double_click_preview
+        ),
         style=style_preview,
     )
     window.show()
