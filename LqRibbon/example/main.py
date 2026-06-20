@@ -7,8 +7,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from PySide6.QtCore import QSettings, QTimer, Qt
-from PySide6.QtGui import QFont, QFontDatabase
+from PySide6.QtCore import QPoint, QSettings, QTimer, Qt
+from PySide6.QtGui import QFont, QFontDatabase, QPainter
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMenu
 
@@ -59,6 +59,7 @@ def main():
     compact_search_preview = "--grab-search-compact-preview" in arguments
     hidden_search_preview = "--grab-search-hidden-preview" in arguments
     alt_q_search_preview = "--grab-alt-q-search-preview" in arguments
+    zero_query_search_preview = "--grab-zero-query-search-preview" in arguments
     collapsed_preview = "--grab-collapsed-preview" in arguments
     simplified_preview = "--grab-simplified-preview" in arguments
     temporary_preview = "--grab-temporary-preview" in arguments
@@ -98,6 +99,7 @@ def main():
         or compact_search_preview
         or hidden_search_preview
         or alt_q_search_preview
+        or zero_query_search_preview
         or controls_preview
         or gallery_preview
         or shell_preview
@@ -134,6 +136,7 @@ def main():
         or compact_search_preview
         or hidden_search_preview
         or alt_q_search_preview
+        or zero_query_search_preview
     ):
         window.resize(1476, 560)
     if style_name:
@@ -194,6 +197,13 @@ def main():
             window.ribbonBar().setSearchText("ba")
 
         QTimer.singleShot(120, show_alt_q_search_preview)
+    if zero_query_search_preview:
+        def show_zero_query_search_preview():
+            window.focus_search_action.trigger()
+            window.ribbonBar().setSearchText("")
+            window.ribbonBar().searchLineEdit().showPopup("")
+
+        QTimer.singleShot(120, show_zero_query_search_preview)
     if collapsed_preview:
         QTimer.singleShot(120, lambda: window.ribbonBar().setRibbonMinimized(True))
     if simplified_preview:
@@ -317,7 +327,21 @@ def main():
 
         QTimer.singleShot(120, show_import_quick_access_preview)
     if preview_path:
-        QTimer.singleShot(300, lambda: (window.grab().save(preview_path), app.quit()))
+        def save_preview():
+            preview = window.grab()
+            if zero_query_search_preview:
+                popup = window.ribbonBar().searchLineEdit()._popup
+                if popup.isVisible():
+                    painter = QPainter(preview)
+                    popup_top_left = window.mapFromGlobal(
+                        popup.mapToGlobal(QPoint(0, 0))
+                    )
+                    painter.drawPixmap(popup_top_left, popup.grab())
+                    painter.end()
+            preview.save(preview_path)
+            app.quit()
+
+        QTimer.singleShot(300, save_preview)
 
     sys.exit(app.exec())
 

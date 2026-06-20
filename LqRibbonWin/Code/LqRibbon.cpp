@@ -3880,6 +3880,10 @@ bool RibbonBar::eventFilter(QObject *object, QEvent *event)
         }
     }
 
+    if (object == m_searchEdit && event->type() == QEvent::FocusIn) {
+        updateSearchPopup();
+    }
+
     if (object == m_searchPopupView && event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
         if (keyEvent->key() == Qt::Key_Return
@@ -4583,11 +4587,34 @@ QList<QAction *> RibbonBar::matchedSearchActions(const QString &strText) const
     QList<QAction *> actionList;
     const QString strNormalizedText = normalizedSearchText(strText);
     if (strNormalizedText.isEmpty()) {
+        const int maxActionCount = qMax(1, m_searchCompleter->maxVisibleItems());
+        auto appendDefaultAction = [&](QAction *action) {
+            if (!actionList.contains(action) && isSearchableAction(action)) {
+                actionList.append(action);
+            }
+        };
+
         for (const QPointer<QAction> &action : m_recentSearchActionList) {
-            if (!action.isNull() && !actionList.contains(action.data())) {
-                actionList.append(action.data());
+            appendDefaultAction(action.data());
+            if (actionList.count() >= maxActionCount) {
+                return actionList;
             }
         }
+
+        for (const QString &strSuggestion : m_searchSuggestionList) {
+            appendDefaultAction(searchAction(strSuggestion));
+            if (actionList.count() >= maxActionCount) {
+                return actionList;
+            }
+        }
+
+        for (const SearchCommand &command : m_searchCommandList) {
+            appendDefaultAction(command.action.data());
+            if (actionList.count() >= maxActionCount) {
+                return actionList;
+            }
+        }
+
         return actionList;
     }
 

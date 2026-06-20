@@ -63,7 +63,7 @@ Default style remains `Office 2016 Blue`.
 | 032 | Compact search icon mode | Caption search | Complete |
 | 033 | Hidden search mode | Caption search | Complete |
 | 034 | `Alt+Q` focuses search | Keyboard test path | Complete |
-| 035 | Zero-query search suggestions | Search popup | Planned |
+| 035 | Zero-query search suggestions | Search popup | Complete |
 | 036 | Recently used action section | Search popup | Planned |
 | 037 | Suggested action section | Search popup | Planned |
 | 038 | Document/find result section | Search popup | Planned |

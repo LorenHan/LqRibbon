@@ -268,6 +268,9 @@ class MainWindow(RibbonMainWindow):
         self.set_search_bar_appearance(SEARCH_BAR_CENTRAL)
         ribbon.setSearchPlaceholderText("Search commands")
         ribbon.setRecentSearchLimit(5)
+        ribbon.setSearchSuggestions(
+            ["Settings", "Connect", "Control Modes", "Center Search"]
+        )
 
     def _create_style_switch_group(self):
         style_group = self.general_page.addGroup("Style")
@@ -791,6 +794,7 @@ class MainWindow(RibbonMainWindow):
             self.compact_search_action,
             self.hidden_search_action,
             self.focus_search_action,
+            self.control_modes_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
             self.export_quick_access_action,
@@ -991,6 +995,7 @@ class MainWindow(RibbonMainWindow):
             self.connect_action,
             self.basic_action,
             self.driver_action,
+            self.control_modes_action,
             self.minimize_ribbon_action,
             self.restore_ribbon_action,
             self.classic_ribbon_action,
@@ -1601,13 +1606,19 @@ class MainWindow(RibbonMainWindow):
 
     def _add_control_modes_button(self, group):
         control_button = QToolButton(group)
-        control_button.setText("Control Modes")
-        control_button.setIcon(self._icon(QStyle.StandardPixmap.SP_FileDialogListView))
+        self.control_modes_action = QAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogListView),
+            "Control Modes",
+            control_button,
+        )
+        self.control_modes_action.setObjectName("controlModesAction")
+        control_button.setDefaultAction(self.control_modes_action)
         control_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         control_button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         menu = QMenu(control_button)
         menu.addAction("Pulse Mode")
         menu.addAction("Analog Velocity Mode")
+        self.control_modes_action.setMenu(menu)
         control_button.setMenu(menu)
         group.addWidget(control_button)
 

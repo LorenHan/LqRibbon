@@ -392,6 +392,29 @@ def test_example_alt_q_restores_and_focuses_caption_search():
     window.close()
 
 
+def test_example_zero_query_search_shows_default_suggestions():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    search = window.ribbonBar().searchLineEdit()
+
+    search.setFocus()
+    search.clear()
+    search.showPopup("")
+    _app().processEvents()
+    popup_actions = [action.text() for action in search._popup.actions()]
+
+    assert popup_actions[:4] == [
+        "Settings",
+        "Connect",
+        "Control Modes",
+        "Center Search",
+    ]
+    assert search._popup.isVisible()
+    search.closePopup()
+    window.close()
+
+
 def test_example_collapse_state_preview_tracks_modes():
     window = MainWindow()
     window.show()
@@ -895,6 +918,7 @@ def main():
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,
         test_example_alt_q_restores_and_focuses_caption_search,
+        test_example_zero_query_search_shows_default_suggestions,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,

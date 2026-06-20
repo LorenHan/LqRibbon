@@ -19,8 +19,10 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
+#include <QListView>
 #include <QMouseEvent>
 #include <QPalette>
+#include <QPainter>
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QMenu>
@@ -378,6 +380,29 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && ribbonBar->searchLineEdit()->isVisible()
                      && ribbonBar->searchLineEdit()->hasFocus(),
                  QStringLiteral("Alt+Q restores and focuses caption search"))) {
+        return 1;
+    }
+
+    ribbonBar->setSearchText(QString());
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    QListView *searchPopupView =
+        ribbonBar->findChild<QListView *>(QStringLiteral("lqRibbonSearchPopupView"));
+    QStringList zeroQueryRows;
+    if (searchPopupView && searchPopupView->model()) {
+        QAbstractItemModel *popupModel = searchPopupView->model();
+        for (int row = 0; row < popupModel->rowCount(); ++row) {
+            zeroQueryRows.append(
+                popupModel->index(row, 0).data(Qt::DisplayRole).toString());
+        }
+    }
+    if (!require(searchPopupView && searchPopupView->isVisible()
+                     && zeroQueryRows.value(0) == QStringLiteral("Actions")
+                     && zeroQueryRows.value(1) == QStringLiteral("Settings")
+                     && zeroQueryRows.value(2) == QStringLiteral("Connect")
+                     && zeroQueryRows.value(3) == QStringLiteral("Control Modes")
+                     && zeroQueryRows.value(4) == QStringLiteral("Center Search"),
+                 QStringLiteral("zero-query search shows default suggestions"))) {
         return 1;
     }
 
@@ -1816,6 +1841,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-search-hidden-preview"));
     const bool altQSearchPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-alt-q-search-preview"));
+    const bool zeroQuerySearchPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-zero-query-search-preview"));
     const bool collapsedPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
     const bool simplifiedPreviewRequested =
@@ -1912,6 +1939,7 @@ int main(int argc, char *argv[])
         || compactSearchPreviewRequested
         || hiddenSearchPreviewRequested
         || altQSearchPreviewRequested
+        || zeroQuerySearchPreviewRequested
         || searchPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
@@ -1928,7 +1956,8 @@ int main(int argc, char *argv[])
         || importQuickAccessPreviewRequested
         || compactSearchPreviewRequested
         || hiddenSearchPreviewRequested
-        || altQSearchPreviewRequested) {
+        || altQSearchPreviewRequested
+        || zeroQuerySearchPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -2050,14 +2079,19 @@ int main(int argc, char *argv[])
         Qt::ToolButtonTextBesideIcon);
 
     QToolButton *toolButtonControl = new QToolButton(&mainWindow);
-    toolButtonControl->setText(QObject::tr("Control Modes"));
-    toolButtonControl->setIcon(
-        mainWindow.style()->standardIcon(QStyle::SP_FileDialogListView));
+    QAction *controlModesAction = new QAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogListView),
+        QObject::tr("Control Modes"),
+        toolButtonControl);
+    controlModesAction->setObjectName(QStringLiteral("controlModesAction"));
+    toolButtonControl->setDefaultAction(controlModesAction);
     toolButtonControl->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     toolButtonControl->setPopupMode(QToolButton::MenuButtonPopup);
-    toolButtonControl->setMenu(new QMenu(toolButtonControl));
-    toolButtonControl->menu()->addAction(QObject::tr("Pulse Mode"));
-    toolButtonControl->menu()->addAction(QObject::tr("Analog Velocity Mode"));
+    QMenu *controlModesMenu = new QMenu(toolButtonControl);
+    controlModesMenu->addAction(QObject::tr("Pulse Mode"));
+    controlModesMenu->addAction(QObject::tr("Analog Velocity Mode"));
+    controlModesAction->setMenu(controlModesMenu);
+    toolButtonControl->setMenu(controlModesMenu);
     specialistGroup->addWidget(toolButtonControl);
 
     LqRibbon::RibbonPage *controlsPage =
@@ -2454,6 +2488,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), compactSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"), hiddenSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"), focusSearchAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), controlModesAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     showQuickAccessBarAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
@@ -3440,6 +3475,11 @@ int main(int argc, char *argv[])
         LqRibbon::RibbonBar::SearchBarCentral);
     mainWindow.ribbonBar()->setSearchPlaceholderText(QObject::tr("Search commands"));
     mainWindow.ribbonBar()->setRecentSearchLimit(5);
+    mainWindow.ribbonBar()->setSearchSuggestions(QStringList()
+        << QObject::tr("Settings")
+        << QObject::tr("Connect")
+        << QObject::tr("Control Modes")
+        << QObject::tr("Center Search"));
     mainWindow.ribbonBar()->registerSearchAction(fullScreenAction);
     mainWindow.ribbonBar()->registerSearchAction(mdiAction);
     mainWindow.ribbonBar()->registerSearchAction(tabAction);
@@ -3447,6 +3487,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(connectAction);
     mainWindow.ribbonBar()->registerSearchAction(basicAction);
     mainWindow.ribbonBar()->registerSearchAction(driverAction);
+    mainWindow.ribbonBar()->registerSearchAction(controlModesAction);
     mainWindow.ribbonBar()->registerSearchAction(minimizeRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(restoreRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(classicRibbonAction);
@@ -3606,8 +3647,23 @@ int main(int argc, char *argv[])
     }
 
     if (!strPreviewPath.isEmpty()) {
-        QTimer::singleShot(300, &mainWindow, [&mainWindow, strPreviewPath]() {
-            mainWindow.grab().save(strPreviewPath);
+        QTimer::singleShot(300,
+                           &mainWindow,
+                           [&mainWindow, strPreviewPath, zeroQuerySearchPreviewRequested]() {
+            QPixmap preview = mainWindow.grab();
+            if (zeroQuerySearchPreviewRequested) {
+                QListView *searchPopupView =
+                    mainWindow.ribbonBar()->findChild<QListView *>(
+                        QStringLiteral("lqRibbonSearchPopupView"));
+                if (searchPopupView && searchPopupView->isVisible()) {
+                    QPainter painter(&preview);
+                    const QPoint popupTopLeft = mainWindow.mapFromGlobal(
+                        searchPopupView->mapToGlobal(QPoint(0, 0)));
+                    painter.drawPixmap(popupTopLeft, searchPopupView->grab());
+                }
+            }
+
+            preview.save(strPreviewPath);
             qApp->quit();
         });
     }
@@ -3635,6 +3691,16 @@ int main(int argc, char *argv[])
             hiddenSearchAction->trigger();
             focusSearchAction->trigger();
             mainWindow.ribbonBar()->setSearchText(QStringLiteral("ba"));
+        });
+    }
+    if (zeroQuerySearchPreviewRequested) {
+        QTimer::singleShot(120,
+                           &mainWindow,
+                           [focusSearchAction, &mainWindow]() {
+            focusSearchAction->trigger();
+            mainWindow.ribbonBar()->setSearchText(QString());
+            mainWindow.ribbonBar()->searchLineEdit()->setFocus(
+                Qt::OtherFocusReason);
         });
     }
 

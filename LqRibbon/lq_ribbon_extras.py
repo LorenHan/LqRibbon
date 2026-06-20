@@ -774,6 +774,7 @@ class LqRibbonSearchBar(QLineEdit):
         self._suggested_actions = []
         self._max_search_item_count = 8
         self._popup = QMenu(self)
+        self._popup.setObjectName("lqRibbonSearchPopupMenu")
         self._icon = self.style().standardIcon(
             QStyle.StandardPixmap.SP_FileDialogContentsView
         )
@@ -814,13 +815,35 @@ class LqRibbonSearchBar(QLineEdit):
     def setMaxSearchItemCount(self, count):
         self._max_search_item_count = max(0, int(count))
 
+    def _ordered_popup_actions(self, normalized):
+        actions = [
+            action
+            for action in self._suggested_actions
+            if action and action.isVisible() and action.text().strip()
+        ]
+        if normalized:
+            return [
+                action for action in actions
+                if normalized in action.text().replace("&", "").lower()
+            ]
+
+        ordered = []
+        if self.ribbon_bar and hasattr(self.ribbon_bar, "searchSuggestions"):
+            for suggestion in self.ribbon_bar.searchSuggestions():
+                normalized_suggestion = str(suggestion).replace("&", "").strip().lower()
+                for action in actions:
+                    normalized_text = action.text().replace("&", "").strip().lower()
+                    if action not in ordered and normalized_text == normalized_suggestion:
+                        ordered.append(action)
+                        break
+        ordered.extend(action for action in actions if action not in ordered)
+        return ordered
+
     def showPopup(self, text=""):
         self._popup.clear()
         normalized = text.strip().lower()
         count = 0
-        for action in self._suggested_actions:
-            if normalized and normalized not in action.text().lower():
-                continue
+        for action in self._ordered_popup_actions(normalized):
             self._popup.addAction(action)
             count += 1
             if self._max_search_item_count and count >= self._max_search_item_count:
@@ -833,6 +856,10 @@ class LqRibbonSearchBar(QLineEdit):
 
     def closePopup(self):
         self._popup.hide()
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.showPopup(self.text())
 
     def paintEvent(self, event):
         super().paintEvent(event)
