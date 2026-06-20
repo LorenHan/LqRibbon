@@ -21,7 +21,7 @@ not copied implementation.
 | Status bar | Permanent area, switch group, sliders, progress | Complete | `--grab-preview` status area |
 | Workspace | Scroll area, MDI-aware workspace, tab/subwindow polish | Implemented basic API | `--grab-mdi-preview`, `--grab-tab-preview` |
 | Customization | Customize manager/page/dialog, save and restore layout | Implemented basic API | Planned customization example |
-| Style | Office-like metrics, colors, theme hooks, high-DPI behavior | Partial | screenshot comparison checklist |
+| Style | Office-like metrics, colors, theme hooks, high-DPI behavior | Basic style switching implemented | `--grab-style-preview`, `--run-style-tests` |
 
 ## Current Gap Summary
 
@@ -32,6 +32,9 @@ not copied implementation.
   and pixel-identical backstage/customization visuals.
 - Each new feature must add or extend an example path, build with Qt 5.15.2,
   run to a screenshot, and be committed separately.
+- Office UI iteration candidates are tracked in
+  `OfficeUiIterationBacklog.md`; each item must land as its own verified
+  feature slice.
 
 ## File-by-File Coverage
 
@@ -89,5 +92,5 @@ Python parity is source-level and behavior-level for normal PySide6 usage. It
 is not binary parity with Qtitan and does not implement Qtitan Designer plugins
 or proprietary style engines.
 
-Style headers and unrelated base widgets are tracked separately from Ribbon
-feature coverage unless they are pulled in by the aggregate Ribbon include.
+The Python example mirrors the C++ style switcher with the same style names and
+default `Office 2016 Blue` behavior.
