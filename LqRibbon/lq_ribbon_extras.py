@@ -668,7 +668,11 @@ class LqRibbonGallery(QWidget):
             button.setEnabled(item.isEnabled())
             button.setCheckable(True)
             button.setChecked(item_index == self._checked_index)
-            button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+            button.setToolButtonStyle(
+                Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+                if item_size.height() >= 40
+                else Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            )
             button.setIconSize(QSize(16, 16))
             button.setFixedSize(item_size)
             button.clicked.connect(lambda checked=False, idx=item_index: self._activate_item(idx))
