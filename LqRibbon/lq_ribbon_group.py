@@ -295,6 +295,9 @@ class LqRibbonGroup(QGroupBox):
         action_text = action.text()
         self.action_triggered.emit(action_text)
         self.actionTriggered.emit(action)
+        ribbon_bar = self.ribbonBar()
+        if ribbon_bar and ribbon_bar.isRibbonMinimized():
+            ribbon_bar.setRibbonMinimized(True)
 
         # Propagate to parent window
         parent = self.parent()
@@ -359,8 +362,8 @@ class LqRibbonGroup(QGroupBox):
     def ribbonBar(self):
         parent = self.parent()
         while parent:
-            if hasattr(parent, "ribbonBar"):
-                return parent.ribbonBar()
+            if hasattr(parent, "isRibbonMinimized") and hasattr(parent, "setRibbonMinimized"):
+                return parent
             parent = parent.parent()
         return None
 

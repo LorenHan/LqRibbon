@@ -3,7 +3,7 @@ LqRibbonBar - Ribbon bar container that holds ribbon pages
 """
 
 from PySide6.QtWidgets import (
-    QTabWidget, QWidget, QHBoxLayout, QMenu, QStackedWidget, QToolButton
+    QApplication, QTabWidget, QWidget, QHBoxLayout, QMenu, QStackedWidget, QToolButton
 )
 from PySide6.QtCore import Qt, Signal, QEvent, QSize
 from PySide6.QtGui import QAction, QIcon, QPainter, QColor, QPen, QPixmap
@@ -99,6 +99,8 @@ class LqRibbonBar(QTabWidget):
         self._customize_manager = None
         self._customize_dialog = None
         self._ribbon_minimized = False
+        self._ribbon_temporary_expanded = False
+        self._ignore_next_tab_release = False
         self._minimization_enabled = True
         self._simplified_mode = False
         self._simplified_mode_enabled = True
@@ -148,6 +150,9 @@ class LqRibbonBar(QTabWidget):
         self.tabBar().setExpanding(False)
         self.tabBar().setUsesScrollButtons(True)
         self.tabBar().installEventFilter(self)
+        app = QApplication.instance()
+        if app:
+            app.installEventFilter(self)
 
         # Set height for ribbon area
         self.setFixedHeight(RIBBON_BAR_HEIGHT)
@@ -184,9 +189,36 @@ class LqRibbonBar(QTabWidget):
 
     def eventFilter(self, obj, event):
         if obj == self.tabBar() and event.type() == QEvent.Type.MouseButtonDblClick:
-            if self.tabBar().tabAt(event.pos()) >= 0 and self._ribbon_minimized:
-                self.setRibbonMinimized(False)
+            tab_index = self.tabBar().tabAt(event.pos())
+            if event.button() == Qt.MouseButton.LeftButton and tab_index >= 0:
+                self._ignore_next_tab_release = True
+                self.setRibbonMinimized(not self._ribbon_minimized)
                 return True
+        if obj == self.tabBar() and event.type() == QEvent.Type.MouseButtonRelease:
+            if self._ignore_next_tab_release:
+                self._ignore_next_tab_release = False
+            elif (
+                event.button() == Qt.MouseButton.LeftButton
+                and self._ribbon_minimized
+                and self.tabBar().tabAt(event.pos()) >= 0
+            ):
+                self._show_temporary_ribbon()
+
+        if self._ribbon_temporary_expanded:
+            event_type = event.type()
+            if event_type == QEvent.Type.MouseButtonPress:
+                widget = obj if isinstance(obj, QWidget) else None
+                if widget is None or not self._is_ribbon_related_widget(widget):
+                    self._hide_temporary_ribbon()
+            elif event_type == QEvent.Type.FocusIn:
+                widget = obj if isinstance(obj, QWidget) else None
+                if widget is not None and not self._is_ribbon_related_widget(widget):
+                    self._hide_temporary_ribbon()
+            elif event_type in (
+                QEvent.Type.WindowDeactivate,
+                QEvent.Type.ApplicationDeactivate,
+            ):
+                self._hide_temporary_ribbon()
         return super().eventFilter(obj, event)
 
     def _style_sheet(self):
@@ -231,13 +263,14 @@ class LqRibbonBar(QTabWidget):
         tab_width = min(self.width(), tab_bar.sizeHint().width())
         tab_bar.setGeometry(0, RIBBON_CAPTION_HEIGHT, tab_width, RIBBON_TAB_HEIGHT)
         tab_bar.raise_()
+        command_area_visible = self._is_command_area_visible()
 
         stack = self.findChild(QStackedWidget)
         if stack:
             stack_top = RIBBON_COLLAPSED_HEIGHT
-            stack_height = 0 if self._ribbon_minimized else max(0, self.height() - stack_top)
+            stack_height = max(0, self.height() - stack_top) if command_area_visible else 0
             stack.setGeometry(0, stack_top, self.width(), stack_height)
-            stack.setVisible(not self._ribbon_minimized)
+            stack.setVisible(command_area_visible)
 
         self._search_bar.setGeometry(
             max(0, (self.width() - 524) // 2),
@@ -258,6 +291,47 @@ class LqRibbonBar(QTabWidget):
         self._collapse_button.setCollapsed(self._ribbon_minimized)
         self._collapse_button.setVisible(self._frame_theme_enabled and not self._ribbon_minimized)
         self._collapse_button.raise_()
+
+    def _is_command_area_visible(self):
+        return not self._ribbon_minimized or self._ribbon_temporary_expanded
+
+    def _apply_ribbon_height(self):
+        height = (
+            RIBBON_BAR_HEIGHT
+            if self._is_command_area_visible()
+            else RIBBON_COLLAPSED_HEIGHT
+        )
+        self.setFixedHeight(height)
+        self._update_layout()
+
+    def _show_temporary_ribbon(self):
+        if (
+            not self._ribbon_minimized
+            or self._ribbon_temporary_expanded
+            or not self._minimization_enabled
+        ):
+            return
+        self._ribbon_temporary_expanded = True
+        self._apply_ribbon_height()
+
+    def _hide_temporary_ribbon(self):
+        if not self._ribbon_temporary_expanded:
+            return
+        self._ribbon_temporary_expanded = False
+        self._apply_ribbon_height()
+
+    def _is_ribbon_related_widget(self, widget):
+        current = widget
+        while current:
+            if current is self:
+                return True
+            parent_widget = current.parentWidget() if hasattr(current, "parentWidget") else None
+            if parent_widget is not None:
+                current = parent_widget
+                continue
+            parent = current.parent()
+            current = parent if isinstance(parent, QWidget) else None
+        return False
 
     def _accept_search_text(self):
         text = self._search_bar.text().strip()
@@ -559,10 +633,12 @@ class LqRibbonBar(QTabWidget):
             return
         minimized = bool(minimized)
         if self._ribbon_minimized == minimized:
+            if minimized:
+                self._hide_temporary_ribbon()
             return
         self._ribbon_minimized = minimized
-        self.setFixedHeight(RIBBON_COLLAPSED_HEIGHT if minimized else RIBBON_BAR_HEIGHT)
-        self._update_layout()
+        self._ribbon_temporary_expanded = False
+        self._apply_ribbon_height()
         self.ribbon_minimized_changed.emit(self._ribbon_minimized)
         self.ribbonMinimizedChanged.emit(self._ribbon_minimized)
         self.minimization_changed.emit(self._ribbon_minimized)

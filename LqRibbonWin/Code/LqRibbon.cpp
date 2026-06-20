@@ -1392,7 +1392,6 @@ QAction *RibbonGroup::addWidget(QWidget *widget)
 
     widget->setParent(this);
     QWidgetAction *action = new QWidgetAction(this);
-    action->setDefaultWidget(widget);
     QWidget::addAction(action);
 
     QToolButton *button = qobject_cast<QToolButton *>(widget);
@@ -1786,6 +1785,11 @@ void RibbonGroup::rememberActionWidget(QAction *action, QWidget *widget)
     }
     connect(action, &QAction::triggered, this, [this, action]() {
         emit actionTriggered(action);
+        if (RibbonBar *bar = ribbonBar()) {
+            if (bar->isRibbonMinimized()) {
+                bar->setRibbonMinimized(true);
+            }
+        }
     }, Qt::UniqueConnection);
 }
 
@@ -2029,7 +2033,14 @@ void RibbonPage::clearGroups()
 
 RibbonBar *RibbonPage::ribbonBar() const
 {
-    return qobject_cast<RibbonBar *>(parentWidget());
+    QWidget *widget = parentWidget();
+    while (widget) {
+        if (RibbonBar *bar = qobject_cast<RibbonBar *>(widget)) {
+            return bar;
+        }
+        widget = widget->parentWidget();
+    }
+    return nullptr;
 }
 
 QAction *RibbonPage::defaultAction() const
@@ -2182,6 +2193,8 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_recentSearchLimit(8)
     , m_frameThemeEnabled(false)
     , m_ribbonMinimized(false)
+    , m_ribbonTemporaryExpanded(false)
+    , m_ignoreNextTabRelease(false)
     , m_searchVisibleExplicitlySet(false)
     , m_searchPlaceholderExplicitlySet(false)
     , m_quickAccessBarPosition(TopPosition)
@@ -2207,6 +2220,9 @@ RibbonBar::RibbonBar(QWidget *parent)
     tabBar()->setExpanding(false);
     tabBar()->setUsesScrollButtons(true);
     tabBar()->installEventFilter(this);
+    if (qApp) {
+        qApp->installEventFilter(this);
+    }
 
     m_searchEdit->setObjectName(QStringLiteral("lqRibbonSearchEdit"));
     m_searchEdit->setPlaceholderText(ribbonText("Search"));
@@ -2359,6 +2375,10 @@ RibbonBar::RibbonBar(QWidget *parent)
 ///
 RibbonBar::~RibbonBar()
 {
+    if (qApp) {
+        qApp->removeEventFilter(this);
+    }
+
     for (const SearchCommand &command : m_searchCommandList) {
         if (!command.action.isNull()) {
             disconnect(command.action.data(), nullptr, this, nullptr);
@@ -3110,18 +3130,15 @@ void RibbonBar::setRibbonMinimized(bool minimized)
         return;
     }
     if (m_ribbonMinimized == minimized) {
+        if (minimized) {
+            hideTemporaryRibbon();
+        }
         return;
     }
 
     m_ribbonMinimized = minimized;
-    updateRibbonMetrics();
-    updateRibbonTabGeometry();
-    updateWindowControlState();
-    updateWindowControlGeometry();
-    updateSearchGeometry();
-    updateTitleButtonGeometry();
-    updateQuickAccessGeometry();
-    updateGeometry();
+    m_ribbonTemporaryExpanded = false;
+    updateRibbonDisplayState();
     emit ribbonMinimizedChanged(m_ribbonMinimized);
     emit minimizationChanged(m_ribbonMinimized);
 }
@@ -3505,10 +3522,42 @@ bool RibbonBar::eventFilter(QObject *object, QEvent *event)
         QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
         if (mouseEvent->button() == Qt::LeftButton
             && tabBar()->tabAt(mouseEvent->pos()) >= 0) {
-            if (m_ribbonMinimized) {
-                setRibbonMinimized(false);
-                return true;
+            m_ignoreNextTabRelease = true;
+            setRibbonMinimized(!m_ribbonMinimized);
+            return true;
+        }
+    }
+
+    if (object == tabBar()
+        && event->type() == QEvent::MouseButtonRelease) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (m_ignoreNextTabRelease) {
+            m_ignoreNextTabRelease = false;
+        } else if (mouseEvent->button() == Qt::LeftButton
+            && m_ribbonMinimized
+            && tabBar()->tabAt(mouseEvent->pos()) >= 0) {
+            showTemporaryRibbon();
+        }
+    }
+
+    if (m_ribbonTemporaryExpanded) {
+        switch (event->type()) {
+        case QEvent::MouseButtonPress:
+            if (!isRibbonRelatedObject(object)) {
+                hideTemporaryRibbon();
             }
+            break;
+        case QEvent::FocusIn:
+            if (object && !isRibbonRelatedObject(object)) {
+                hideTemporaryRibbon();
+            }
+            break;
+        case QEvent::WindowDeactivate:
+        case QEvent::ApplicationDeactivate:
+            hideTemporaryRibbon();
+            break;
+        default:
+            break;
         }
     }
 
@@ -3697,11 +3746,12 @@ void RibbonBar::updateRibbonTabGeometry()
         return;
     }
 
-    const int stackHeight = m_ribbonMinimized
-        ? 0
-        : qMax(0, height() - stackTop);
+    const bool commandAreaVisible = isRibbonCommandAreaVisible();
+    const int stackHeight = commandAreaVisible
+        ? qMax(0, height() - stackTop)
+        : 0;
     stackedWidget->setGeometry(0, stackTop, width(), stackHeight);
-    stackedWidget->setVisible(!m_ribbonMinimized);
+    stackedWidget->setVisible(commandAreaVisible);
 }
 
 ///
@@ -3798,14 +3848,72 @@ void RibbonBar::updateTitleButtonGeometry()
 ///
 void RibbonBar::updateRibbonMetrics()
 {
-    const int barHeight = m_ribbonMinimized
-        ? (m_frameThemeEnabled
+    const int barHeight = isRibbonCommandAreaVisible()
+        ? ribbonBarHeight(this)
+        : (m_frameThemeEnabled
                ? ribbonCaptionHeight + ribbonTabHeight
-               : tabBar()->sizeHint().height())
-        : ribbonBarHeight(this);
+               : tabBar()->sizeHint().height());
     if (height() != barHeight || minimumHeight() != barHeight) {
         setFixedHeight(barHeight);
     }
+}
+
+void RibbonBar::updateRibbonDisplayState()
+{
+    updateRibbonMetrics();
+    updateRibbonTabGeometry();
+    updateWindowControlState();
+    updateWindowControlGeometry();
+    updateSearchGeometry();
+    updateTitleButtonGeometry();
+    updateQuickAccessGeometry();
+    updateGeometry();
+}
+
+bool RibbonBar::isRibbonCommandAreaVisible() const
+{
+    return !m_ribbonMinimized || m_ribbonTemporaryExpanded;
+}
+
+void RibbonBar::showTemporaryRibbon()
+{
+    if (!m_ribbonMinimized
+        || m_ribbonTemporaryExpanded
+        || !m_minimizationEnabled) {
+        return;
+    }
+
+    m_ribbonTemporaryExpanded = true;
+    updateRibbonDisplayState();
+}
+
+void RibbonBar::hideTemporaryRibbon()
+{
+    if (!m_ribbonTemporaryExpanded) {
+        return;
+    }
+
+    m_ribbonTemporaryExpanded = false;
+    updateRibbonDisplayState();
+}
+
+bool RibbonBar::isRibbonRelatedObject(QObject *object) const
+{
+    for (QObject *current = object; current; current = current->parent()) {
+        if (current == this) {
+            return true;
+        }
+    }
+
+    QWidget *widget = qobject_cast<QWidget *>(object);
+    while (widget) {
+        if (widget == this) {
+            return true;
+        }
+        widget = widget->parentWidget();
+    }
+
+    return false;
 }
 
 ///

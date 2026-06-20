@@ -737,6 +737,11 @@ private:
     QString normalizedSearchText(const QString &strText) const;
     QString searchActionText(QAction *action) const;
     void updateStyleSheet();
+    void updateRibbonDisplayState();
+    bool isRibbonCommandAreaVisible() const;
+    void showTemporaryRibbon();
+    void hideTemporaryRibbon();
+    bool isRibbonRelatedObject(QObject *object) const;
 
 private:
     struct SearchCommand
@@ -772,6 +777,8 @@ private:
     int m_recentSearchLimit;
     bool m_frameThemeEnabled;
     bool m_ribbonMinimized;
+    bool m_ribbonTemporaryExpanded;
+    bool m_ignoreNextTabRelease;
     bool m_searchVisibleExplicitlySet;
     bool m_searchPlaceholderExplicitlySet;
     BarPosition m_quickAccessBarPosition;

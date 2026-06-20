@@ -244,7 +244,11 @@ class LqRibbonPage(QWidget):
 
     def ribbonBar(self):
         parent = self.parent()
-        return parent if parent and hasattr(parent, "pageIndex") else None
+        while parent:
+            if hasattr(parent, "pageIndex") and hasattr(parent, "setRibbonMinimized"):
+                return parent
+            parent = parent.parent()
+        return None
 
     def contextColor(self):
         return self._context_color
