@@ -3,6 +3,7 @@ MainWindow - feature parity demo for the C++ example.
 """
 
 import io
+import json
 
 from PySide6.QtCore import QDate, QPoint, QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QColor
@@ -606,6 +607,13 @@ class MainWindow(RibbonMainWindow):
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
         self.reset_quick_access_action.setObjectName("resetQuickAccessAction")
+        self.export_quick_access_action = self._add_group_action(
+            customize_group,
+            QStyle.StandardPixmap.SP_DialogSaveButton,
+            "Export QAT",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.export_quick_access_action.setObjectName("exportQuickAccessAction")
 
         specialist_options_action = QAction(
             self._icon(QStyle.StandardPixmap.SP_FileDialogInfoView),
@@ -731,6 +739,7 @@ class MainWindow(RibbonMainWindow):
             self.show_customize_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
+            self.export_quick_access_action,
         ]:
             self.customize_manager.addToCategory("Actions", action)
         self.customize_manager.setPageId(self.shell_page, "shell")
@@ -776,6 +785,9 @@ class MainWindow(RibbonMainWindow):
         )
         self.reset_quick_access_action.triggered.connect(
             self.reset_quick_access_actions
+        )
+        self.export_quick_access_action.triggered.connect(
+            self.store_exported_quick_access_state
         )
         self.ribbonBar().searchAccepted.connect(
             lambda text: self._message(f"No command: {text}")
@@ -846,6 +858,15 @@ class MainWindow(RibbonMainWindow):
             self.minimize_ribbon_action,
         ]
         self.quick_access_actions = list(self.default_quick_access_actions)
+        self.exported_quick_access_state = ""
+        self.quick_access_action_ids = {
+            self.full_screen_action: "fullScreen",
+            self.connect_action: "connect",
+            self.minimize_ribbon_action: "minimizeRibbon",
+            self.rename_page_action: "renamePage",
+            self.move_gallery_action: "moveGallery",
+            self.toggle_group_action: "toggleGroup",
+        }
         self.show_quick_access_action = QAction(
             self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarNormalButton),
             "Show Quick Access Toolbar",
@@ -915,6 +936,7 @@ class MainWindow(RibbonMainWindow):
             self.show_customize_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
+            self.export_quick_access_action,
         ]
         for action in self.search_actions:
             self.ribbonBar().registerSearchAction(action)
@@ -933,6 +955,7 @@ class MainWindow(RibbonMainWindow):
         menu.addSeparator()
         menu.addAction(self.reorder_quick_access_action)
         menu.addAction(self.reset_quick_access_action)
+        menu.addAction(self.export_quick_access_action)
 
     def _configure_action_context_menus(self):
         self.action_context_menu_actions = [
@@ -1127,6 +1150,30 @@ class MainWindow(RibbonMainWindow):
         self.quick_access_actions = list(self.default_quick_access_actions)
         self.rebuild_quick_access_order()
         self.statusBar().showMessage("Quick Access Toolbar reset to default", 2500)
+
+    def export_quick_access_state(self):
+        quick_access_bar = self.ribbonBar().quickAccessBar()
+        return json.dumps(
+            {
+                "version": 1,
+                "actions": [
+                    self.quick_access_action_ids[action]
+                    for action in self.quick_access_actions
+                    if action in self.quick_access_action_ids
+                ],
+                "position": "below"
+                if self.ribbonBar().quickAccessBarPosition()
+                == QUICK_ACCESS_BOTTOM_POSITION
+                else "above",
+                "labels": quick_access_bar.toolButtonStyle()
+                == Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+            },
+            separators=(",", ":"),
+        )
+
+    def store_exported_quick_access_state(self):
+        self.exported_quick_access_state = self.export_quick_access_state()
+        self.statusBar().showMessage("QAT customization exported", 2500)
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()

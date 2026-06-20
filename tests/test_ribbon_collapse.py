@@ -7,6 +7,7 @@ Run with:
 
 import os
 import sys
+import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(
@@ -580,6 +581,39 @@ def test_example_quick_access_menu_resets_commands():
     window.close()
 
 
+def test_example_quick_access_menu_exports_customization():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    window.add_action_to_quick_access(window.rename_page_action)
+    window.move_quick_access_action(window.rename_page_action, -1)
+    window.quick_access_below_action.trigger()
+    window.quick_access_labels_action.setChecked(True)
+    _app().processEvents()
+
+    menu = QMenu(window)
+    window.populate_quick_access_menu(menu)
+    export_action = next(
+        action
+        for action in menu.actions()
+        if action.objectName() == "exportQuickAccessAction"
+    )
+    export_action.trigger()
+    _app().processEvents()
+    state = json.loads(window.exported_quick_access_state)
+    assert state["version"] == 1
+    assert state["actions"] == [
+        "fullScreen",
+        "connect",
+        "renamePage",
+        "minimizeRibbon",
+    ]
+    assert state["position"] == "below"
+    assert state["labels"] is True
+    window.close()
+
+
 def test_example_responsive_label_preview_hides_labels_under_stress():
     window = MainWindow()
     window.show()
@@ -719,6 +753,7 @@ def main():
         test_example_quick_access_context_menu_removes_command,
         test_example_quick_access_context_menu_reorders_command,
         test_example_quick_access_menu_resets_commands,
+        test_example_quick_access_menu_exports_customization,
         test_example_responsive_label_preview_hides_labels_under_stress,
         test_single_click_collapsed_tab_temporarily_expands,
         test_action_triggers_while_temporarily_expanded,
