@@ -614,6 +614,13 @@ class MainWindow(RibbonMainWindow):
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
         self.export_quick_access_action.setObjectName("exportQuickAccessAction")
+        self.import_quick_access_action = self._add_group_action(
+            customize_group,
+            QStyle.StandardPixmap.SP_DialogOpenButton,
+            "Import QAT",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.import_quick_access_action.setObjectName("importQuickAccessAction")
 
         specialist_options_action = QAction(
             self._icon(QStyle.StandardPixmap.SP_FileDialogInfoView),
@@ -740,6 +747,7 @@ class MainWindow(RibbonMainWindow):
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
             self.export_quick_access_action,
+            self.import_quick_access_action,
         ]:
             self.customize_manager.addToCategory("Actions", action)
         self.customize_manager.setPageId(self.shell_page, "shell")
@@ -788,6 +796,9 @@ class MainWindow(RibbonMainWindow):
         )
         self.export_quick_access_action.triggered.connect(
             self.store_exported_quick_access_state
+        )
+        self.import_quick_access_action.triggered.connect(
+            self.import_exported_quick_access_state
         )
         self.ribbonBar().searchAccepted.connect(
             lambda text: self._message(f"No command: {text}")
@@ -867,6 +878,10 @@ class MainWindow(RibbonMainWindow):
             self.move_gallery_action: "moveGallery",
             self.toggle_group_action: "toggleGroup",
         }
+        self.quick_access_actions_by_id = {
+            action_id: action
+            for action, action_id in self.quick_access_action_ids.items()
+        }
         self.show_quick_access_action = QAction(
             self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarNormalButton),
             "Show Quick Access Toolbar",
@@ -937,6 +952,7 @@ class MainWindow(RibbonMainWindow):
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
             self.export_quick_access_action,
+            self.import_quick_access_action,
         ]
         for action in self.search_actions:
             self.ribbonBar().registerSearchAction(action)
@@ -956,6 +972,7 @@ class MainWindow(RibbonMainWindow):
         menu.addAction(self.reorder_quick_access_action)
         menu.addAction(self.reset_quick_access_action)
         menu.addAction(self.export_quick_access_action)
+        menu.addAction(self.import_quick_access_action)
 
     def _configure_action_context_menus(self):
         self.action_context_menu_actions = [
@@ -1174,6 +1191,41 @@ class MainWindow(RibbonMainWindow):
     def store_exported_quick_access_state(self):
         self.exported_quick_access_state = self.export_quick_access_state()
         self.statusBar().showMessage("QAT customization exported", 2500)
+
+    def apply_quick_access_state(self, state_text):
+        try:
+            state = json.loads(state_text)
+        except (TypeError, ValueError):
+            return False
+        imported_actions = []
+        for action_id in state.get("actions", []):
+            action = self.quick_access_actions_by_id.get(action_id)
+            if action is not None and action not in imported_actions:
+                imported_actions.append(action)
+        if not imported_actions:
+            return False
+        self.quick_access_actions = imported_actions
+        self.rebuild_quick_access_order()
+        if state.get("position") == "below":
+            self.ribbonBar().setQuickAccessBarPosition(QUICK_ACCESS_BOTTOM_POSITION)
+        else:
+            self.ribbonBar().setQuickAccessBarPosition(QUICK_ACCESS_TOP_POSITION)
+        self.set_quick_access_labels_visible(bool(state.get("labels", False)))
+        self.update_quick_access_preview()
+        return True
+
+    def import_exported_quick_access_state(self):
+        if not self.exported_quick_access_state:
+            self.statusBar().showMessage("No QAT customization exported", 2500)
+            return False
+        imported = self.apply_quick_access_state(self.exported_quick_access_state)
+        self.statusBar().showMessage(
+            "QAT customization imported"
+            if imported
+            else "Invalid QAT customization",
+            2500,
+        )
+        return imported
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()

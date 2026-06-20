@@ -190,6 +190,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *quickAccessLabelsAction,
                      QAction *resetQuickAccessAction,
                      QAction *exportQuickAccessAction,
+                     QAction *importQuickAccessAction,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
                      const std::function<void(QMenu *, QAction *)> &populateActionContextMenu,
                      const std::function<void(QMenu *, QAction *)> &populateQuickAccessActionContextMenu,
@@ -495,6 +496,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && quickAccessMenu.actions().contains(quickAccessLabelsAction)
                      && quickAccessMenu.actions().contains(resetQuickAccessAction)
                      && quickAccessMenu.actions().contains(exportQuickAccessAction)
+                     && quickAccessMenu.actions().contains(importQuickAccessAction)
                      && showQuickAccessBarAction->isChecked(),
                  QStringLiteral("quick access menu exposes show action"))) {
         return 1;
@@ -801,6 +803,35 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         && exportedState.value(QStringLiteral("labels")).toBool();
     if (!require(exportMatches,
                  QStringLiteral("quick access export captures customized state"))) {
+        return 1;
+    }
+    resetQuickAccessAction->trigger();
+    processCollapseTestEvents();
+    importQuickAccessAction->trigger();
+    processCollapseTestEvents();
+    const QList<QAction *> importedQuickAccessActions =
+        quickAccessBar->actions();
+    const bool importMatches =
+        importedQuickAccessActions.value(0)
+            == defaultQuickAccessActions.at(0)
+        && importedQuickAccessActions.value(1)
+            == defaultQuickAccessActions.at(1)
+        && importedQuickAccessActions.value(2) == renamePageAction
+        && importedQuickAccessActions.value(3)
+            == defaultQuickAccessActions.at(2)
+        && quickAccessBar->visibleCount() == 4
+        && mainWindow.ribbonBar()->quickAccessBarPosition()
+            == LqRibbon::RibbonBar::BottomPosition
+        && quickAccessBar->toolButtonStyle()
+            == Qt::ToolButtonTextBesideIcon
+        && quickAccessStatusPreview->text().contains(
+            QStringLiteral("Visible 4/4"))
+        && quickAccessStatusPreview->text().contains(
+            QStringLiteral("Below"))
+        && quickAccessStatusPreview->text().contains(
+            QStringLiteral("Labels"));
+    if (!require(importMatches,
+                 QStringLiteral("quick access import restores exported state"))) {
         return 1;
     }
     resetQuickAccessAction->trigger();
@@ -1715,6 +1746,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-qat-reset-preview"));
     const bool exportQuickAccessPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-qat-export-preview"));
+    const bool importQuickAccessPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-qat-import-preview"));
     const bool stylePreviewRequested =
         argumentList.contains(QStringLiteral("--grab-style-preview"));
     const bool collapseTestsRequested =
@@ -1767,6 +1800,7 @@ int main(int argc, char *argv[])
         || reorderQuickAccessPreviewRequested
         || resetQuickAccessPreviewRequested
         || exportQuickAccessPreviewRequested
+        || importQuickAccessPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
         mainWindow.resize(1180, 560);
@@ -1778,7 +1812,8 @@ int main(int argc, char *argv[])
         || removeFromQuickAccessPreviewRequested
         || reorderQuickAccessPreviewRequested
         || resetQuickAccessPreviewRequested
-        || exportQuickAccessPreviewRequested) {
+        || exportQuickAccessPreviewRequested
+        || importQuickAccessPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -2196,6 +2231,12 @@ int main(int argc, char *argv[])
         Qt::ToolButtonTextBesideIcon);
     exportQuickAccessAction->setObjectName(
         QStringLiteral("exportQuickAccessAction"));
+    QAction *importQuickAccessAction = customizeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogOpenButton),
+        QObject::tr("Import QAT"),
+        Qt::ToolButtonTextBesideIcon);
+    importQuickAccessAction->setObjectName(
+        QStringLiteral("importQuickAccessAction"));
 
     QAction *specialistOptionsAction = new QAction(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
@@ -2278,6 +2319,8 @@ int main(int argc, char *argv[])
                                     resetQuickAccessAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     exportQuickAccessAction);
+    customizeManager->addToCategory(QObject::tr("Actions"),
+                                    importQuickAccessAction);
     customizeManager->setPageId(shellPage, QStringLiteral("shell"));
     customizeManager->setGroupId(runtimeGroup, QStringLiteral("runtime"));
     QByteArray savedRibbonState;
@@ -2298,6 +2341,14 @@ int main(int argc, char *argv[])
         {renamePageAction, QStringLiteral("renamePage")},
         {moveGalleryAction, QStringLiteral("moveGallery")},
         {toggleGroupAction, QStringLiteral("toggleGroup")},
+    };
+    const QHash<QString, QAction *> quickAccessActionsById = {
+        {QStringLiteral("fullScreen"), fullScreenAction},
+        {QStringLiteral("connect"), connectAction},
+        {QStringLiteral("minimizeRibbon"), minimizeRibbonAction},
+        {QStringLiteral("renamePage"), renamePageAction},
+        {QStringLiteral("moveGallery"), moveGalleryAction},
+        {QStringLiteral("toggleGroup"), toggleGroupAction},
     };
     const QList<QAction *> responsiveLabelActions = {
         renamePageAction,
@@ -2572,6 +2623,52 @@ int main(int argc, char *argv[])
                 == Qt::ToolButtonTextBesideIcon);
         return QJsonDocument(state).toJson(QJsonDocument::Compact);
     };
+    auto applyQuickAccessState =
+        [&mainWindow,
+         &quickAccessActions,
+         quickAccessActionsById,
+         rebuildQuickAccessOrder,
+         updateQuickAccessPreview](const QByteArray &stateBytes) -> bool {
+        QJsonParseError parseError;
+        const QJsonDocument document =
+            QJsonDocument::fromJson(stateBytes, &parseError);
+        if (parseError.error != QJsonParseError::NoError
+            || !document.isObject()) {
+            return false;
+        }
+
+        const QJsonObject state = document.object();
+        const QJsonArray actionArray =
+            state.value(QStringLiteral("actions")).toArray();
+        QList<QAction *> importedActions;
+        for (const QJsonValue &value : actionArray) {
+            QAction *action =
+                quickAccessActionsById.value(value.toString(), nullptr);
+            if (action && !importedActions.contains(action)) {
+                importedActions.append(action);
+            }
+        }
+        if (importedActions.isEmpty()) {
+            return false;
+        }
+
+        quickAccessActions = importedActions;
+        rebuildQuickAccessOrder();
+        const QString position =
+            state.value(QStringLiteral("position")).toString();
+        mainWindow.ribbonBar()->setQuickAccessBarPosition(
+            position == QStringLiteral("below")
+                ? LqRibbon::RibbonBar::BottomPosition
+                : LqRibbon::RibbonBar::TopPosition);
+        mainWindow.ribbonBar()->quickAccessBar()->setToolButtonStyle(
+            state.value(QStringLiteral("labels")).toBool()
+                ? Qt::ToolButtonTextBesideIcon
+                : Qt::ToolButtonIconOnly);
+        mainWindow.ribbonBar()->setQuickAccessBarPosition(
+            mainWindow.ribbonBar()->quickAccessBarPosition());
+        updateQuickAccessPreview();
+        return true;
+    };
     auto populateQuickAccessActionContextMenu =
         [&mainWindow,
          &quickAccessActions,
@@ -2708,6 +2805,7 @@ int main(int argc, char *argv[])
          reorderQuickAccessAction,
          resetQuickAccessAction,
          exportQuickAccessAction,
+         importQuickAccessAction,
          updateQuickAccessPreview](QMenu *menu) {
         if (!menu) {
             return;
@@ -2723,6 +2821,7 @@ int main(int argc, char *argv[])
         menu->addAction(reorderQuickAccessAction);
         menu->addAction(resetQuickAccessAction);
         menu->addAction(exportQuickAccessAction);
+        menu->addAction(importQuickAccessAction);
     };
     installQuickAccessActionContextMenus =
         [&mainWindow, populateQuickAccessActionContextMenu]() {
@@ -2842,6 +2941,30 @@ int main(int argc, char *argv[])
                          if (mainWindow.statusBar()) {
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr("QAT customization exported"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(importQuickAccessAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow,
+                      &exportedQuickAccessState,
+                      applyQuickAccessState]() {
+                         if (exportedQuickAccessState.isEmpty()) {
+                             if (mainWindow.statusBar()) {
+                                 mainWindow.statusBar()->showMessage(
+                                     QObject::tr("No QAT customization exported"),
+                                     2500);
+                             }
+                             return;
+                         }
+                         const bool imported =
+                             applyQuickAccessState(exportedQuickAccessState);
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 imported
+                                     ? QObject::tr("QAT customization imported")
+                                     : QObject::tr("Invalid QAT customization"),
                                  2500);
                          }
                      });
@@ -3106,6 +3229,7 @@ int main(int argc, char *argv[])
                || reorderQuickAccessPreviewRequested
                || resetQuickAccessPreviewRequested
                || exportQuickAccessPreviewRequested
+               || importQuickAccessPreviewRequested
                || simplifiedPreviewRequested
                || temporaryPreviewRequested
                || doubleClickPreviewRequested) {
@@ -3159,6 +3283,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(reorderQuickAccessAction);
     mainWindow.ribbonBar()->registerSearchAction(resetQuickAccessAction);
     mainWindow.ribbonBar()->registerSearchAction(exportQuickAccessAction);
+    mainWindow.ribbonBar()->registerSearchAction(importQuickAccessAction);
     mainWindow.ribbonBar()->addQuickAccessAction(fullScreenAction);
     mainWindow.ribbonBar()->addQuickAccessAction(connectAction);
     mainWindow.ribbonBar()->addQuickAccessAction(minimizeRibbonAction);
@@ -3264,6 +3389,7 @@ int main(int argc, char *argv[])
                                 quickAccessLabelsAction,
                                 resetQuickAccessAction,
                                 exportQuickAccessAction,
+                                importQuickAccessAction,
                                 populateQuickAccessMenu,
                                 populateActionContextMenu,
                                 populateQuickAccessActionContextMenu,
@@ -3482,6 +3608,43 @@ int main(int argc, char *argv[])
             quickAccessBelowAction->trigger();
             quickAccessLabelsAction->setChecked(true);
             exportQuickAccessAction->trigger();
+        });
+    }
+    if (importQuickAccessPreviewRequested) {
+        QTimer::singleShot(
+            120,
+            &mainWindow,
+            [renamePageAction,
+             resetQuickAccessAction,
+             exportQuickAccessAction,
+             importQuickAccessAction,
+             quickAccessBelowAction,
+             quickAccessLabelsAction,
+             populateActionContextMenu,
+             populateQuickAccessActionContextMenu]() {
+            QMenu addMenu;
+            populateActionContextMenu(&addMenu, renamePageAction);
+            for (QAction *action : addMenu.actions()) {
+                if (action->objectName()
+                    == QStringLiteral("addToQuickAccessContextAction")) {
+                    action->trigger();
+                    break;
+                }
+            }
+            QMenu moveMenu;
+            populateQuickAccessActionContextMenu(&moveMenu, renamePageAction);
+            for (QAction *action : moveMenu.actions()) {
+                if (action->objectName()
+                    == QStringLiteral("moveQuickAccessLeftContextAction")) {
+                    action->trigger();
+                    break;
+                }
+            }
+            quickAccessBelowAction->trigger();
+            quickAccessLabelsAction->setChecked(true);
+            exportQuickAccessAction->trigger();
+            resetQuickAccessAction->trigger();
+            importQuickAccessAction->trigger();
         });
     }
 

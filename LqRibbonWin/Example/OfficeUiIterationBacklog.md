@@ -58,7 +58,7 @@ Default style remains `Office 2016 Blue`.
 | 027 | Reorder QAT commands | Customize dialog | Complete |
 | 028 | Reset QAT to default | Customize dialog | Complete |
 | 029 | Export QAT customization | Customize dialog | Complete |
-| 030 | Import QAT customization | Customize dialog | Planned |
+| 030 | Import QAT customization | Customize dialog | Complete |
 | 031 | Centered Microsoft Search box | Caption search | Planned |
 | 032 | Compact search icon mode | Caption search | Planned |
 | 033 | Hidden search mode | Caption search | Planned |

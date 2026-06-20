@@ -614,6 +614,50 @@ def test_example_quick_access_menu_exports_customization():
     window.close()
 
 
+def test_example_quick_access_menu_imports_customization():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    quick_access_bar = window.ribbonBar().quickAccessBar()
+
+    window.add_action_to_quick_access(window.rename_page_action)
+    window.move_quick_access_action(window.rename_page_action, -1)
+    window.quick_access_below_action.trigger()
+    window.quick_access_labels_action.setChecked(True)
+    window.export_quick_access_action.trigger()
+    window.reset_quick_access_action.trigger()
+    _app().processEvents()
+    assert window.rename_page_action not in quick_access_bar.actions()
+    assert quick_access_bar.visibleCount() == 3
+
+    menu = QMenu(window)
+    window.populate_quick_access_menu(menu)
+    import_action = next(
+        action
+        for action in menu.actions()
+        if action.objectName() == "importQuickAccessAction"
+    )
+    import_action.trigger()
+    _app().processEvents()
+    visible_actions = [
+        action
+        for action in quick_access_bar.actions()
+        if action != quick_access_bar.actionCustomizeButton()
+    ]
+    assert visible_actions == [
+        window.full_screen_action,
+        window.connect_action,
+        window.rename_page_action,
+        window.minimize_ribbon_action,
+    ]
+    assert window.ribbonBar().quickAccessBarPosition() == QUICK_ACCESS_BOTTOM_POSITION
+    assert quick_access_bar.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+    assert "Visible 4/4" in window.quick_access_status_preview.text()
+    assert "Below" in window.quick_access_status_preview.text()
+    assert "Labels" in window.quick_access_status_preview.text()
+    window.close()
+
+
 def test_example_responsive_label_preview_hides_labels_under_stress():
     window = MainWindow()
     window.show()
@@ -754,6 +798,7 @@ def main():
         test_example_quick_access_context_menu_reorders_command,
         test_example_quick_access_menu_resets_commands,
         test_example_quick_access_menu_exports_customization,
+        test_example_quick_access_menu_imports_customization,
         test_example_responsive_label_preview_hides_labels_under_stress,
         test_single_click_collapsed_tab_temporarily_expands,
         test_action_triggers_while_temporarily_expanded,

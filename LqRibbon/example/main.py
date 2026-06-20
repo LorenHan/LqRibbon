@@ -75,6 +75,7 @@ def main():
     reorder_quick_access_preview = "--grab-qat-reorder-preview" in arguments
     reset_quick_access_preview = "--grab-qat-reset-preview" in arguments
     export_quick_access_preview = "--grab-qat-export-preview" in arguments
+    import_quick_access_preview = "--grab-qat-import-preview" in arguments
     style_preview = "--grab-style-preview" in arguments
     style_name = _option_value(arguments, "--style")
     deterministic_style = bool(preview_path)
@@ -103,6 +104,7 @@ def main():
         or reorder_quick_access_preview
         or reset_quick_access_preview
         or export_quick_access_preview
+        or import_quick_access_preview
         or simplified_preview
         or temporary_preview
         or double_click_preview
@@ -121,6 +123,7 @@ def main():
         or reorder_quick_access_preview
         or reset_quick_access_preview
         or export_quick_access_preview
+        or import_quick_access_preview
     ):
         window.resize(1476, 560)
     if style_name:
@@ -146,6 +149,7 @@ def main():
             or reorder_quick_access_preview
             or reset_quick_access_preview
             or export_quick_access_preview
+            or import_quick_access_preview
             or simplified_preview
             or temporary_preview
             or double_click_preview
@@ -268,6 +272,29 @@ def main():
             window.export_quick_access_action.trigger()
 
         QTimer.singleShot(120, show_export_quick_access_preview)
+    if import_quick_access_preview:
+        def show_import_quick_access_preview():
+            add_menu = QMenu(window)
+            add_action = window.populate_action_context_menu(
+                add_menu, window.rename_page_action
+            )
+            if add_action is not None:
+                add_action.trigger()
+            move_menu = QMenu(window)
+            window.populate_quick_access_action_context_menu(
+                move_menu, window.rename_page_action
+            )
+            for action in move_menu.actions():
+                if action.objectName() == "moveQuickAccessLeftContextAction":
+                    action.trigger()
+                    break
+            window.quick_access_below_action.trigger()
+            window.quick_access_labels_action.setChecked(True)
+            window.export_quick_access_action.trigger()
+            window.reset_quick_access_action.trigger()
+            window.import_quick_access_action.trigger()
+
+        QTimer.singleShot(120, show_import_quick_access_preview)
     if preview_path:
         QTimer.singleShot(300, lambda: (window.grab().save(preview_path), app.quit()))
 
