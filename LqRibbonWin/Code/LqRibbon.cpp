@@ -2007,6 +2007,18 @@ void RibbonGroup::rememberActionWidget(QAction *action, QWidget *widget)
             m_controlList.append(control);
         }
     }
+    for (auto it = m_actionTriggeredActionList.begin();
+         it != m_actionTriggeredActionList.end();) {
+        if (it->isNull()) {
+            it = m_actionTriggeredActionList.erase(it);
+            continue;
+        }
+        if (it->data() == action) {
+            return;
+        }
+        ++it;
+    }
+
     connect(action, &QAction::triggered, this, [this, action]() {
         emit actionTriggered(action);
         if (RibbonBar *bar = ribbonBar()) {
@@ -2018,7 +2030,8 @@ void RibbonGroup::rememberActionWidget(QAction *action, QWidget *widget)
                 });
             }
         }
-    }, Qt::UniqueConnection);
+    });
+    m_actionTriggeredActionList.append(action);
 }
 
 ///

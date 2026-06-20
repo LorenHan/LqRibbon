@@ -210,6 +210,7 @@ private:
     Qt::TextElideMode m_titleElideMode;
     RibbonControlSizeDefinition::GroupSizes m_sizeDefinition;
     QList<RibbonControl *> m_controlList;
+    QList<QPointer<QAction>> m_actionTriggeredActionList;
     QHash<QAction *, QWidget *> m_actionWidgetHash;
     QHash<QWidget *, QAction *> m_widgetActionHash;
     bool m_controlsGrouping;
