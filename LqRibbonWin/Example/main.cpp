@@ -1,11 +1,14 @@
 #include <QApplication>
 #include <QActionGroup>
+#include <QBuffer>
 #include <QDate>
+#include <QFormLayout>
 #include <QLabel>
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QMenu>
 #include <QMessageBox>
+#include <QPlainTextEdit>
 #include <QStyle>
 #include <QTableWidget>
 #include <QTimer>
@@ -36,11 +39,14 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-controls-preview"));
     const bool galleryPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-gallery-preview"));
+    const bool shellPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-shell-preview"));
 
     LqRibbon::RibbonMainWindow mainWindow;
     mainWindow.setWindowTitle(QObject::tr("LqRibbon Example"));
     mainWindow.resize(920, 560);
-    if (controlsPreviewRequested || galleryPreviewRequested) {
+    if (controlsPreviewRequested || galleryPreviewRequested
+        || shellPreviewRequested) {
         mainWindow.resize(1180, 560);
     }
 
@@ -229,6 +235,147 @@ int main(int argc, char *argv[])
         galleryMenu);
     galleryActionGroup->addWidget(galleryToolBar);
 
+    LqRibbon::RibbonPage *shellPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Shell"));
+    LqRibbon::RibbonGroup *windowGroup =
+        shellPage->addGroup(QObject::tr("Window"));
+    QAction *minimizeRibbonAction = windowGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_TitleBarShadeButton),
+        QObject::tr("Minimize"),
+        Qt::ToolButtonTextUnderIcon);
+    QAction *restoreRibbonAction = windowGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_TitleBarUnshadeButton),
+        QObject::tr("Restore"),
+        Qt::ToolButtonTextBesideIcon);
+    QAction *toggleFrameAction = windowGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_TitleBarNormalButton),
+        QObject::tr("Frame Theme"),
+        Qt::ToolButtonTextBesideIcon);
+    toggleFrameAction->setCheckable(true);
+    toggleFrameAction->setChecked(true);
+    QAction *simplifiedRibbonAction = mainWindow.ribbonBar()->simplifiedAction();
+    simplifiedRibbonAction->setIcon(
+        mainWindow.style()->standardIcon(QStyle::SP_ArrowUp));
+    windowGroup->addAction(simplifiedRibbonAction,
+                           Qt::ToolButtonTextBesideIcon);
+
+    LqRibbon::RibbonGroup *runtimeGroup =
+        shellPage->addGroup(QObject::tr("Runtime"));
+    QAction *addPageAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogNewFolder),
+        QObject::tr("Add Page"),
+        Qt::ToolButtonTextUnderIcon);
+    QAction *renamePageAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
+        QObject::tr("Rename Driver"),
+        Qt::ToolButtonTextBesideIcon);
+    QAction *moveGalleryAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_ArrowRight),
+        QObject::tr("Move Gallery"),
+        Qt::ToolButtonTextBesideIcon);
+    QAction *toggleGroupAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogResetButton),
+        QObject::tr("Toggle Specialist"),
+        Qt::ToolButtonTextBesideIcon);
+
+    LqRibbon::RibbonGroup *popupGroup =
+        shellPage->addGroup(QObject::tr("Popups"));
+    QAction *officePopupAction = popupGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MessageBoxInformation),
+        QObject::tr("Popup"),
+        Qt::ToolButtonTextUnderIcon);
+    QAction *officeMenuAction = popupGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DirOpenIcon),
+        QObject::tr("Popup Menu"),
+        Qt::ToolButtonTextBesideIcon);
+    LqRibbon::PopupColorButton *colorButton =
+        new LqRibbon::PopupColorButton(popupGroup);
+    colorButton->setColor(QColor(QStringLiteral("#2b579a")));
+    colorButton->setToolTip(QObject::tr("Popup Color Button"));
+    popupGroup->addWidget(colorButton);
+
+    LqRibbon::RibbonGroup *customizeGroup =
+        shellPage->addGroup(QObject::tr("Customize"));
+    QAction *showCustomizeAction = customizeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogDetailedView),
+        QObject::tr("Customize"),
+        Qt::ToolButtonTextUnderIcon);
+    QAction *saveStateAction = customizeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogSaveButton),
+        QObject::tr("Save Layout"),
+        Qt::ToolButtonTextBesideIcon);
+    QAction *loadStateAction = customizeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogOpenButton),
+        QObject::tr("Load Layout"),
+        Qt::ToolButtonTextBesideIcon);
+
+    QAction *specialistOptionsAction = new QAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
+        QObject::tr("Specialist Options"),
+        specialistGroup);
+    specialistGroup->setOptionButtonAction(specialistOptionsAction);
+    specialistGroup->setOptionButtonVisible(true);
+
+    QAction *systemButtonAction = mainWindow.ribbonBar()->addSystemButton(
+        mainWindow.style()->standardIcon(QStyle::SP_DriveFDIcon),
+        QObject::tr("File"));
+    Q_UNUSED(systemButtonAction)
+    LqRibbon::RibbonBackstageView *backstage =
+        new LqRibbon::RibbonBackstageView(&mainWindow);
+    backstage->addAction(mainWindow.style()->standardIcon(QStyle::SP_DialogOpenButton),
+                         QObject::tr("Open"));
+    backstage->addAction(mainWindow.style()->standardIcon(QStyle::SP_DialogSaveButton),
+                         QObject::tr("Save"));
+    backstage->addSeparator();
+    QWidget *backstagePage = new QWidget(backstage);
+    QFormLayout *backstageLayout = new QFormLayout(backstagePage);
+    backstageLayout->addRow(QObject::tr("Product"),
+                            new QLabel(QObject::tr("LqRibbon Demo"), backstagePage));
+    backstageLayout->addRow(QObject::tr("Mode"),
+                            new QLabel(QObject::tr("Backstage page"), backstagePage));
+    backstage->addPage(backstagePage);
+
+    LqRibbon::RibbonSystemMenu *systemMenu =
+        new LqRibbon::RibbonSystemMenu(mainWindow.ribbonBar());
+    systemMenu->addPopupBarAction(QObject::tr("New"));
+    systemMenu->addPopupBarAction(QObject::tr("Open"));
+    LqRibbon::RibbonPageSystemRecentFileList *recentFiles =
+        systemMenu->addPageRecentFile(QObject::tr("Recent Files"));
+    recentFiles->updateRecentFileActions(QStringList()
+                                         << QObject::tr("axis-profile.lqr")
+                                         << QObject::tr("drive-layout.lqr"));
+    QAction *exportAction = new QAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogSaveButton),
+        QObject::tr("Export"), systemMenu);
+    systemMenu->addPageSystemPopup(QObject::tr("Export"), exportAction, true);
+    if (mainWindow.ribbonBar()->systemButton()) {
+        mainWindow.ribbonBar()->systemButton()->setBackstage(backstage);
+        mainWindow.ribbonBar()->systemButton()->setSystemMenu(systemMenu);
+    }
+
+    LqRibbon::OfficePopupMenu *officeMenu =
+        LqRibbon::OfficePopupMenu::createPopupMenu(&mainWindow);
+    officeMenu->setGripVisible(true);
+    QPlainTextEdit *popupEditor = new QPlainTextEdit(officeMenu);
+    popupEditor->setPlainText(QObject::tr("OfficePopupMenu widget host"));
+    popupEditor->setFixedSize(260, 120);
+    officeMenu->addWidget(popupEditor);
+
+    LqRibbon::RibbonCustomizeManager *customizeManager =
+        mainWindow.ribbonBar()->customizeManager();
+    customizeManager->addToCategory(QObject::tr("Pages"), generalPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), driverPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), controlsPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), galleryPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), shellPage);
+    customizeManager->addToCategory(QObject::tr("Actions"), fullScreenAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), officePopupAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), showCustomizeAction);
+    customizeManager->setPageId(shellPage, QStringLiteral("shell"));
+    customizeManager->setGroupId(runtimeGroup, QStringLiteral("runtime"));
+    QByteArray savedRibbonState;
+
     QObject::connect(fullScreenAction, &QAction::triggered, [&mainWindow]() {
         mainWindow.setWindowState(mainWindow.windowState() ^ Qt::WindowFullScreen);
     });
@@ -256,6 +403,110 @@ int main(int argc, char *argv[])
                                  QObject::tr("LqRibbon"),
                                  QObject::tr("Connect"));
     });
+    QObject::connect(specialistOptionsAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.statusBar()->showMessage(
+                             QObject::tr("Specialist option button clicked"),
+                             2500);
+                     });
+    QObject::connect(minimizeRibbonAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.ribbonBar()->setRibbonMinimized(true);
+                     });
+    QObject::connect(restoreRibbonAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.ribbonBar()->setRibbonMinimized(false);
+                     });
+    QObject::connect(toggleFrameAction, &QAction::toggled,
+                     [&mainWindow](bool checked) {
+                         mainWindow.setFrameThemeEnabled(checked);
+                     });
+    QObject::connect(addPageAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         static int runtimePageCounter = 1;
+                         LqRibbon::RibbonPage *runtimePage =
+                             mainWindow.ribbonBar()->addPage(
+                                 QObject::tr("Runtime %1")
+                                     .arg(runtimePageCounter++));
+                         LqRibbon::RibbonGroup *runtimeGroup =
+                             runtimePage->addGroup(QObject::tr("Generated"));
+                         runtimeGroup->addAction(
+                             mainWindow.style()->standardIcon(
+                                 QStyle::SP_DialogApplyButton),
+                             QObject::tr("Generated Action"),
+                             Qt::ToolButtonTextUnderIcon);
+                         mainWindow.ribbonBar()->setCurrentWidget(runtimePage);
+                     });
+    QObject::connect(renamePageAction, &QAction::triggered,
+                     [driverPage]() {
+                         driverPage->setTitle(
+                             driverPage->title() == QObject::tr("Driver")
+                                 ? QObject::tr("Drive")
+                                 : QObject::tr("Driver"));
+                     });
+    QObject::connect(moveGalleryAction, &QAction::triggered,
+                     [&mainWindow, galleryPage]() {
+                         const int currentIndex =
+                             mainWindow.ribbonBar()->pageIndex(galleryPage);
+                         const int targetIndex = currentIndex == 1
+                             ? mainWindow.ribbonBar()->pageCount() - 1
+                             : 1;
+                         mainWindow.ribbonBar()->movePage(galleryPage,
+                                                          targetIndex);
+                     });
+    QObject::connect(toggleGroupAction, &QAction::triggered,
+                     [driverPage, specialistGroup]() {
+                         specialistGroup->setVisible(
+                             !specialistGroup->isVisible());
+                         driverPage->updateLayout();
+                     });
+    QObject::connect(officePopupAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         LqRibbon::OfficePopupWindow::showPopup(
+                             &mainWindow,
+                             mainWindow.style()->standardIcon(
+                                 QStyle::SP_MessageBoxInformation),
+        QObject::tr("LqRibbon"),
+                             QObject::tr("Popup window sample"));
+                     });
+    QObject::connect(officeMenuAction, &QAction::triggered,
+                     [&mainWindow, officeMenu]() {
+                         officeMenu->exec(mainWindow.mapToGlobal(
+                             QPoint(40, 90)));
+                     });
+    QObject::connect(colorButton, &LqRibbon::PopupColorButton::colorChanged,
+                     [&mainWindow](const QColor &color) {
+                         mainWindow.statusBar()->showMessage(
+                             QObject::tr("Color changed: %1")
+                                 .arg(color.name()),
+                             2500);
+                     });
+    QObject::connect(showCustomizeAction, &QAction::triggered,
+                     [&mainWindow]() {
+                         mainWindow.ribbonBar()->showCustomizeDialog();
+                     });
+    QObject::connect(saveStateAction, &QAction::triggered,
+                     [&mainWindow, customizeManager, &savedRibbonState]() {
+                         savedRibbonState.clear();
+                         QBuffer buffer(&savedRibbonState);
+                         buffer.open(QIODevice::WriteOnly);
+                         customizeManager->saveStateToDevice(&buffer);
+                         mainWindow.statusBar()->showMessage(
+                             QObject::tr("Ribbon layout saved"), 2500);
+                     });
+    QObject::connect(loadStateAction, &QAction::triggered,
+                     [&mainWindow, customizeManager, &savedRibbonState]() {
+                         if (savedRibbonState.isEmpty()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("No saved Ribbon layout"), 2500);
+                             return;
+                         }
+                         QBuffer buffer(&savedRibbonState);
+                         buffer.open(QIODevice::ReadOnly);
+                         customizeManager->loadStateFromDevice(&buffer);
+                         mainWindow.statusBar()->showMessage(
+                             QObject::tr("Ribbon layout loaded"), 2500);
+                     });
 
     if (mdiPreviewRequested || tabPreviewRequested) {
         QMdiArea *mdiArea = new QMdiArea(&mainWindow);
@@ -330,7 +581,10 @@ int main(int argc, char *argv[])
 
     const int controlsPageIndex = mainWindow.ribbonBar()->indexOf(controlsPage);
     const int galleryPageIndex = mainWindow.ribbonBar()->indexOf(galleryPage);
-    if (galleryPreviewRequested) {
+    const int shellPageIndex = mainWindow.ribbonBar()->indexOf(shellPage);
+    if (shellPreviewRequested) {
+        mainWindow.ribbonBar()->setCurrentPageIndex(shellPageIndex);
+    } else if (galleryPreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(galleryPageIndex);
     } else if (controlsPreviewRequested) {
         mainWindow.ribbonBar()->setCurrentPageIndex(controlsPageIndex);
@@ -348,8 +602,18 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(connectAction);
     mainWindow.ribbonBar()->registerSearchAction(basicAction);
     mainWindow.ribbonBar()->registerSearchAction(driverAction);
+    mainWindow.ribbonBar()->registerSearchAction(minimizeRibbonAction);
+    mainWindow.ribbonBar()->registerSearchAction(restoreRibbonAction);
+    mainWindow.ribbonBar()->registerSearchAction(addPageAction);
+    mainWindow.ribbonBar()->registerSearchAction(renamePageAction);
+    mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
+    mainWindow.ribbonBar()->registerSearchAction(toggleGroupAction);
+    mainWindow.ribbonBar()->registerSearchAction(officePopupAction);
+    mainWindow.ribbonBar()->registerSearchAction(officeMenuAction);
+    mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
     mainWindow.ribbonBar()->addQuickAccessAction(fullScreenAction);
     mainWindow.ribbonBar()->addQuickAccessAction(connectAction);
+    mainWindow.ribbonBar()->addQuickAccessAction(minimizeRibbonAction);
 
     QAction *helpTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxQuestion),
