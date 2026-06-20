@@ -69,6 +69,7 @@ enum RibbonSearchPopupKind
 {
     SearchPopupHeaderItem = 0,
     SearchPopupActionItem,
+    SearchPopupResultItem,
     SearchPopupHelpItem
 };
 
@@ -85,6 +86,8 @@ const RibbonTranslationEntry ribbonTranslationTable[] = {
      "\xE6\x9C\x80\xE8\xBF\x91\xE4\xBD\xBF\xE7\x94\xA8"},
     {"Suggested Actions",
      "\xE5\xBB\xBA\xE8\xAE\xAE\xE6\x93\x8D\xE4\xBD\x9C"},
+    {"Document Results",
+     "\xE6\x96\x87\xE6\xA1\xA3\xE7\xBB\x93\xE6\x9E\x9C"},
     {"Help", "\xE5\xB8\xAE\xE5\x8A\xA9"},
     {"Get Help with \"%1\"",
      "\xE8\x8E\xB7\xE5\x8F\x96\x20\x22\x25\x31\x22\x20"
@@ -1436,6 +1439,21 @@ QStandardItem *createSearchActionItem(QAction *action)
     item->setData(SearchPopupActionItem, ribbonSearchPopupKindRole);
     item->setData(static_cast<qlonglong>(reinterpret_cast<quintptr>(action)),
                   ribbonSearchPopupActionRole);
+    return item;
+}
+
+///
+/// \brief createSearchResultItem
+/// Creates a selectable row for a non-command search result.
+/// \param strText Result text displayed in the popup.
+/// \param icon Icon displayed before the result text.
+/// \return New model item owned by the caller after insertion.
+///
+QStandardItem *createSearchResultItem(const QString &strText, const QIcon &icon)
+{
+    QStandardItem *item = new QStandardItem(icon, strText);
+    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    item->setData(SearchPopupResultItem, ribbonSearchPopupKindRole);
     return item;
 }
 
@@ -3008,6 +3026,37 @@ void RibbonBar::clearSearchSuggestions()
 }
 
 ///
+/// \brief RibbonBar::setSearchDocumentResults
+/// Replaces document result rows shown when search text matches them.
+/// \param strList Result strings.
+///
+void RibbonBar::setSearchDocumentResults(const QStringList &strList)
+{
+    m_searchDocumentResultList = strList;
+    updateSearchPopup();
+}
+
+///
+/// \brief RibbonBar::searchDocumentResults
+/// Returns configured document result rows.
+/// \return Document result strings.
+///
+QStringList RibbonBar::searchDocumentResults() const
+{
+    return m_searchDocumentResultList;
+}
+
+///
+/// \brief RibbonBar::clearSearchDocumentResults
+/// Clears configured document result rows.
+///
+void RibbonBar::clearSearchDocumentResults()
+{
+    m_searchDocumentResultList.clear();
+    updateSearchPopup();
+}
+
+///
 /// \brief RibbonBar::registerSearchAction
 /// Adds an action to the searchable command index.
 /// \param action Action that can be found and triggered by search.
@@ -4445,6 +4494,8 @@ void RibbonBar::updateSearchPopup()
 
     const QString strText = m_searchEdit->text().trimmed();
     const QList<QAction *> actionList = matchedSearchActions(strText);
+    const QStringList strDocumentResultList =
+        matchedSearchDocumentResults(strText);
     m_searchPopupModel->clear();
 
     if (!actionList.isEmpty() && strText.isEmpty()) {
@@ -4497,7 +4548,20 @@ void RibbonBar::updateSearchPopup()
                 m_searchPopupModel->appendRow(createSearchActionItem(action));
             }
         }
-    } else if (!actionList.isEmpty()) {
+    } else {
+        if (!strDocumentResultList.isEmpty()) {
+            const QIcon documentIcon =
+                style()->standardIcon(QStyle::SP_FileIcon);
+            m_searchPopupModel->appendRow(
+                createSearchHeaderItem(ribbonText("Document Results")));
+            for (const QString &strResult : strDocumentResultList) {
+                m_searchPopupModel->appendRow(
+                    createSearchResultItem(strResult, documentIcon));
+            }
+        }
+    }
+
+    if (!actionList.isEmpty() && !strText.isEmpty()) {
         m_searchPopupModel->appendRow(createSearchHeaderItem(ribbonText("Actions")));
         for (QAction *action : actionList) {
             m_searchPopupModel->appendRow(createSearchActionItem(action));
@@ -4562,8 +4626,10 @@ void RibbonBar::updateSearchPopup()
 
     for (int row = 0; row < m_searchPopupModel->rowCount(); ++row) {
         const QModelIndex index = m_searchPopupModel->index(row, 0);
-        if (index.data(ribbonSearchPopupKindRole).toInt()
-            == SearchPopupActionItem) {
+        const int itemKind = index.data(ribbonSearchPopupKindRole).toInt();
+        if (itemKind == SearchPopupActionItem
+            || itemKind == SearchPopupResultItem
+            || itemKind == SearchPopupHelpItem) {
             m_searchPopupView->setCurrentIndex(index);
             break;
         }
@@ -4620,6 +4686,13 @@ void RibbonBar::activateSearchPopupIndex(const QModelIndex &index)
         if (!actionPointer.isNull()) {
             emit searchActionTriggered(actionPointer.data());
         }
+        return;
+    }
+
+    if (itemKind == SearchPopupResultItem) {
+        const QString strResultText = index.data(Qt::DisplayRole).toString();
+        emit searchSuggestionActivated(strResultText);
+        finishSearch();
         return;
     }
 
@@ -4709,6 +4782,38 @@ QList<QAction *> RibbonBar::matchedSearchActions(const QString &strText) const
     }
 
     return actionList;
+}
+
+///
+/// \brief RibbonBar::matchedSearchDocumentResults
+/// Finds configured document rows whose text matches the search text.
+/// \param strText Search text entered by the user.
+/// \return Matching document result strings.
+///
+QStringList RibbonBar::matchedSearchDocumentResults(const QString &strText) const
+{
+    QStringList strResultList;
+    const QString strNormalizedText = normalizedSearchText(strText);
+    if (strNormalizedText.isEmpty()) {
+        return strResultList;
+    }
+
+    const int maxResultCount =
+        qMax(1, m_searchCompleter->maxVisibleItems() / 2);
+    for (const QString &strResult : m_searchDocumentResultList) {
+        const QString strCleanResult = strResult.trimmed();
+        if (strCleanResult.isEmpty()
+            || !normalizedSearchText(strCleanResult).contains(strNormalizedText)) {
+            continue;
+        }
+
+        strResultList.append(strCleanResult);
+        if (strResultList.count() >= maxResultCount) {
+            break;
+        }
+    }
+
+    return strResultList;
 }
 
 ///

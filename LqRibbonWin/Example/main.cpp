@@ -434,6 +434,29 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         return 1;
     }
 
+    ribbonBar->setSearchText(QStringLiteral("driver"));
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    QStringList documentRows;
+    if (searchPopupView && searchPopupView->model()) {
+        QAbstractItemModel *popupModel = searchPopupView->model();
+        for (int row = 0; row < popupModel->rowCount(); ++row) {
+            documentRows.append(
+                popupModel->index(row, 0).data(Qt::DisplayRole).toString());
+        }
+    }
+    const int actionsRow = documentRows.indexOf(QStringLiteral("Actions"));
+    const int helpRow = documentRows.indexOf(QStringLiteral("Help"));
+    if (!require(searchPopupView && searchPopupView->isVisible()
+                     && documentRows.value(0) == QStringLiteral("Document Results")
+                     && documentRows.value(1)
+                         == QStringLiteral("Driver commissioning checklist")
+                     && actionsRow > 1
+                     && helpRow > actionsRow,
+                 QStringLiteral("search shows document result section"))) {
+        return 1;
+    }
+
     reset();
     doubleClickCollapseTestTab(ribbonBar, firstIndex);
     if (!require(ribbonBar->isRibbonMinimized()
@@ -1875,6 +1898,8 @@ int main(int argc, char *argv[])
         argumentList.contains(QStringLiteral("--grab-recent-search-preview"));
     const bool suggestedSearchPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-suggested-search-preview"));
+    const bool documentSearchPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-document-search-preview"));
     const bool collapsedPreviewRequested =
         argumentList.contains(QStringLiteral("--grab-collapsed-preview"));
     const bool simplifiedPreviewRequested =
@@ -1974,6 +1999,7 @@ int main(int argc, char *argv[])
         || zeroQuerySearchPreviewRequested
         || recentSearchPreviewRequested
         || suggestedSearchPreviewRequested
+        || documentSearchPreviewRequested
         || searchPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
         || stylePreviewRequested) {
@@ -1993,7 +2019,8 @@ int main(int argc, char *argv[])
         || altQSearchPreviewRequested
         || zeroQuerySearchPreviewRequested
         || recentSearchPreviewRequested
-        || suggestedSearchPreviewRequested) {
+        || suggestedSearchPreviewRequested
+        || documentSearchPreviewRequested) {
         mainWindow.resize(1476, 560);
     }
 
@@ -3516,6 +3543,10 @@ int main(int argc, char *argv[])
         << QObject::tr("Connect")
         << QObject::tr("Control Modes")
         << QObject::tr("Center Search"));
+    mainWindow.ribbonBar()->setSearchDocumentResults(QStringList()
+        << QObject::tr("Driver commissioning checklist")
+        << QObject::tr("Servo tuning guide: velocity loop")
+        << QObject::tr("Find result: alarm reset procedure"));
     mainWindow.ribbonBar()->registerSearchAction(fullScreenAction);
     mainWindow.ribbonBar()->registerSearchAction(mdiAction);
     mainWindow.ribbonBar()->registerSearchAction(tabAction);
@@ -3689,11 +3720,13 @@ int main(int argc, char *argv[])
                             strPreviewPath,
                             zeroQuerySearchPreviewRequested,
                             recentSearchPreviewRequested,
-                            suggestedSearchPreviewRequested]() {
+                            suggestedSearchPreviewRequested,
+                            documentSearchPreviewRequested]() {
             QPixmap preview = mainWindow.grab();
             if (zeroQuerySearchPreviewRequested
                 || recentSearchPreviewRequested
-                || suggestedSearchPreviewRequested) {
+                || suggestedSearchPreviewRequested
+                || documentSearchPreviewRequested) {
                 QListView *searchPopupView =
                     mainWindow.ribbonBar()->findChild<QListView *>(
                         QStringLiteral("lqRibbonSearchPopupView"));
@@ -3763,6 +3796,16 @@ int main(int argc, char *argv[])
             mainWindow.ribbonBar()->triggerSearchAction(QStringLiteral("Center Search"));
             focusSearchAction->trigger();
             mainWindow.ribbonBar()->setSearchText(QString());
+            mainWindow.ribbonBar()->searchLineEdit()->setFocus(
+                Qt::OtherFocusReason);
+        });
+    }
+    if (documentSearchPreviewRequested) {
+        QTimer::singleShot(120,
+                           &mainWindow,
+                           [focusSearchAction, &mainWindow]() {
+            focusSearchAction->trigger();
+            mainWindow.ribbonBar()->setSearchText(QStringLiteral("driver"));
             mainWindow.ribbonBar()->searchLineEdit()->setFocus(
                 Qt::OtherFocusReason);
         });

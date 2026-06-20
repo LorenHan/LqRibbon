@@ -271,6 +271,13 @@ class MainWindow(RibbonMainWindow):
         ribbon.setSearchSuggestions(
             ["Settings", "Connect", "Control Modes", "Center Search"]
         )
+        ribbon.setSearchDocumentResults(
+            [
+                "Driver commissioning checklist",
+                "Servo tuning guide: velocity loop",
+                "Find result: alarm reset procedure",
+            ]
+        )
 
     def _create_style_switch_group(self):
         style_group = self.general_page.addGroup("Style")

@@ -450,6 +450,29 @@ def test_example_zero_query_search_groups_recent_actions():
     window.close()
 
 
+def test_example_search_shows_document_result_section():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    search = window.ribbonBar().searchLineEdit()
+
+    search.setFocus()
+    search.setText("driver")
+    search.showPopup("driver")
+    _app().processEvents()
+    popup_rows = [action.text() for action in search._popup.actions()]
+
+    assert popup_rows[:4] == [
+        "Document Results",
+        "Driver commissioning checklist",
+        "Actions",
+        "Driver Configuration",
+    ]
+    assert popup_rows.index('Get Help "driver"') > popup_rows.index("Actions")
+    search.closePopup()
+    window.close()
+
+
 def test_example_collapse_state_preview_tracks_modes():
     window = MainWindow()
     window.show()
@@ -955,6 +978,7 @@ def main():
         test_example_alt_q_restores_and_focuses_caption_search,
         test_example_zero_query_search_shows_default_suggestions,
         test_example_zero_query_search_groups_recent_actions,
+        test_example_search_shows_document_result_section,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,

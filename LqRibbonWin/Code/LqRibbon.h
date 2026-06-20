@@ -466,6 +466,23 @@ public:
     ///
     void clearSearchSuggestions();
     ///
+    /// \brief RibbonBar::setSearchDocumentResults
+    /// Replaces the document result list shown for matching search text.
+    /// \param strList Document result strings.
+    ///
+    void setSearchDocumentResults(const QStringList &strList);
+    ///
+    /// \brief RibbonBar::searchDocumentResults
+    /// Returns the configured document result strings.
+    /// \return Document result strings.
+    ///
+    QStringList searchDocumentResults() const;
+    ///
+    /// \brief RibbonBar::clearSearchDocumentResults
+    /// Removes all configured document search results.
+    ///
+    void clearSearchDocumentResults();
+    ///
     /// \brief RibbonBar::registerSearchAction
     /// Registers an action so it can be found and triggered by search.
     /// \param action Action to include in Ribbon search results.
@@ -737,6 +754,7 @@ private:
     void finishSearch();
     void activateSearchPopupIndex(const QModelIndex &index);
     QList<QAction *> matchedSearchActions(const QString &strText) const;
+    QStringList matchedSearchDocumentResults(const QString &strText) const;
     bool isSearchableAction(QAction *action) const;
     bool searchActionMatches(QAction *action, const QString &strNormalizedText) const;
     void appendSearchActionIfMatches(QList<QAction *> &actionList,
@@ -785,6 +803,7 @@ private:
     QToolButton *m_closeButton;
     QToolButton *m_collapseButton;
     QStringList m_searchSuggestionList;
+    QStringList m_searchDocumentResultList;
     QList<SearchCommand> m_searchCommandList;
     QHash<QString, QPointer<QAction>> m_searchActionIndex;
     QList<QPointer<QAction>> m_recentSearchActionList;

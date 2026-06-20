@@ -60,6 +60,7 @@ QtnRibbonSearchBarHelpString = "Help"
 QtnRibbonSearchBarActionsString = "Actions"
 QtnRibbonSearchBarRecentActionsString = "Recently Used"
 QtnRibbonSearchBarSuggestedActionsString = "Suggested Actions"
+QtnRibbonSearchBarDocumentResultsString = "Document Results"
 QtnRibbonGalleryItemSize = QSize(72, 56)
 QtnRibbonGalleryItemString = "Gallery Item"
 
@@ -853,11 +854,30 @@ class LqRibbonSearchBar(QLineEdit):
                     break
         return ordered
 
+    def _matched_document_results(self, normalized):
+        if (
+            not normalized
+            or not self.ribbon_bar
+            or not hasattr(self.ribbon_bar, "searchDocumentResults")
+        ):
+            return []
+        results = []
+        for result in self.ribbon_bar.searchDocumentResults():
+            text = str(result).strip()
+            if text and normalized in text.replace("&", "").lower():
+                results.append(text)
+            if self._max_search_item_count and len(results) >= max(
+                1, self._max_search_item_count // 2
+            ):
+                break
+        return results
+
     def showPopup(self, text=""):
         self._popup.clear()
         normalized = text.strip().lower()
         count = 0
         actions = self._ordered_popup_actions(normalized)
+        document_results = self._matched_document_results(normalized)
         if not normalized and self.ribbon_bar and hasattr(self.ribbon_bar, "recentSearchActions"):
             recent_actions = [
                 action for action in self.ribbon_bar.recentSearchActions()
@@ -884,14 +904,31 @@ class LqRibbonSearchBar(QLineEdit):
             if grouped_actions:
                 actions = grouped_actions
 
+        if normalized and document_results and actions:
+            actions = [QtnRibbonSearchBarActionsString] + actions
+
+        if document_results:
+            self._popup.addSection(QtnRibbonSearchBarDocumentResultsString)
+            document_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon)
+            for result in document_results:
+                if self._max_search_item_count and count >= self._max_search_item_count:
+                    break
+                result_action = self._popup.addAction(document_icon, result)
+                result_action.triggered.connect(
+                    lambda _checked=False, value=result: (
+                        self.ribbon_bar.searchSuggestionActivated.emit(value)
+                    )
+                )
+                count += 1
+
         for action in actions:
             if isinstance(action, str):
                 self._popup.addSection(action)
                 continue
-            self._popup.addAction(action)
-            count += 1
             if self._max_search_item_count and count >= self._max_search_item_count:
                 break
+            self._popup.addAction(action)
+            count += 1
         if self._help_enabled and text:
             help_action = self._popup.addAction(f'{QtnRibbonSearchBarGetHelpString} "{text}"')
             help_action.triggered.connect(lambda: self.show_help.emit(text))
