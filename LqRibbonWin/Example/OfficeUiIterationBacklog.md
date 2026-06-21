@@ -130,7 +130,7 @@ Default style remains `Office 2016 Blue`.
 | 099 | Add command to custom group | Customize dialog | Complete |
 | 100 | Remove command from custom group | Customize dialog | Complete |
 | 101 | Reset selected tab | Customize dialog | Complete |
-| 102 | Reset all ribbon customizations | Customize dialog | Planned |
+| 102 | Reset all ribbon customizations | Customize dialog | Complete |
 | 103 | Export ribbon customization | Customize dialog | Planned |
 | 104 | Import ribbon customization | Customize dialog | Planned |
 | 105 | Backstage info page | Backstage | Planned |

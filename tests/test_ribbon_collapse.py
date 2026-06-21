@@ -1244,6 +1244,49 @@ def test_example_reset_selected_custom_tab_is_available():
     window.close()
 
 
+def test_example_reset_all_customizations_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    initial_page_count = ribbon.pageCount()
+
+    window.add_page_action.trigger()
+    first_runtime_page = ribbon.currentPage()
+    window.add_group_action.trigger()
+    window.add_command_action.trigger()
+    window.add_page_action.trigger()
+    _app().processEvents()
+    assert ribbon.pageCount() == initial_page_count + 2
+
+    assert window.reset_all_customizations_action.objectName() == "resetAllCustomizationsAction"
+    assert not window.reset_all_customizations_action.icon().isNull()
+    assert "all ribbon customizations" in window.reset_all_customizations_action.toolTip()
+    assert window.reset_all_customizations_action.statusTip() == "Ribbon customizations: not reset"
+    assert window.reset_all_customizations_preview.objectName() == "resetAllCustomizationsPreview"
+    assert window.reset_all_customizations_preview.text() == "All customizations: active"
+    assert window.reset_all_customizations_action in window.search_actions
+    assert ribbon.searchAction("Reset All") is window.reset_all_customizations_action
+
+    window.reset_all_customizations_action.trigger()
+    _app().processEvents()
+    assert ribbon.pageCount() == initial_page_count
+    assert ribbon.pageIndex(first_runtime_page) == -1
+    assert window.runtime_page_counter == 1
+    assert window.runtime_group_counter == 1
+    assert window.last_custom_group is None
+    assert window.custom_tab_preview.text() == "Custom tab: none"
+    assert window.custom_group_preview.text() == "Custom group: none"
+    assert window.custom_command_preview.text() == "Custom command: none"
+    assert window.reset_all_customizations_preview.text() == "All customizations: reset"
+    assert "#resetAllCustomizationsPreview" in window.reset_all_customizations_preview.styleSheet()
+    assert window.reset_all_customizations_action.statusTip() == (
+        "Ribbon customizations reset: 2 page(s)"
+    )
+    assert "Ribbon customizations reset" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2711,6 +2754,7 @@ def main():
         test_example_add_command_to_custom_group_is_available,
         test_example_remove_command_from_custom_group_is_available,
         test_example_reset_selected_custom_tab_is_available,
+        test_example_reset_all_customizations_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

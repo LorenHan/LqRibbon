@@ -494,6 +494,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *removedCommandPreview,
                      QAction *resetSelectedTabAction,
                      QLabel *resetSelectedTabPreview,
+                     QAction *resetAllCustomizationsAction,
+                     QLabel *resetAllCustomizationsPreview,
                      QAction *renamePageAction,
                      QAction *moveGalleryAction,
                      QAction *toggleGroupAction,
@@ -3790,6 +3792,59 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("Reset selected tab restores runtime default"))) {
         return 1;
     }
+    const int pageCountBeforeSecondRuntime = ribbonBar->pageCount();
+    addPageAction->trigger();
+    processCollapseTestEvents();
+    const int pageCountBeforeResetAll = ribbonBar->pageCount();
+    if (!require(pageCountBeforeResetAll == pageCountBeforeSecondRuntime + 1,
+                 QStringLiteral("Reset all setup creates second runtime tab"))) {
+        return 1;
+    }
+    if (!require(resetAllCustomizationsAction
+                     && resetAllCustomizationsAction->objectName()
+                         == QStringLiteral("resetAllCustomizationsAction")
+                     && !resetAllCustomizationsAction->icon().isNull()
+                     && resetAllCustomizationsAction->toolTip().contains(
+                         QStringLiteral("all ribbon customizations"))
+                     && resetAllCustomizationsAction->statusTip()
+                         == QStringLiteral(
+                             "Ribbon customizations: not reset")
+                     && resetAllCustomizationsPreview
+                     && resetAllCustomizationsPreview->objectName()
+                         == QStringLiteral("resetAllCustomizationsPreview")
+                     && resetAllCustomizationsPreview->text()
+                         == QStringLiteral("All customizations: active")
+                     && ribbonBar->searchAction(QStringLiteral("Reset All"))
+                         == resetAllCustomizationsAction,
+                 QStringLiteral("Reset all customizations defaults active"))) {
+        return 1;
+    }
+    resetAllCustomizationsAction->trigger();
+    processCollapseTestEvents();
+    const QString strResetAllStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(ribbonBar->pageCount() == pageCountBeforeResetAll - 2
+                     && customTabPreview->text()
+                         == QStringLiteral("Custom tab: none")
+                     && customGroupPreview->text()
+                         == QStringLiteral("Custom group: none")
+                     && customCommandPreview->text()
+                         == QStringLiteral("Custom command: none")
+                     && resetSelectedTabPreview->text()
+                         == QStringLiteral("Selected tab reset: none")
+                     && resetAllCustomizationsPreview->text()
+                         == QStringLiteral("All customizations: reset")
+                     && resetAllCustomizationsPreview->styleSheet().contains(
+                         QStringLiteral("#resetAllCustomizationsPreview"))
+                     && resetAllCustomizationsAction->statusTip()
+                         == QStringLiteral(
+                             "Ribbon customizations reset: 2 page(s)")
+                     && strResetAllStatus.contains(
+                         QStringLiteral("Ribbon customizations reset")),
+                 QStringLiteral("Reset all customizations removes runtime tabs"))) {
+        return 1;
+    }
 
     return 0;
 }
@@ -5858,6 +5913,28 @@ int main(int argc, char *argv[])
     resetSelectedTabPreview->setToolTip(
         QObject::tr("Last selected custom tab reset"));
     runtimeGroup->addWidget(resetSelectedTabPreview);
+    QAction *resetAllCustomizationsAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_BrowserReload),
+        QObject::tr("Reset All"),
+        Qt::ToolButtonTextBesideIcon);
+    resetAllCustomizationsAction->setObjectName(
+        QStringLiteral("resetAllCustomizationsAction"));
+    resetAllCustomizationsAction->setToolTip(
+        QObject::tr("Reset all ribbon customizations"));
+    resetAllCustomizationsAction->setStatusTip(
+        QObject::tr("Ribbon customizations: not reset"));
+    QLabel *resetAllCustomizationsPreview = new QLabel(runtimeGroup);
+    resetAllCustomizationsPreview->setObjectName(
+        QStringLiteral("resetAllCustomizationsPreview"));
+    resetAllCustomizationsPreview->setText(
+        QObject::tr("All customizations: active"));
+    resetAllCustomizationsPreview->setMinimumWidth(190);
+    resetAllCustomizationsPreview->setFixedHeight(30);
+    resetAllCustomizationsPreview->setAlignment(Qt::AlignCenter);
+    resetAllCustomizationsPreview->setFrameShape(QFrame::StyledPanel);
+    resetAllCustomizationsPreview->setToolTip(
+        QObject::tr("Ribbon customization reset state"));
+    runtimeGroup->addWidget(resetAllCustomizationsPreview);
     QAction *renamePageAction = runtimeGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
         QObject::tr("Rename Driver"),
@@ -6301,6 +6378,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), addCommandAction);
     customizeManager->addToCategory(QObject::tr("Actions"), removeCommandAction);
     customizeManager->addToCategory(QObject::tr("Actions"), resetSelectedTabAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), resetAllCustomizationsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     dictateMicrophoneAction);
@@ -7138,12 +7216,16 @@ int main(int argc, char *argv[])
                          mainWindow.setFrameThemeEnabled(checked);
                      });
     LqRibbon::RibbonGroup *lastCustomGroup = nullptr;
+    int runtimePageCounter = 1;
+    int runtimeGroupCounter = 1;
+    int renameCustomCounter = 1;
+    int customCommandCounter = 1;
     QObject::connect(addPageAction, &QAction::triggered,
                      [&mainWindow,
                       addPageAction,
                       customizeManager,
-                      customTabPreview]() {
-                         static int runtimePageCounter = 1;
+                      customTabPreview,
+                      &runtimePageCounter]() {
                          const int runtimePageNumber = runtimePageCounter++;
                          LqRibbon::RibbonPage *runtimePage =
                              mainWindow.ribbonBar()->addPage(
@@ -7181,8 +7263,8 @@ int main(int argc, char *argv[])
                       addGroupAction,
                       customizeManager,
                       customGroupPreview,
-                      &lastCustomGroup]() {
-                         static int runtimeGroupCounter = 1;
+                      &lastCustomGroup,
+                      &runtimeGroupCounter]() {
                          LqRibbon::RibbonPage *page =
                              mainWindow.ribbonBar()->currentPage();
                          if (!page || !page->title().startsWith(
@@ -7226,8 +7308,8 @@ int main(int argc, char *argv[])
                       customGroupPreview,
                       renameCustomAction,
                       renameCustomPreview,
-                      &lastCustomGroup]() {
-                         static int renameCustomCounter = 1;
+                      &lastCustomGroup,
+                      &renameCustomCounter]() {
                          LqRibbon::RibbonPage *page =
                              mainWindow.ribbonBar()->currentPage();
                          if (!page || !page->title().startsWith(
@@ -7270,8 +7352,8 @@ int main(int argc, char *argv[])
                       addCommandAction,
                       customizeManager,
                       customCommandPreview,
-                      &lastCustomGroup]() {
-                         static int customCommandCounter = 1;
+                      &lastCustomGroup,
+                      &customCommandCounter]() {
                          if (!lastCustomGroup) {
                              addGroupAction->trigger();
                          }
@@ -7399,6 +7481,62 @@ int main(int argc, char *argv[])
                          if (mainWindow.statusBar()) {
                              mainWindow.statusBar()->showMessage(
                                  resetSelectedTabAction->statusTip(), 2500);
+                         }
+                     });
+    QObject::connect(resetAllCustomizationsAction, &QAction::triggered,
+                     [&mainWindow,
+                      customTabPreview,
+                      customGroupPreview,
+                      customCommandPreview,
+                      removedCommandPreview,
+                      resetSelectedTabPreview,
+                      resetAllCustomizationsAction,
+                      resetAllCustomizationsPreview,
+                      customizeManager,
+                      &lastCustomGroup,
+                      &runtimePageCounter,
+                      &runtimeGroupCounter,
+                      &renameCustomCounter,
+                      &customCommandCounter]() {
+                         QList<LqRibbon::RibbonPage *> runtimePages;
+                         for (LqRibbon::RibbonPage *page :
+                              mainWindow.ribbonBar()->pages()) {
+                             if (page->property("customizePageId")
+                                     .toString()
+                                     .startsWith(QStringLiteral("runtime"))) {
+                                 runtimePages.append(page);
+                             }
+                         }
+                         for (LqRibbon::RibbonPage *page : runtimePages) {
+                             customizeManager->deletePage(page);
+                         }
+                         runtimePageCounter = 1;
+                         runtimeGroupCounter = 1;
+                         renameCustomCounter = 1;
+                         customCommandCounter = 1;
+                         lastCustomGroup = nullptr;
+                         customTabPreview->setText(
+                             QObject::tr("Custom tab: none"));
+                         customGroupPreview->setText(
+                             QObject::tr("Custom group: none"));
+                         customCommandPreview->setText(
+                             QObject::tr("Custom command: none"));
+                         removedCommandPreview->setText(
+                             QObject::tr("Removed command: none"));
+                         resetSelectedTabPreview->setText(
+                             QObject::tr("Selected tab reset: none"));
+                         resetAllCustomizationsPreview->setText(
+                             QObject::tr("All customizations: reset"));
+                         resetAllCustomizationsPreview->setStyleSheet(
+                             QStringLiteral("QLabel#resetAllCustomizationsPreview { color: #084298; background: #cfe2ff; font-weight: 600; }"));
+                         resetAllCustomizationsAction->setStatusTip(
+                             QObject::tr(
+                                 "Ribbon customizations reset: %1 page(s)")
+                                 .arg(runtimePages.count()));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 resetAllCustomizationsAction->statusTip(),
+                                 2500);
                          }
                      });
     QObject::connect(renamePageAction, &QAction::triggered,
@@ -7742,6 +7880,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(addCommandAction);
     mainWindow.ribbonBar()->registerSearchAction(removeCommandAction);
     mainWindow.ribbonBar()->registerSearchAction(resetSelectedTabAction);
+    mainWindow.ribbonBar()->registerSearchAction(resetAllCustomizationsAction);
     mainWindow.ribbonBar()->registerSearchAction(renamePageAction);
     mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
     mainWindow.ribbonBar()->registerSearchAction(toggleGroupAction);
@@ -8622,6 +8761,8 @@ int main(int argc, char *argv[])
                                 removedCommandPreview,
                                 resetSelectedTabAction,
                                 resetSelectedTabPreview,
+                                resetAllCustomizationsAction,
+                                resetAllCustomizationsPreview,
                                 renamePageAction,
                                 moveGalleryAction,
                                 toggleGroupAction,
