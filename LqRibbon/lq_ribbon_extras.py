@@ -830,9 +830,14 @@ class LqRibbonSearchBar(QLineEdit):
             keywords = [keywords]
         return [action.text()] + [str(keyword) for keyword in keywords]
 
+    def _term_matches_text(self, term, normalized):
+        if self.ribbon_bar and hasattr(self.ribbon_bar, "_fuzzy_search_term_matches"):
+            return self.ribbon_bar._fuzzy_search_term_matches(term, normalized)
+        return normalized in self._normalized_action_text(term)
+
     def _action_matches_text(self, action, normalized):
         return any(
-            normalized in self._normalized_action_text(term)
+            self._term_matches_text(term, normalized)
             for term in self._action_search_terms(action)
         )
 

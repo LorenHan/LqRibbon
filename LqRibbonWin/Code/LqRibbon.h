@@ -791,6 +791,11 @@ private:
     void updateChangedSearchAction();
     void rebuildSearchActionIndex();
     QString normalizedSearchText(const QString &strText) const;
+    QStringList searchPhraseTokens(const QString &strText) const;
+    bool fuzzySearchTokenMatches(const QString &strCandidateToken,
+                                 const QString &strQueryToken) const;
+    bool fuzzySearchTermMatches(const QString &strTerm,
+                                const QString &strNormalizedQuery) const;
     QString searchActionText(QAction *action) const;
     void updateStyleSheet();
     void updateRibbonDisplayState();

@@ -16,6 +16,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QRegularExpression>
 #include <QScreen>
 #include <QSpinBox>
 #include <QStackedWidget>
@@ -4867,7 +4868,7 @@ QList<QAction *> RibbonBar::matchedSearchActions(const QString &strText) const
         QStringList strKeyList = command.strKeywords;
         strKeyList.prepend(command.strText);
         for (const QString &strKey : strKeyList) {
-            if (normalizedSearchText(strKey).contains(strNormalizedText)) {
+            if (fuzzySearchTermMatches(strKey, strNormalizedText)) {
                 actionList.append(command.action.data());
                 break;
             }
@@ -4991,7 +4992,7 @@ bool RibbonBar::searchActionMatches(QAction *action, const QString &strNormalize
     }
 
     const QString strActionText = searchActionText(action);
-    return normalizedSearchText(strActionText).contains(strNormalizedText);
+    return fuzzySearchTermMatches(strActionText, strNormalizedText);
 }
 
 ///
@@ -5187,6 +5188,102 @@ QString RibbonBar::normalizedSearchText(const QString &strText) const
     QString strNormalizedText = strText.trimmed().toCaseFolded();
     strNormalizedText.remove(QLatin1Char('&'));
     return strNormalizedText;
+}
+
+///
+/// \brief RibbonBar::searchPhraseTokens
+/// Splits normalized search text into ordered phrase tokens.
+/// \param strText Text to normalize and split.
+/// \return Non-empty phrase tokens.
+///
+QStringList RibbonBar::searchPhraseTokens(const QString &strText) const
+{
+    static const QRegularExpression whitespaceExpression(QStringLiteral("\\s+"));
+    return normalizedSearchText(strText)
+        .split(whitespaceExpression, Qt::SkipEmptyParts);
+}
+
+///
+/// \brief RibbonBar::fuzzySearchTokenMatches
+/// Tests prefix and ordered-subsequence token matches.
+/// \param strCandidateToken Candidate word from a searchable term.
+/// \param strQueryToken Query word entered by the user.
+/// \return true when query token is a prefix or ordered abbreviation.
+///
+bool RibbonBar::fuzzySearchTokenMatches(const QString &strCandidateToken,
+                                        const QString &strQueryToken) const
+{
+    if (strCandidateToken.isEmpty() || strQueryToken.isEmpty()) {
+        return false;
+    }
+
+    if (strCandidateToken.startsWith(strQueryToken)) {
+        return true;
+    }
+
+    int queryIndex = 0;
+    for (const QChar character : strCandidateToken) {
+        if (character == strQueryToken.at(queryIndex)) {
+            ++queryIndex;
+            if (queryIndex == strQueryToken.size()) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+///
+/// \brief RibbonBar::fuzzySearchTermMatches
+/// Matches a query against a command text or keyword.
+/// \param strTerm Candidate command text or keyword.
+/// \param strNormalizedQuery Already normalized query text.
+/// \return true for contains, ordered phrase token, or acronym matches.
+///
+bool RibbonBar::fuzzySearchTermMatches(const QString &strTerm,
+                                       const QString &strNormalizedQuery) const
+{
+    if (strNormalizedQuery.isEmpty()) {
+        return false;
+    }
+
+    const QString strNormalizedTerm = normalizedSearchText(strTerm);
+    if (strNormalizedTerm.contains(strNormalizedQuery)) {
+        return true;
+    }
+
+    const QStringList strTermTokenList = searchPhraseTokens(strNormalizedTerm);
+    const QStringList strQueryTokenList = searchPhraseTokens(strNormalizedQuery);
+    if (strTermTokenList.isEmpty() || strQueryTokenList.isEmpty()) {
+        return false;
+    }
+
+    int termTokenIndex = 0;
+    for (const QString &strQueryToken : strQueryTokenList) {
+        bool matched = false;
+        while (termTokenIndex < strTermTokenList.count()) {
+            if (fuzzySearchTokenMatches(strTermTokenList.at(termTokenIndex),
+                                        strQueryToken)) {
+                matched = true;
+                ++termTokenIndex;
+                break;
+            }
+            ++termTokenIndex;
+        }
+        if (!matched) {
+            QString strAcronym;
+            for (const QString &strTermToken : strTermTokenList) {
+                if (!strTermToken.isEmpty()) {
+                    strAcronym.append(strTermToken.at(0));
+                }
+            }
+            return strQueryTokenList.count() == 1
+                && fuzzySearchTokenMatches(strAcronym, strQueryToken);
+        }
+    }
+
+    return true;
 }
 
 ///

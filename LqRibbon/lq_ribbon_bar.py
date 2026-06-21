@@ -639,6 +639,51 @@ class LqRibbonBar(QTabWidget):
     def _normalized_search_text(self, text):
         return str(text).replace("&", "").strip().lower()
 
+    def _search_phrase_tokens(self, text):
+        return self._normalized_search_text(text).split()
+
+    def _fuzzy_search_token_matches(self, candidate_token, query_token):
+        if not candidate_token or not query_token:
+            return False
+        if candidate_token.startswith(query_token):
+            return True
+        query_index = 0
+        for character in candidate_token:
+            if character == query_token[query_index]:
+                query_index += 1
+                if query_index == len(query_token):
+                    return True
+        return False
+
+    def _fuzzy_search_term_matches(self, term, normalized_query):
+        if not normalized_query:
+            return False
+        normalized_term = self._normalized_search_text(term)
+        if normalized_query in normalized_term:
+            return True
+        term_tokens = self._search_phrase_tokens(normalized_term)
+        query_tokens = self._search_phrase_tokens(normalized_query)
+        if not term_tokens or not query_tokens:
+            return False
+
+        term_index = 0
+        for query_token in query_tokens:
+            matched = False
+            while term_index < len(term_tokens):
+                if self._fuzzy_search_token_matches(
+                    term_tokens[term_index], query_token
+                ):
+                    matched = True
+                    term_index += 1
+                    break
+                term_index += 1
+            if not matched:
+                acronym = "".join(token[0] for token in term_tokens if token)
+                return len(query_tokens) == 1 and self._fuzzy_search_token_matches(
+                    acronym, query_token
+                )
+        return True
+
     def _search_action_terms(self, action):
         keywords = action.data() or []
         if isinstance(keywords, str):
@@ -650,6 +695,12 @@ class LqRibbonBar(QTabWidget):
         for action in self._search_actions:
             if any(
                 normalized == self._normalized_search_text(item)
+                for item in self._search_action_terms(action)
+            ):
+                return action
+        for action in self._search_actions:
+            if any(
+                self._fuzzy_search_term_matches(item, normalized)
                 for item in self._search_action_terms(action)
             ):
                 return action

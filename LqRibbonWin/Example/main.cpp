@@ -523,6 +523,33 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("search command alias matches registered action"))) {
         return 1;
     }
+
+    ribbonBar->clearRecentSearchActions();
+    ribbonBar->setSearchText(QStringLiteral("ctrl mode"));
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    QStringList fuzzyRows;
+    if (searchPopupView && searchPopupView->model()) {
+        QAbstractItemModel *popupModel = searchPopupView->model();
+        for (int row = 0; row < popupModel->rowCount(); ++row) {
+            fuzzyRows.append(
+                popupModel->index(row, 0).data(Qt::DisplayRole).toString());
+        }
+    }
+    const bool fuzzyTriggered =
+        ribbonBar->triggerSearchAction(QStringLiteral("ctrl mode"));
+    const QList<QAction *> fuzzyRecentActions =
+        ribbonBar->recentSearchActions();
+    if (!require(searchPopupView && searchPopupView->isVisible()
+                     && fuzzyRows.value(0) == QStringLiteral("Actions")
+                     && fuzzyRows.value(1) == QStringLiteral("Control Modes")
+                     && fuzzyTriggered
+                     && !fuzzyRecentActions.isEmpty()
+                     && fuzzyRecentActions.first()->text()
+                         == QStringLiteral("Control Modes"),
+                 QStringLiteral("search fuzzy phrase matches registered action"))) {
+        return 1;
+    }
     ribbonBar->searchLineEdit()->clear();
     searchPopupView->hide();
     ribbonBar->clearRecentSearchActions();
