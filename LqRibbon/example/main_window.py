@@ -1347,26 +1347,43 @@ class MainWindow(RibbonMainWindow):
         self._add_status_action_button(switch_group, normal_view_action)
         self._add_status_action_button(switch_group, compact_view_action)
 
+        self.zoom_status_label = QLabel("100%", status_bar)
+        self.zoom_status_label.setObjectName("zoomStatusLabel")
+        self.zoom_status_label.setMinimumWidth(48)
+        self.zoom_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.zoom_status_label.setToolTip("Current document zoom")
+
         zoom_slider = RibbonSliderPane(status_bar)
+        zoom_slider.setObjectName("zoomStatusSlider")
+        zoom_slider.setToolTip("Adjust document zoom percentage")
         zoom_slider.setRange(10, 200)
         zoom_slider.setSingleStep(10)
         zoom_slider.setValue(100)
 
         progress_bar = RibbonProgressBar(status_bar)
-        progress_bar.setValue(42)
+        progress_bar.setObjectName("zoomStatusProgress")
+        progress_bar.setRange(10, 200)
+        progress_bar.setValue(100)
+        progress_bar.setToolTip("Zoom percentage progress")
 
         sync_action = QAction(
             self._icon(QStyle.StandardPixmap.SP_BrowserReload), "Sync", status_bar
         )
         status_bar.addPermanentAction(sync_action)
         status_bar.addPermanentWidget(switch_group)
+        status_bar.addPermanentWidget(self.zoom_status_label)
         status_bar.addPermanentWidget(zoom_slider)
         status_bar.addPermanentWidget(progress_bar)
         self.setStatusBar(status_bar)
         self.ribbon_status_bar = status_bar
         self.zoom_slider = zoom_slider
         self.progress_bar = progress_bar
-        zoom_slider.valueChanged.connect(progress_bar.setValueSafe)
+        zoom_slider.valueChanged.connect(self.update_zoom_status)
+
+    def update_zoom_status(self, value):
+        self.zoom_status_label.setText(f"{value}%")
+        self.progress_bar.setValueSafe(value)
+        self._message(f"Zoom: {value}%")
 
     def _create_customize_state(self):
         self.customize_manager = self.ribbonBar().customizeManager()

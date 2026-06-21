@@ -582,6 +582,34 @@ def test_example_coauthoring_indicator_is_available():
     window.close()
 
 
+def test_example_zoom_slider_status_item_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    assert window.zoom_status_label.objectName() == "zoomStatusLabel"
+    assert window.zoom_status_label.text() == "100%"
+    assert "document zoom" in window.zoom_status_label.toolTip()
+    assert window.zoom_slider.objectName() == "zoomStatusSlider"
+    assert window.zoom_slider.slider.minimum() == 10
+    assert window.zoom_slider.slider.maximum() == 200
+    assert window.zoom_slider.singleStep() == 10
+    assert window.zoom_slider.value() == 100
+    assert "zoom percentage" in window.zoom_slider.toolTip()
+    assert window.progress_bar.objectName() == "zoomStatusProgress"
+    assert window.progress_bar.minimum() == 10
+    assert window.progress_bar.maximum() == 200
+    assert window.progress_bar.value() == 100
+
+    window.zoom_slider.setValue(125)
+    _app().processEvents()
+    assert window.zoom_slider.value() == 125
+    assert window.zoom_status_label.text() == "125%"
+    assert window.progress_bar.value() == 125
+    assert "Zoom: 125%" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1962,6 +1990,7 @@ def main():
         test_example_presence_avatar_strip_is_available,
         test_example_collaboration_status_text_is_available,
         test_example_coauthoring_indicator_is_available,
+        test_example_zoom_slider_status_item_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

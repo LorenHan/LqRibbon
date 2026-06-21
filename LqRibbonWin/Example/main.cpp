@@ -305,6 +305,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *collaborationStatusText,
                      QFrame *coauthoringIndicatorDot,
                      QLabel *coauthoringIndicatorLabel,
+                     LqRibbon::RibbonSliderPane *zoomSlider,
+                     QLabel *zoomStatusLabel,
+                     LqRibbon::RibbonProgressBar *zoomProgressBar,
                      LqRibbon::RibbonBackstageView *backstage,
                      QAction *saveCopyAction,
                      QComboBox *cloudLocationCombo,
@@ -1763,6 +1766,44 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          QStringLiteral("coauthoring"), Qt::CaseInsensitive),
                  QStringLiteral("Coauthoring indicator is available"))) {
         return 1;
+    }
+
+    if (!require(zoomSlider
+                     && zoomSlider->objectName()
+                         == QStringLiteral("zoomStatusSlider")
+                     && zoomSlider->value() == 100
+                     && zoomSlider->singleStep() == 10
+                     && zoomSlider->toolTip().contains(
+                         QStringLiteral("zoom percentage"))
+                     && zoomStatusLabel
+                     && zoomStatusLabel->objectName()
+                         == QStringLiteral("zoomStatusLabel")
+                     && zoomStatusLabel->text() == QStringLiteral("100%")
+                     && zoomStatusLabel->toolTip().contains(
+                         QStringLiteral("document zoom"))
+                     && zoomProgressBar
+                     && zoomProgressBar->objectName()
+                         == QStringLiteral("zoomStatusProgress")
+                     && zoomProgressBar->minimum() == 10
+                     && zoomProgressBar->maximum() == 200
+                     && zoomProgressBar->value() == 100,
+                 QStringLiteral("Zoom slider status item is available"))) {
+        return 1;
+    }
+    zoomSlider->setValue(125);
+    processCollapseTestEvents();
+    const QString strZoomStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(zoomSlider->value() == 125
+                     && zoomStatusLabel->text() == QStringLiteral("125%")
+                     && zoomProgressBar->value() == 125
+                     && strZoomStatus.contains(QStringLiteral("Zoom: 125%")),
+                 QStringLiteral("Zoom slider updates status value"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
     }
 
     if (versionHistoryAction) {
@@ -5564,15 +5605,27 @@ int main(int argc, char *argv[])
     switchGroup->addAction(normalViewAction);
     switchGroup->addAction(compactViewAction);
 
+    QLabel *zoomStatusLabel =
+        new QLabel(QStringLiteral("100%"), ribbonStatusBar);
+    zoomStatusLabel->setObjectName(QStringLiteral("zoomStatusLabel"));
+    zoomStatusLabel->setMinimumWidth(48);
+    zoomStatusLabel->setAlignment(Qt::AlignCenter);
+    zoomStatusLabel->setToolTip(QObject::tr("Current document zoom"));
+
     LqRibbon::RibbonSliderPane *zoomSlider =
         new LqRibbon::RibbonSliderPane(ribbonStatusBar);
+    zoomSlider->setObjectName(QStringLiteral("zoomStatusSlider"));
+    zoomSlider->setToolTip(QObject::tr("Adjust document zoom percentage"));
     zoomSlider->setRange(10, 200);
     zoomSlider->setSingleStep(10);
     zoomSlider->setValue(100);
 
     LqRibbon::RibbonProgressBar *progressBar =
         new LqRibbon::RibbonProgressBar(ribbonStatusBar);
-    progressBar->setValue(42);
+    progressBar->setObjectName(QStringLiteral("zoomStatusProgress"));
+    progressBar->setRange(10, 200);
+    progressBar->setValue(100);
+    progressBar->setToolTip(QObject::tr("Zoom percentage progress"));
 
     QAction *syncAction = new QAction(
         mainWindow.style()->standardIcon(QStyle::SP_BrowserReload),
@@ -5580,6 +5633,7 @@ int main(int argc, char *argv[])
         ribbonStatusBar);
     ribbonStatusBar->addPermanentAction(syncAction);
     ribbonStatusBar->addPermanentWidget(switchGroup);
+    ribbonStatusBar->addPermanentWidget(zoomStatusLabel);
     ribbonStatusBar->addPermanentWidget(zoomSlider);
     ribbonStatusBar->addPermanentWidget(progressBar);
     mainWindow.setStatusBar(ribbonStatusBar);
@@ -5587,8 +5641,18 @@ int main(int argc, char *argv[])
     updateResponsiveLabelsPreview();
     updateQuickAccessPreview();
 
-    QObject::connect(zoomSlider, &LqRibbon::RibbonSliderPane::valueChanged,
-                     progressBar, &LqRibbon::RibbonProgressBar::setValueSafe);
+    QObject::connect(zoomSlider,
+                     &LqRibbon::RibbonSliderPane::valueChanged,
+                     [&mainWindow, zoomStatusLabel, progressBar](int value) {
+                         zoomStatusLabel->setText(
+                             QStringLiteral("%1%").arg(value));
+                         progressBar->setValueSafe(value);
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Zoom: %1%").arg(value),
+                                 2500);
+                         }
+                     });
 
     const int generalPageIndex = mainWindow.ribbonBar()->indexOf(generalPage);
     const int controlsPageIndex = mainWindow.ribbonBar()->indexOf(controlsPage);
@@ -6252,6 +6316,9 @@ int main(int argc, char *argv[])
                                 collaborationStatusText,
                                 coauthoringIndicatorDot,
                                 coauthoringIndicatorLabel,
+                                zoomSlider,
+                                zoomStatusLabel,
+                                progressBar,
                                 backstage,
                                 saveCopyAction,
                                 cloudLocationCombo,

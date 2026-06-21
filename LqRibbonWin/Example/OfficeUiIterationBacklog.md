@@ -104,7 +104,7 @@ Default style remains `Office 2016 Blue`.
 | 073 | Immersive Reader command | View page | Complete |
 | 074 | Focus mode command | View page | Complete |
 | 075 | Dark canvas toggle | View page | Complete |
-| 076 | Zoom slider in status bar | Status bar | Planned |
+| 076 | Zoom slider in status bar | Status bar | Complete |
 | 077 | View switch buttons in status bar | Status bar | Planned |
 | 078 | Character count status item | Status bar | Planned |
 | 079 | Sync status action | Status bar | Planned |
