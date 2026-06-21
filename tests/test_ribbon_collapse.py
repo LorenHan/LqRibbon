@@ -1119,6 +1119,28 @@ def test_example_accessibility_checker_command_surface():
     window.close()
 
 
+def test_example_editor_pane_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.editor_pane_action.objectName() == "editorPaneAction"
+    assert not window.editor_pane_action.icon().isNull()
+    assert "Editor pane" in window.editor_pane_action.toolTip()
+    assert window.editor_pane_preview.objectName() == "editorPanePreview"
+    assert window.editor_pane_preview.text() == "Editor: suggestions hidden"
+    assert window.editor_pane_action in window.search_actions
+    assert ribbon.searchAction("Editor") is window.editor_pane_action
+
+    window.editor_pane_action.trigger()
+    _app().processEvents()
+    assert window.editor_pane_preview.text() == "Editor: 5 suggestions ready"
+    assert "#editorPanePreview" in window.editor_pane_preview.styleSheet()
+    assert "Editor" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1751,6 +1773,7 @@ def main():
         test_example_smart_lookup_command_surface,
         test_example_sensitivity_label_command_surface,
         test_example_accessibility_checker_command_surface,
+        test_example_editor_pane_command_surface,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,

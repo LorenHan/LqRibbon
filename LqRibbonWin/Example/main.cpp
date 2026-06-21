@@ -278,6 +278,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *sensitivityLabelPreview,
                      QAction *accessibilityCheckerAction,
                      QLabel *accessibilityCheckerPreview,
+                     QAction *editorPaneAction,
+                     QLabel *editorPanePreview,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -836,6 +838,39 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strAccessibilityStatus.contains(
                          QStringLiteral("Accessibility")),
                  QStringLiteral("Accessibility checker command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *editorPaneButton =
+        collapseTestActionButton(ribbonBar, editorPaneAction);
+    if (editorPaneAction) {
+        editorPaneAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strEditorStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(editorPaneAction
+                     && editorPaneAction->objectName()
+                         == QStringLiteral("editorPaneAction")
+                     && !editorPaneAction->icon().isNull()
+                     && editorPaneAction->toolTip().contains(
+                         QStringLiteral("Editor pane"))
+                     && editorPaneButton
+                     && editorPanePreview
+                     && editorPanePreview->objectName()
+                         == QStringLiteral("editorPanePreview")
+                     && editorPanePreview->text()
+                         == QStringLiteral("Editor: 5 suggestions ready")
+                     && editorPanePreview->styleSheet().contains(
+                         QStringLiteral("#editorPanePreview"))
+                     && ribbonBar->searchAction(QStringLiteral("Editor"))
+                         == editorPaneAction
+                     && strEditorStatus.contains(QStringLiteral("Editor")),
+                 QStringLiteral("Editor pane command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3481,6 +3516,26 @@ int main(int argc, char *argv[])
     accessibilityCheckerPreview->setToolTip(
         QObject::tr("Accessibility checker result preview"));
     accessibilityGroup->addWidget(accessibilityCheckerPreview);
+    LqRibbon::RibbonGroup *editorGroup =
+        reviewPage->addGroup(QObject::tr("Editor"));
+    QAction *editorPaneAction = editorGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogDetailedView),
+        QObject::tr("Editor"),
+        Qt::ToolButtonTextUnderIcon);
+    editorPaneAction->setObjectName(QStringLiteral("editorPaneAction"));
+    editorPaneAction->setToolTip(
+        QObject::tr("Open the Editor pane for writing suggestions"));
+    editorPaneAction->setStatusTip(
+        QObject::tr("Editor: review spelling, grammar, and clarity"));
+    QLabel *editorPanePreview = new QLabel(editorGroup);
+    editorPanePreview->setObjectName(QStringLiteral("editorPanePreview"));
+    editorPanePreview->setText(QObject::tr("Editor: suggestions hidden"));
+    editorPanePreview->setMinimumWidth(220);
+    editorPanePreview->setFixedHeight(30);
+    editorPanePreview->setAlignment(Qt::AlignCenter);
+    editorPanePreview->setFrameShape(QFrame::StyledPanel);
+    editorPanePreview->setToolTip(QObject::tr("Editor pane suggestion preview"));
+    editorGroup->addWidget(editorPanePreview);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -4055,6 +4110,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), sensitivityLabelAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accessibilityCheckerAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), editorPaneAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -5121,6 +5177,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(smartLookupAction);
     mainWindow.ribbonBar()->registerSearchAction(sensitivityLabelAction);
     mainWindow.ribbonBar()->registerSearchAction(accessibilityCheckerAction);
+    mainWindow.ribbonBar()->registerSearchAction(editorPaneAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -5336,6 +5393,20 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(editorPaneAction,
+                     &QAction::triggered,
+                     [&mainWindow, editorPanePreview]() {
+                         editorPanePreview->setText(
+                             QObject::tr("Editor: 5 suggestions ready"));
+                         editorPanePreview->setStyleSheet(
+                             QStringLiteral("QLabel#editorPanePreview { color: #107c41; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Editor: 5 writing suggestions ready"),
+                                 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -5473,6 +5544,8 @@ int main(int argc, char *argv[])
                                 sensitivityLabelPreview,
                                 accessibilityCheckerAction,
                                 accessibilityCheckerPreview,
+                                editorPaneAction,
+                                editorPanePreview,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,

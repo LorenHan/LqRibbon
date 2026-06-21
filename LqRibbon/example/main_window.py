@@ -586,6 +586,29 @@ class MainWindow(RibbonMainWindow):
             "Accessibility checker result preview"
         )
         accessibility_group.addWidget(self.accessibility_checker_preview)
+        editor_group = self.review_page.addGroup("Editor")
+        self.editor_pane_action = editor_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogDetailedView),
+            "Editor",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.editor_pane_action.setObjectName("editorPaneAction")
+        self.editor_pane_action.setToolTip(
+            "Open the Editor pane for writing suggestions"
+        )
+        self.editor_pane_action.setStatusTip(
+            "Editor: review spelling, grammar, and clarity"
+        )
+        self.editor_pane_preview = QLabel(
+            "Editor: suggestions hidden", editor_group
+        )
+        self.editor_pane_preview.setObjectName("editorPanePreview")
+        self.editor_pane_preview.setMinimumWidth(220)
+        self.editor_pane_preview.setFixedHeight(30)
+        self.editor_pane_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.editor_pane_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.editor_pane_preview.setToolTip("Editor pane suggestion preview")
+        editor_group.addWidget(self.editor_pane_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -1198,6 +1221,7 @@ class MainWindow(RibbonMainWindow):
             self.smart_lookup_action,
             self.sensitivity_label_action,
             self.accessibility_checker_action,
+            self.editor_pane_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1224,6 +1248,7 @@ class MainWindow(RibbonMainWindow):
         self.accessibility_checker_action.triggered.connect(
             self.run_accessibility_checker
         )
+        self.editor_pane_action.triggered.connect(self.open_editor_pane)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1490,6 +1515,7 @@ class MainWindow(RibbonMainWindow):
             self.smart_lookup_action,
             self.sensitivity_label_action,
             self.accessibility_checker_action,
+            self.editor_pane_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -1817,6 +1843,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#accessibilityCheckerPreview { color: #b35c00; font-weight: 600; }"
         )
         self._message("Accessibility: 2 issues found")
+
+    def open_editor_pane(self):
+        self.editor_pane_preview.setText("Editor: 5 suggestions ready")
+        self.editor_pane_preview.setStyleSheet(
+            "QLabel#editorPanePreview { color: #107c41; font-weight: 600; }"
+        )
+        self._message("Editor: 5 writing suggestions ready")
 
     def open_tell_me_help_redirect(self):
         query = self.ribbonBar().searchText().strip() or "unmatched Tell Me phrase"
