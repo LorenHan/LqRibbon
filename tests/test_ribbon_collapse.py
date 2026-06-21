@@ -652,6 +652,30 @@ def test_example_search_shows_related_file_result_section():
     window.close()
 
 
+def test_example_smart_lookup_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    ribbon.setCurrentPageIndex(ribbon.pageIndex(window.review_page))
+    _app().processEvents()
+
+    assert ribbon.pageIndex(window.review_page) >= 0
+    assert window.smart_lookup_action.objectName() == "smartLookupAction"
+    assert not window.smart_lookup_action.icon().isNull()
+    assert "contextual insights" in window.smart_lookup_action.toolTip()
+    assert window.smart_lookup_preview.text() == "Select text to look up insights"
+    assert window.smart_lookup_action in window.search_actions
+    assert ribbon.searchAction("Smart Lookup") is window.smart_lookup_action
+
+    window.smart_lookup_action.trigger()
+    _app().processEvents()
+    assert window.smart_lookup_preview.text() == "Insights ready for selected text"
+    assert "Smart Lookup" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1265,6 +1289,7 @@ def main():
         test_example_search_no_result_affordance_keeps_help_path,
         test_example_search_shows_help_result_section,
         test_example_search_shows_related_file_result_section,
+        test_example_smart_lookup_command_surface,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,

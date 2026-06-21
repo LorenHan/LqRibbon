@@ -262,6 +262,9 @@ class MainWindow(RibbonMainWindow):
         self.gallery_page = ribbon.addPage("Gallery")
         self._create_gallery_page()
 
+        self.review_page = ribbon.addPage("Review")
+        self._create_review_page()
+
         self.tell_me_page = ribbon.addPage("Tell Me")
         self._create_command_discovery_page()
 
@@ -501,6 +504,33 @@ class MainWindow(RibbonMainWindow):
         more_menu = gallery_toolbar.addMenu(self._icon(QStyle.StandardPixmap.SP_ArrowDown), "More")
         more_menu.addActions(self.gallery_menu.actions())
         gallery_action_group.addWidget(gallery_toolbar)
+
+    def _create_review_page(self):
+        insights_group = self.review_page.addGroup("Insights")
+        self.smart_lookup_action = insights_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogInfoView),
+            "Smart Lookup",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.smart_lookup_action.setObjectName("smartLookupAction")
+        self.smart_lookup_action.setToolTip(
+            "Find contextual insights for selected text"
+        )
+        self.smart_lookup_action.setStatusTip(
+            "Smart Lookup: insights for selected text"
+        )
+        self.smart_lookup_preview = QLabel(
+            "Select text to look up insights", insights_group
+        )
+        self.smart_lookup_preview.setObjectName("smartLookupPreview")
+        self.smart_lookup_preview.setMinimumWidth(220)
+        self.smart_lookup_preview.setFixedHeight(30)
+        self.smart_lookup_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.smart_lookup_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.smart_lookup_preview.setToolTip(
+            "Preview of the Smart Lookup command surface"
+        )
+        insights_group.addWidget(self.smart_lookup_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -888,6 +918,7 @@ class MainWindow(RibbonMainWindow):
             self.driver_page,
             self.controls_page,
             self.gallery_page,
+            self.review_page,
             self.tell_me_page,
             self.shell_page,
         ]:
@@ -902,6 +933,7 @@ class MainWindow(RibbonMainWindow):
             self.hidden_search_action,
             self.focus_search_action,
             self.control_modes_action,
+            self.smart_lookup_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
@@ -909,6 +941,7 @@ class MainWindow(RibbonMainWindow):
             self.import_quick_access_action,
         ]:
             self.customize_manager.addToCategory("Actions", action)
+        self.customize_manager.setPageId(self.review_page, "review")
         self.customize_manager.setPageId(self.tell_me_page, "tellMe")
         self.customize_manager.setPageId(self.shell_page, "shell")
         self.customize_manager.setGroupId(self.runtime_group, "runtime")
@@ -921,6 +954,7 @@ class MainWindow(RibbonMainWindow):
         self.connect_action.triggered.connect(lambda: self._message("Connect"))
         self.basic_action.triggered.connect(lambda: self._message("Basic Operation"))
         self.driver_action.triggered.connect(lambda: self._message("Driver Configuration"))
+        self.smart_lookup_action.triggered.connect(self.open_smart_lookup)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1128,6 +1162,7 @@ class MainWindow(RibbonMainWindow):
             self.quick_access_labels_action,
             self.office_popup_action,
             self.office_menu_action,
+            self.smart_lookup_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
             self.show_customize_action,
@@ -1436,6 +1471,10 @@ class MainWindow(RibbonMainWindow):
         self.focus_caption_search()
         self.ribbonBar().setSearchText(phrase)
         self._message(f"Tell Me phrase: {phrase}")
+
+    def open_smart_lookup(self):
+        self.smart_lookup_preview.setText("Insights ready for selected text")
+        self._message("Smart Lookup: insights for selected text")
 
     def open_tell_me_help_redirect(self):
         query = self.ribbonBar().searchText().strip() or "unmatched Tell Me phrase"

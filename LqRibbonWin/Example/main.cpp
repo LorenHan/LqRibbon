@@ -226,6 +226,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *compactSearchAction,
                      QAction *hiddenSearchAction,
                      QAction *focusSearchAction,
+                     QAction *smartLookupAction,
+                     LqRibbon::RibbonPage *reviewPage,
+                     QLabel *smartLookupPreview,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -668,6 +671,43 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     searchPopupView->hide();
     ribbonBar->clearRecentSearchActions();
     processCollapseTestEvents();
+
+    const int reviewPageIndex = ribbonBar->indexOf(reviewPage);
+    if (reviewPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(reviewPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *smartLookupButton =
+        collapseTestActionButton(ribbonBar, smartLookupAction);
+    if (smartLookupAction) {
+        smartLookupAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strSmartLookupStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(reviewPageIndex >= 0
+                     && smartLookupAction
+                     && smartLookupAction->objectName()
+                         == QStringLiteral("smartLookupAction")
+                     && !smartLookupAction->icon().isNull()
+                     && smartLookupAction->toolTip().contains(
+                         QStringLiteral("contextual insights"))
+                     && smartLookupButton
+                     && smartLookupPreview
+                     && smartLookupPreview->text()
+                         == QStringLiteral("Insights ready for selected text")
+                     && ribbonBar->searchAction(
+                            QStringLiteral("Smart Lookup"))
+                         == smartLookupAction
+                     && strSmartLookupStatus.contains(
+                         QStringLiteral("Smart Lookup")),
+                 QStringLiteral("Smart Lookup command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
 
     const int tellMePageIndex = ribbonBar->indexOf(tellMePage);
     if (tellMePageIndex >= 0) {
@@ -2645,6 +2685,30 @@ int main(int argc, char *argv[])
         galleryMenu);
     galleryActionGroup->addWidget(galleryToolBar);
 
+    LqRibbon::RibbonPage *reviewPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Review"));
+    LqRibbon::RibbonGroup *insightsGroup =
+        reviewPage->addGroup(QObject::tr("Insights"));
+    QAction *smartLookupAction = insightsGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
+        QObject::tr("Smart Lookup"),
+        Qt::ToolButtonTextUnderIcon);
+    smartLookupAction->setObjectName(QStringLiteral("smartLookupAction"));
+    smartLookupAction->setToolTip(
+        QObject::tr("Find contextual insights for selected text"));
+    smartLookupAction->setStatusTip(
+        QObject::tr("Smart Lookup: insights for selected text"));
+    QLabel *smartLookupPreview = new QLabel(insightsGroup);
+    smartLookupPreview->setObjectName(QStringLiteral("smartLookupPreview"));
+    smartLookupPreview->setText(QObject::tr("Select text to look up insights"));
+    smartLookupPreview->setMinimumWidth(220);
+    smartLookupPreview->setFixedHeight(30);
+    smartLookupPreview->setAlignment(Qt::AlignCenter);
+    smartLookupPreview->setFrameShape(QFrame::StyledPanel);
+    smartLookupPreview->setToolTip(
+        QObject::tr("Preview of the Smart Lookup command surface"));
+    insightsGroup->addWidget(smartLookupPreview);
+
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
     LqRibbon::RibbonGroup *commandDiscoveryGroup =
@@ -2966,6 +3030,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), driverPage);
     customizeManager->addToCategory(QObject::tr("Pages"), controlsPage);
     customizeManager->addToCategory(QObject::tr("Pages"), galleryPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), reviewPage);
     customizeManager->addToCategory(QObject::tr("Pages"), tellMePage);
     customizeManager->addToCategory(QObject::tr("Pages"), shellPage);
     customizeManager->addToCategory(QObject::tr("Actions"), fullScreenAction);
@@ -2979,6 +3044,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), hiddenSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"), focusSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"), controlModesAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), smartLookupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     showQuickAccessBarAction);
@@ -2998,6 +3064,7 @@ int main(int argc, char *argv[])
                                     exportQuickAccessAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     importQuickAccessAction);
+    customizeManager->setPageId(reviewPage, QStringLiteral("review"));
     customizeManager->setPageId(tellMePage, QStringLiteral("tellMe"));
     customizeManager->setPageId(shellPage, QStringLiteral("shell"));
     customizeManager->setGroupId(runtimeGroup, QStringLiteral("runtime"));
@@ -4011,6 +4078,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(quickAccessLabelsAction);
     mainWindow.ribbonBar()->registerSearchAction(officePopupAction);
     mainWindow.ribbonBar()->registerSearchAction(officeMenuAction);
+    mainWindow.ribbonBar()->registerSearchAction(smartLookupAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
     mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
@@ -4069,6 +4137,18 @@ int main(int argc, char *argv[])
                                  QObject::tr("LqRibbon"),
                                  QObject::tr("Account"));
     });
+    QObject::connect(smartLookupAction,
+                     &QAction::triggered,
+                     [&mainWindow, smartLookupPreview]() {
+                         smartLookupPreview->setText(
+                             QObject::tr("Insights ready for selected text"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Smart Lookup: insights for selected text"),
+                                 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -4186,6 +4266,9 @@ int main(int argc, char *argv[])
                                 compactSearchAction,
                                 hiddenSearchAction,
                                 focusSearchAction,
+                                smartLookupAction,
+                                reviewPage,
+                                smartLookupPreview,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,
