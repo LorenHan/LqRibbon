@@ -988,6 +988,50 @@ def test_example_contextual_tab_show_hide_toggle_is_available():
     window.close()
 
 
+def test_example_title_groups_visibility_toggle_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    ribbon.setCurrentPageIndex(ribbon.pageIndex(window.contextual_page))
+    _app().processEvents()
+
+    assert (
+        window.title_groups_visibility_action.objectName()
+        == "titleGroupsVisibilityAction"
+    )
+    assert window.title_groups_visibility_action.isCheckable()
+    assert window.title_groups_visibility_action.isChecked()
+    assert not window.title_groups_visibility_action.icon().isNull()
+    assert "contextual title groups" in window.title_groups_visibility_action.toolTip()
+    assert ribbon.isTitleGroupsVisible()
+    assert (
+        window.title_groups_visibility_preview.objectName()
+        == "titleGroupsVisibilityPreview"
+    )
+    assert window.title_groups_visibility_preview.text() == "Title groups: visible"
+    assert window.title_groups_visibility_action in window.search_actions
+    assert ribbon.searchAction("Title Groups") is window.title_groups_visibility_action
+
+    window.title_groups_visibility_action.trigger()
+    _app().processEvents()
+    assert not window.title_groups_visibility_action.isChecked()
+    assert not ribbon.isTitleGroupsVisible()
+    assert window.title_groups_visibility_preview.text() == "Title groups: hidden"
+    assert (
+        "#titleGroupsVisibilityPreview"
+        in window.title_groups_visibility_preview.styleSheet()
+    )
+    assert "hidden" in window.statusBar().currentMessage()
+
+    window.title_groups_visibility_action.trigger()
+    _app().processEvents()
+    assert window.title_groups_visibility_action.isChecked()
+    assert ribbon.isTitleGroupsVisible()
+    assert window.title_groups_visibility_preview.text() == "Title groups: visible"
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2448,6 +2492,7 @@ def main():
         test_example_reduced_motion_option_is_available,
         test_example_contextual_tab_group_color_preview_is_available,
         test_example_contextual_tab_show_hide_toggle_is_available,
+        test_example_title_groups_visibility_toggle_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

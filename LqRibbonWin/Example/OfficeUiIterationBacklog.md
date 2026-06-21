@@ -123,7 +123,7 @@ Default style remains `Office 2016 Blue`.
 | 092 | Alt key tab activation | Keyboard overlay | Complete |
 | 093 | Contextual tab group color | Contextual page preview | Complete |
 | 094 | Contextual tab show/hide | Contextual page preview | Complete |
-| 095 | Title groups visibility toggle | Contextual page preview | Planned |
+| 095 | Title groups visibility toggle | Contextual page preview | Complete |
 | 096 | Custom tab creation | Customize dialog | Planned |
 | 097 | Custom group creation | Customize dialog | Planned |
 | 098 | Rename tab/group | Customize dialog | Planned |

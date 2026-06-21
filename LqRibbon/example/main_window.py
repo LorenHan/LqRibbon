@@ -741,6 +741,34 @@ class MainWindow(RibbonMainWindow):
             "Current contextual tab visibility state"
         )
         tools_group.addWidget(self.contextual_tab_visibility_preview)
+        self.title_groups_visibility_action = tools_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_TitleBarMenuButton),
+            "Title Groups",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.title_groups_visibility_action.setObjectName(
+            "titleGroupsVisibilityAction"
+        )
+        self.title_groups_visibility_action.setCheckable(True)
+        self.title_groups_visibility_action.setChecked(True)
+        self.title_groups_visibility_action.setToolTip(
+            "Show or hide contextual title groups"
+        )
+        self.title_groups_visibility_action.setStatusTip("Title groups: visible")
+        self.title_groups_visibility_preview = QLabel(
+            "Title groups: visible", tools_group
+        )
+        self.title_groups_visibility_preview.setObjectName(
+            "titleGroupsVisibilityPreview"
+        )
+        self.title_groups_visibility_preview.setMinimumWidth(210)
+        self.title_groups_visibility_preview.setFixedHeight(30)
+        self.title_groups_visibility_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title_groups_visibility_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.title_groups_visibility_preview.setToolTip(
+            "Current contextual title groups visibility state"
+        )
+        tools_group.addWidget(self.title_groups_visibility_preview)
 
     def _create_options_page(self):
         accessibility_group = self.options_page.addGroup("Accessibility")
@@ -1737,6 +1765,7 @@ class MainWindow(RibbonMainWindow):
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
             self.contextual_tab_visibility_action,
+            self.title_groups_visibility_action,
             self.reduced_motion_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
@@ -1793,6 +1822,9 @@ class MainWindow(RibbonMainWindow):
         )
         self.contextual_tab_visibility_action.toggled.connect(
             self.toggle_contextual_tabs_visible
+        )
+        self.title_groups_visibility_action.toggled.connect(
+            self.toggle_title_groups_visible
         )
         self.reduced_motion_action.toggled.connect(self.toggle_reduced_motion)
         self.tell_me_lightbulb_action.triggered.connect(
@@ -2099,6 +2131,7 @@ class MainWindow(RibbonMainWindow):
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
             self.contextual_tab_visibility_action,
+            self.title_groups_visibility_action,
             self.reduced_motion_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
@@ -2580,6 +2613,20 @@ class MainWindow(RibbonMainWindow):
                 "Contextual tabs: hidden"
             )
         self._message(self.contextual_tab_visibility_action.statusTip())
+
+    def toggle_title_groups_visible(self, visible):
+        self.ribbonBar().setTitleGroupsVisible(bool(visible))
+        if visible:
+            self.title_groups_visibility_preview.setText("Title groups: visible")
+            self.title_groups_visibility_preview.setStyleSheet("")
+            self.title_groups_visibility_action.setStatusTip("Title groups: visible")
+        else:
+            self.title_groups_visibility_preview.setText("Title groups: hidden")
+            self.title_groups_visibility_preview.setStyleSheet(
+                "QLabel#titleGroupsVisibilityPreview { color: #5b2d00; background: #fff4ce; font-weight: 600; }"
+            )
+            self.title_groups_visibility_action.setStatusTip("Title groups: hidden")
+        self._message(self.title_groups_visibility_action.statusTip())
 
     def toggle_reduced_motion(self, enabled):
         self.state_timing_preview.setProperty("reducedMotion", bool(enabled))

@@ -414,6 +414,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *contextualGroupColorPreview,
                      QAction *contextualTabVisibilityAction,
                      QLabel *contextualTabVisibilityPreview,
+                     QAction *titleGroupsVisibilityAction,
+                     QLabel *titleGroupsVisibilityPreview,
                      LqRibbon::RibbonPage *optionsPage,
                      QAction *reducedMotionAction,
                      QLabel *reducedMotionPreview,
@@ -1146,6 +1148,59 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && contextualTabVisibilityPreview->text()
                          == QStringLiteral("Contextual tabs: visible"),
                  QStringLiteral("Contextual tab visibility restores tabs"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *titleGroupsVisibilityButton =
+        collapseTestActionButton(ribbonBar, titleGroupsVisibilityAction);
+    if (!require(titleGroupsVisibilityAction
+                     && titleGroupsVisibilityAction->objectName()
+                         == QStringLiteral("titleGroupsVisibilityAction")
+                     && titleGroupsVisibilityAction->isCheckable()
+                     && titleGroupsVisibilityAction->isChecked()
+                     && !titleGroupsVisibilityAction->icon().isNull()
+                     && titleGroupsVisibilityAction->toolTip().contains(
+                         QStringLiteral("contextual title groups"))
+                     && ribbonBar->isTitleGroupsVisible()
+                     && titleGroupsVisibilityPreview
+                     && titleGroupsVisibilityPreview->objectName()
+                         == QStringLiteral("titleGroupsVisibilityPreview")
+                     && titleGroupsVisibilityPreview->text()
+                         == QStringLiteral("Title groups: visible")
+                     && ribbonBar->searchAction(QStringLiteral("Title Groups"))
+                         == titleGroupsVisibilityAction
+                     && titleGroupsVisibilityButton
+                     && titleGroupsVisibilityButton->defaultAction()
+                         == titleGroupsVisibilityAction,
+                 QStringLiteral("Title groups visibility defaults visible"))) {
+        return 1;
+    }
+    titleGroupsVisibilityAction->trigger();
+    processCollapseTestEvents();
+    const QString strTitleGroupsHiddenStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(!titleGroupsVisibilityAction->isChecked()
+                     && !ribbonBar->isTitleGroupsVisible()
+                     && titleGroupsVisibilityPreview->text()
+                         == QStringLiteral("Title groups: hidden")
+                     && titleGroupsVisibilityPreview->styleSheet().contains(
+                         QStringLiteral("#titleGroupsVisibilityPreview"))
+                     && strTitleGroupsHiddenStatus.contains(
+                         QStringLiteral("hidden")),
+                 QStringLiteral("Title groups visibility hides groups"))) {
+        return 1;
+    }
+    titleGroupsVisibilityAction->trigger();
+    processCollapseTestEvents();
+    if (!require(titleGroupsVisibilityAction->isChecked()
+                     && ribbonBar->isTitleGroupsVisible()
+                     && titleGroupsVisibilityPreview->text()
+                         == QStringLiteral("Title groups: visible"),
+                 QStringLiteral("Title groups visibility restores groups"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -4971,6 +5026,30 @@ int main(int argc, char *argv[])
     contextualTabVisibilityPreview->setToolTip(
         QObject::tr("Current contextual tab visibility state"));
     pictureToolsGroup->addWidget(contextualTabVisibilityPreview);
+    mainWindow.ribbonBar()->setTitleGroupsVisible(true);
+    QAction *titleGroupsVisibilityAction = pictureToolsGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_TitleBarMenuButton),
+        QObject::tr("Title Groups"),
+        Qt::ToolButtonTextUnderIcon);
+    titleGroupsVisibilityAction->setObjectName(
+        QStringLiteral("titleGroupsVisibilityAction"));
+    titleGroupsVisibilityAction->setCheckable(true);
+    titleGroupsVisibilityAction->setChecked(true);
+    titleGroupsVisibilityAction->setToolTip(
+        QObject::tr("Show or hide contextual title groups"));
+    titleGroupsVisibilityAction->setStatusTip(
+        QObject::tr("Title groups: visible"));
+    QLabel *titleGroupsVisibilityPreview = new QLabel(pictureToolsGroup);
+    titleGroupsVisibilityPreview->setObjectName(
+        QStringLiteral("titleGroupsVisibilityPreview"));
+    titleGroupsVisibilityPreview->setText(QObject::tr("Title groups: visible"));
+    titleGroupsVisibilityPreview->setMinimumWidth(210);
+    titleGroupsVisibilityPreview->setFixedHeight(30);
+    titleGroupsVisibilityPreview->setAlignment(Qt::AlignCenter);
+    titleGroupsVisibilityPreview->setFrameShape(QFrame::StyledPanel);
+    titleGroupsVisibilityPreview->setToolTip(
+        QObject::tr("Current contextual title groups visibility state"));
+    pictureToolsGroup->addWidget(titleGroupsVisibilityPreview);
 
     LqRibbon::RibbonPage *optionsPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Options"));
@@ -5859,6 +5938,8 @@ int main(int argc, char *argv[])
                                     contextualGroupColorAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     contextualTabVisibilityAction);
+    customizeManager->addToCategory(QObject::tr("Actions"),
+                                    titleGroupsVisibilityAction);
     customizeManager->addToCategory(QObject::tr("Actions"), reducedMotionAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
@@ -7043,6 +7124,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
     mainWindow.ribbonBar()->registerSearchAction(contextualGroupColorAction);
     mainWindow.ribbonBar()->registerSearchAction(contextualTabVisibilityAction);
+    mainWindow.ribbonBar()->registerSearchAction(titleGroupsVisibilityAction);
     mainWindow.ribbonBar()->registerSearchAction(reducedMotionAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
@@ -7335,6 +7417,34 @@ int main(int argc, char *argv[])
                          if (mainWindow.statusBar()) {
                              mainWindow.statusBar()->showMessage(
                                  contextualTabVisibilityAction->statusTip(),
+                                 2500);
+                         }
+                     });
+    QObject::connect(titleGroupsVisibilityAction,
+                     &QAction::toggled,
+                     [&mainWindow,
+                      titleGroupsVisibilityAction,
+                      titleGroupsVisibilityPreview](bool visible) {
+                         mainWindow.ribbonBar()->setTitleGroupsVisible(
+                             visible);
+                         if (visible) {
+                             titleGroupsVisibilityPreview->setText(
+                                 QObject::tr("Title groups: visible"));
+                             titleGroupsVisibilityPreview->setStyleSheet(
+                                 QString());
+                             titleGroupsVisibilityAction->setStatusTip(
+                                 QObject::tr("Title groups: visible"));
+                         } else {
+                             titleGroupsVisibilityPreview->setText(
+                                 QObject::tr("Title groups: hidden"));
+                             titleGroupsVisibilityPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#titleGroupsVisibilityPreview { color: #5b2d00; background: #fff4ce; font-weight: 600; }"));
+                             titleGroupsVisibilityAction->setStatusTip(
+                                 QObject::tr("Title groups: hidden"));
+                         }
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 titleGroupsVisibilityAction->statusTip(),
                                  2500);
                          }
                      });
@@ -7785,6 +7895,8 @@ int main(int argc, char *argv[])
                                 contextualGroupColorPreview,
                                 contextualTabVisibilityAction,
                                 contextualTabVisibilityPreview,
+                                titleGroupsVisibilityAction,
+                                titleGroupsVisibilityPreview,
                                 optionsPage,
                                 reducedMotionAction,
                                 reducedMotionPreview,
