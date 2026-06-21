@@ -533,8 +533,56 @@ class MainWindow(RibbonMainWindow):
         mode_combo.widget().addItems(["Position", "Velocity", "Torque"])
         selector_group.addWidget(mode_combo)
 
-        font_combo = RibbonFontComboBoxControl(selector_group)
-        selector_group.addWidget(font_combo)
+        self.font_combo_control = RibbonFontComboBoxControl(selector_group)
+        self.font_picker = self.font_combo_control.widget()
+        self.font_picker.setObjectName("fontPicker")
+        if self.font_picker.count() <= 12:
+            self.font_picker.addItems(
+                [
+                    "Aptos",
+                    "Arial",
+                    "Calibri",
+                    "Cambria",
+                    "Candara",
+                    "Consolas",
+                    "Constantia",
+                    "Corbel",
+                    "Georgia",
+                    "Segoe UI",
+                    "Tahoma",
+                    "Times New Roman",
+                    "Trebuchet MS",
+                    "Verdana",
+                ]
+            )
+        self.font_picker.setMaxVisibleItems(12)
+        font_scrollbar_expected = (
+            self.font_picker.count() > self.font_picker.maxVisibleItems()
+        )
+        self.font_picker.setProperty(
+            "largeListScrollbarExpected", font_scrollbar_expected
+        )
+        self.font_picker.setToolTip("Font picker large list")
+        selector_group.addWidget(self.font_combo_control)
+        self.font_picker_scrollbar_preview = QLabel(
+            f"Font list: {self.font_picker.maxVisibleItems()} visible / "
+            f"{self.font_picker.count()} fonts",
+            selector_group,
+        )
+        self.font_picker_scrollbar_preview.setObjectName(
+            "fontPickerScrollbarPreview"
+        )
+        self.font_picker_scrollbar_preview.setMinimumWidth(220)
+        self.font_picker_scrollbar_preview.setFixedHeight(30)
+        self.font_picker_scrollbar_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.font_picker_scrollbar_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.font_picker_scrollbar_preview.setToolTip(
+            "Font picker large-list scrollbar state"
+        )
+        self.font_picker_scrollbar_preview.setProperty(
+            "scrollbarExpected", font_scrollbar_expected
+        )
+        selector_group.addWidget(self.font_picker_scrollbar_preview)
 
         enabled_check = RibbonCheckBoxControl("Enabled", selector_group)
         enabled_check.widget().setChecked(True)

@@ -9,6 +9,7 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QFormLayout>
+#include <QFontComboBox>
 #include <QFontDatabase>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -367,6 +368,8 @@ QToolButton *collapseTestActionButton(LqRibbon::RibbonBar *ribbonBar,
 int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *classicRibbonAction,
                      LqRibbon::RibbonPage *generalPage,
+                     QFontComboBox *fontPicker,
+                     QLabel *fontPickerScrollbarPreview,
                      QAction *dictateMicrophoneAction,
                      QLabel *dictateMicrophonePreview,
                      QAction *pinRibbonAction,
@@ -638,6 +641,31 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         qInfo().noquote() << "PASS" << name;
         return true;
     };
+
+    if (!require(fontPicker
+                     && fontPicker->objectName()
+                         == QStringLiteral("fontPicker")
+                     && fontPicker->maxVisibleItems() == 12
+                     && fontPicker->count() > fontPicker->maxVisibleItems()
+                     && fontPicker->property("largeListScrollbarExpected")
+                            .toBool()
+                     && fontPicker->toolTip().contains(
+                         QStringLiteral("Font picker large list"))
+                     && fontPickerScrollbarPreview
+                     && fontPickerScrollbarPreview->objectName()
+                         == QStringLiteral("fontPickerScrollbarPreview")
+                     && fontPickerScrollbarPreview
+                            ->property("scrollbarExpected")
+                            .toBool()
+                     && fontPickerScrollbarPreview->text().contains(
+                         QStringLiteral("visible"))
+                     && fontPickerScrollbarPreview->text().contains(
+                         QStringLiteral("fonts"))
+                     && fontPickerScrollbarPreview->toolTip().contains(
+                         QStringLiteral("large-list scrollbar")),
+                 QStringLiteral("Font picker large-list scrollbar state is available"))) {
+        return 1;
+    }
 
     const QRect searchGeometry = ribbonBar->searchLineEdit()->geometry();
     if (!require(ribbonBar->searchBarAppearance()
@@ -6283,7 +6311,48 @@ int main(int argc, char *argv[])
 
     LqRibbon::RibbonFontComboBoxControl *fontCombo =
         new LqRibbon::RibbonFontComboBoxControl(selectorGroup);
+    QFontComboBox *fontPicker = fontCombo->widget();
+    fontPicker->setObjectName(QStringLiteral("fontPicker"));
+    if (fontPicker->count() <= 12) {
+        fontPicker->addItems(QStringList()
+                             << QStringLiteral("Aptos")
+                             << QStringLiteral("Arial")
+                             << QStringLiteral("Calibri")
+                             << QStringLiteral("Cambria")
+                             << QStringLiteral("Candara")
+                             << QStringLiteral("Consolas")
+                             << QStringLiteral("Constantia")
+                             << QStringLiteral("Corbel")
+                             << QStringLiteral("Georgia")
+                             << QStringLiteral("Segoe UI")
+                             << QStringLiteral("Tahoma")
+                             << QStringLiteral("Times New Roman")
+                             << QStringLiteral("Trebuchet MS")
+                             << QStringLiteral("Verdana"));
+    }
+    fontPicker->setMaxVisibleItems(12);
+    const bool fontScrollbarExpected =
+        fontPicker->count() > fontPicker->maxVisibleItems();
+    fontPicker->setProperty("largeListScrollbarExpected",
+                            fontScrollbarExpected);
+    fontPicker->setToolTip(QObject::tr("Font picker large list"));
     selectorGroup->addWidget(fontCombo);
+    QLabel *fontPickerScrollbarPreview = new QLabel(selectorGroup);
+    fontPickerScrollbarPreview->setObjectName(
+        QStringLiteral("fontPickerScrollbarPreview"));
+    fontPickerScrollbarPreview->setText(
+        QObject::tr("Font list: %1 visible / %2 fonts")
+            .arg(fontPicker->maxVisibleItems())
+            .arg(fontPicker->count()));
+    fontPickerScrollbarPreview->setMinimumWidth(220);
+    fontPickerScrollbarPreview->setFixedHeight(30);
+    fontPickerScrollbarPreview->setAlignment(Qt::AlignCenter);
+    fontPickerScrollbarPreview->setFrameShape(QFrame::StyledPanel);
+    fontPickerScrollbarPreview->setToolTip(
+        QObject::tr("Font picker large-list scrollbar state"));
+    fontPickerScrollbarPreview->setProperty("scrollbarExpected",
+                                            fontScrollbarExpected);
+    selectorGroup->addWidget(fontPickerScrollbarPreview);
 
     LqRibbon::RibbonCheckBoxControl *enabledCheck =
         new LqRibbon::RibbonCheckBoxControl(QObject::tr("Enabled"),
@@ -10713,6 +10782,8 @@ int main(int argc, char *argv[])
         return runCollapseTests(mainWindow,
                                 classicRibbonAction,
                                 generalPage,
+                                fontPicker,
+                                fontPickerScrollbarPreview,
                                 dictateMicrophoneAction,
                                 dictateMicrophonePreview,
                                 pinRibbonAction,

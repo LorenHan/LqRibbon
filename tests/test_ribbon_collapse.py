@@ -1272,6 +1272,28 @@ def test_example_macro_blocking_status_command_surface():
     window.close()
 
 
+def test_example_font_picker_large_list_scrollbar_state_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    font_picker = window.font_picker
+    preview = window.font_picker_scrollbar_preview
+
+    assert font_picker.objectName() == "fontPicker"
+    assert font_picker.maxVisibleItems() == 12
+    assert font_picker.count() > font_picker.maxVisibleItems()
+    assert font_picker.property("largeListScrollbarExpected")
+    assert "Font picker large list" in font_picker.toolTip()
+    assert preview.objectName() == "fontPickerScrollbarPreview"
+    assert preview.property("scrollbarExpected")
+    assert "visible" in preview.text()
+    assert "fonts" in preview.text()
+    assert "large-list scrollbar" in preview.toolTip()
+    window.close()
+
+
 def test_example_svg_recolor_command_surface():
     window = MainWindow()
     window.show()
@@ -3533,6 +3555,7 @@ def main():
         test_example_copilot_prompt_gallery_is_available,
         test_example_comments_link_opening_command_surface,
         test_example_macro_blocking_status_command_surface,
+        test_example_font_picker_large_list_scrollbar_state_is_available,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,
