@@ -448,6 +448,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *darkCanvasAction,
                      QLabel *darkCanvasPreview,
                      LqRibbon::RibbonGallery *styleGallery,
+                     QMenu *galleryMenu,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -1759,6 +1760,28 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && appColorSetPixmap.width() >= 64
                      && appColorSetPixmap.height() >= 64,
                  QStringLiteral("New app icon color set is available"))) {
+        return 1;
+    }
+
+    const QList<QAction *> galleryMenuActions =
+        galleryMenu ? galleryMenu->actions() : QList<QAction *>();
+    if (!require(styleGallery
+                     && styleGallery->popupMenu() == galleryMenu
+                     && galleryMenu
+                     && galleryMenu->objectName()
+                         == QStringLiteral("styleGalleryPopupMenu")
+                     && galleryMenu->toolTip().contains(
+                         QStringLiteral("additional style commands"))
+                     && galleryMenuActions.size() >= 2
+                     && galleryMenuActions.at(0)->text()
+                         == QStringLiteral("More styles")
+                     && galleryMenuActions.at(0)->objectName()
+                         == QStringLiteral("moreStylesGalleryAction")
+                     && galleryMenuActions.at(1)->text()
+                         == QStringLiteral("Reset style")
+                     && galleryMenuActions.at(1)->objectName()
+                         == QStringLiteral("resetStyleGalleryAction"),
+                 QStringLiteral("Popup gallery menu is available"))) {
         return 1;
     }
 
@@ -5618,8 +5641,17 @@ int main(int argc, char *argv[])
     styleGallery->setCheckedIndex(1);
 
     QMenu *galleryMenu = new QMenu(styleGallery);
-    galleryMenu->addAction(QObject::tr("More styles"));
-    galleryMenu->addAction(QObject::tr("Reset style"));
+    galleryMenu->setObjectName(QStringLiteral("styleGalleryPopupMenu"));
+    galleryMenu->setToolTip(
+        QObject::tr("Popup gallery menu for additional style commands"));
+    QAction *moreStylesGalleryAction =
+        galleryMenu->addAction(QObject::tr("More styles"));
+    moreStylesGalleryAction->setObjectName(
+        QStringLiteral("moreStylesGalleryAction"));
+    QAction *resetStyleGalleryAction =
+        galleryMenu->addAction(QObject::tr("Reset style"));
+    resetStyleGalleryAction->setObjectName(
+        QStringLiteral("resetStyleGalleryAction"));
     styleGallery->setPopupMenu(galleryMenu);
 
     LqRibbon::RibbonGalleryControl *styleGalleryControl =
@@ -9372,6 +9404,7 @@ int main(int argc, char *argv[])
                                 darkCanvasAction,
                                 darkCanvasPreview,
                                 styleGallery,
+                                galleryMenu,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,

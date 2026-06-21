@@ -144,7 +144,7 @@ Default style remains `Office 2016 Blue`.
 | 113 | Resizable Office popup menu grip | Popup page | Complete |
 | 114 | Popup color button | Popup page | Complete |
 | 115 | In-ribbon gallery | Gallery page | Complete |
-| 116 | Popup gallery menu | Gallery page | Planned |
+| 116 | Popup gallery menu | Gallery page | Complete |
 | 117 | Gallery checked-item state | Gallery page | Planned |
 | 118 | Gallery keyboard navigation | Gallery page | Planned |
 | 119 | Draw tab | Draw page | Planned |

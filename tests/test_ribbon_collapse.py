@@ -831,6 +831,24 @@ def test_example_app_icon_color_set_is_available():
     window.close()
 
 
+def test_example_popup_gallery_menu_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    menu = window.gallery_menu
+    actions = menu.actions()
+
+    assert window.style_gallery.popupMenu() is menu
+    assert menu.objectName() == "styleGalleryPopupMenu"
+    assert "additional style commands" in menu.toolTip()
+    assert [action.text() for action in actions[:2]] == ["More styles", "Reset style"]
+    assert actions[0].objectName() == "moreStylesGalleryAction"
+    assert actions[1].objectName() == "resetStyleGalleryAction"
+    window.close()
+
+
 def test_example_svg_icon_insert_command_surface():
     window = MainWindow()
     window.show()
@@ -3024,6 +3042,7 @@ def main():
         test_example_sync_status_action_is_available,
         test_example_high_dpi_gallery_icon_is_available,
         test_example_app_icon_color_set_is_available,
+        test_example_popup_gallery_menu_is_available,
         test_example_svg_icon_insert_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,

@@ -601,8 +601,12 @@ class MainWindow(RibbonMainWindow):
         self.style_gallery.setCheckedIndex(1)
 
         self.gallery_menu = QMenu(self.style_gallery)
-        self.gallery_menu.addAction("More styles")
-        self.gallery_menu.addAction("Reset style")
+        self.gallery_menu.setObjectName("styleGalleryPopupMenu")
+        self.gallery_menu.setToolTip("Popup gallery menu for additional style commands")
+        self.more_styles_action = self.gallery_menu.addAction("More styles")
+        self.more_styles_action.setObjectName("moreStylesGalleryAction")
+        self.reset_style_action = self.gallery_menu.addAction("Reset style")
+        self.reset_style_action.setObjectName("resetStyleGalleryAction")
         self.style_gallery.setPopupMenu(self.gallery_menu)
         self.style_gallery.itemClicked.connect(
             lambda item: self._message(f"Gallery style: {item.caption()}")
