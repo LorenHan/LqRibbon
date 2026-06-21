@@ -1102,6 +1102,14 @@ class MainWindow(RibbonMainWindow):
         if isinstance(display_button, QToolButton):
             display_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
+        self.auto_save_title_action = self.ribbonBar().addTitleButton(
+            self._icon(QStyle.StandardPixmap.SP_DialogSaveButton),
+            "AutoSave",
+        )
+        self.auto_save_title_action.setObjectName("autoSaveTitleAction")
+        self.auto_save_title_action.setCheckable(True)
+        self.auto_save_title_action.setChecked(True)
+        self._update_auto_save_title_action(True)
         self.share_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_DialogOpenButton),
             "Share",
@@ -1143,6 +1151,9 @@ class MainWindow(RibbonMainWindow):
         self.account_title_action.setObjectName("accountTitleAction")
         self.account_title_action.setToolTip("Open account and profile settings")
         self.account_title_action.setStatusTip("Account: signed in as Local User")
+        self.auto_save_title_action.triggered.connect(
+            self._update_auto_save_title_action
+        )
         self.share_title_action.triggered.connect(
             lambda: self._message("Share: invite people to this document")
         )
@@ -1819,6 +1830,17 @@ class MainWindow(RibbonMainWindow):
     def focus_search_preview(self):
         self.ribbonBar().searchLineEdit().setFocus()
         self.ribbonBar().setSearchText("ba")
+
+    def _update_auto_save_title_action(self, enabled):
+        state = "on" if enabled else "off"
+        detail = (
+            "AutoSave is on for this cloud document"
+            if enabled
+            else "AutoSave is off for this local draft"
+        )
+        self.auto_save_title_action.setToolTip(detail)
+        self.auto_save_title_action.setStatusTip(f"AutoSave: {state}")
+        self._message(f"AutoSave: {state}")
 
     def toggle_full_screen(self):
         if self.windowState() & Qt.WindowState.WindowFullScreen:

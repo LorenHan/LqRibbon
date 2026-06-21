@@ -358,6 +358,36 @@ def test_example_share_title_button_is_available():
     window.close()
 
 
+def test_example_auto_save_title_toggle_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    title_bar = window.ribbonBar()._title_button_bar
+    auto_save_button = title_bar.widgetForAction(window.auto_save_title_action)
+
+    assert window.auto_save_title_action.objectName() == "autoSaveTitleAction"
+    assert window.auto_save_title_action.isCheckable()
+    assert window.auto_save_title_action.isChecked()
+    assert not window.auto_save_title_action.icon().isNull()
+    assert "AutoSave" in window.auto_save_title_action.text()
+    assert "on" in window.auto_save_title_action.toolTip()
+    assert window.auto_save_title_action in title_bar.actions()
+    assert isinstance(auto_save_button, QToolButton)
+    assert auto_save_button.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+
+    window.auto_save_title_action.trigger()
+    _app().processEvents()
+    assert not window.auto_save_title_action.isChecked()
+    assert "off" in window.auto_save_title_action.toolTip()
+    assert "AutoSave: off" in window.statusBar().currentMessage()
+
+    window.auto_save_title_action.trigger()
+    _app().processEvents()
+    assert window.auto_save_title_action.isChecked()
+    assert "AutoSave: on" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_comments_title_button_is_available():
     window = MainWindow()
     window.show()
@@ -1455,6 +1485,7 @@ def main():
         test_example_feedback_title_button_is_available,
         test_example_account_title_button_is_available,
         test_example_share_title_button_is_available,
+        test_example_auto_save_title_toggle_is_available,
         test_example_comments_title_button_is_available,
         test_example_presence_avatar_strip_is_available,
         test_example_collaboration_status_text_is_available,

@@ -243,6 +243,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *pinRibbonAction,
                      QAction *unpinRibbonAction,
                      QAction *displayOptionsTitleAction,
+                     QAction *autoSaveTitleAction,
                      QAction *shareTitleAction,
                      QAction *commentsTitleAction,
                      QAction *presenceAvatarStripAction,
@@ -1092,6 +1093,57 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
 
     QToolBar *titleButtonBar = ribbonBar->findChild<QToolBar *>(
         QStringLiteral("lqRibbonTitleButtonBar"));
+    QToolButton *autoSaveButton =
+        titleButtonBar
+            ? qobject_cast<QToolButton *>(
+                titleButtonBar->widgetForAction(autoSaveTitleAction))
+            : nullptr;
+    const bool autoSaveStartedChecked =
+        autoSaveTitleAction && autoSaveTitleAction->isChecked();
+    if (autoSaveTitleAction) {
+        autoSaveTitleAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strAutoSaveOffStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    const bool autoSaveToggledOff =
+        autoSaveTitleAction && !autoSaveTitleAction->isChecked();
+    if (autoSaveTitleAction) {
+        autoSaveTitleAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strAutoSaveOnStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(autoSaveTitleAction
+                     && autoSaveTitleAction->objectName()
+                         == QStringLiteral("autoSaveTitleAction")
+                     && autoSaveTitleAction->isCheckable()
+                     && autoSaveStartedChecked
+                     && autoSaveToggledOff
+                     && autoSaveTitleAction->isChecked()
+                     && !autoSaveTitleAction->icon().isNull()
+                     && autoSaveTitleAction->text().contains(
+                         QStringLiteral("AutoSave"))
+                     && autoSaveTitleAction->toolTip().contains(
+                         QStringLiteral("on"))
+                     && titleButtonBar
+                     && titleButtonBar->actions().contains(autoSaveTitleAction)
+                     && autoSaveButton
+                     && autoSaveButton->toolButtonStyle()
+                         == Qt::ToolButtonIconOnly
+                     && strAutoSaveOffStatus.contains(
+                         QStringLiteral("AutoSave: off"))
+                     && strAutoSaveOnStatus.contains(
+                         QStringLiteral("AutoSave: on")),
+                 QStringLiteral("AutoSave title toggle is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
     QToolButton *shareButton =
         titleButtonBar
             ? qobject_cast<QToolButton *>(
@@ -4490,6 +4542,29 @@ int main(int argc, char *argv[])
         }
     }
 
+    QAction *autoSaveTitleAction = mainWindow.ribbonBar()->addTitleButton(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogSaveButton),
+        QObject::tr("AutoSave"));
+    autoSaveTitleAction->setObjectName(QStringLiteral("autoSaveTitleAction"));
+    autoSaveTitleAction->setCheckable(true);
+    autoSaveTitleAction->setChecked(true);
+    auto updateAutoSaveTitleAction = [&mainWindow,
+                                      autoSaveTitleAction](bool enabled) {
+        const QString strState =
+            enabled ? QObject::tr("on") : QObject::tr("off");
+        autoSaveTitleAction->setToolTip(
+            enabled
+                ? QObject::tr("AutoSave is on for this cloud document")
+                : QObject::tr("AutoSave is off for this local draft"));
+        autoSaveTitleAction->setStatusTip(
+            QObject::tr("AutoSave: %1").arg(strState));
+        if (mainWindow.statusBar()) {
+            mainWindow.statusBar()->showMessage(
+                QObject::tr("AutoSave: %1").arg(strState),
+                2500);
+        }
+    };
+    updateAutoSaveTitleAction(true);
     QAction *shareTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_DialogOpenButton),
         QObject::tr("Share"));
@@ -4554,6 +4629,10 @@ int main(int argc, char *argv[])
                 2500);
         }
     });
+    QObject::connect(autoSaveTitleAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     updateAutoSaveTitleAction);
     QObject::connect(shareTitleAction, &QAction::triggered, [&mainWindow]() {
         if (mainWindow.statusBar()) {
             mainWindow.statusBar()->showMessage(
@@ -4689,6 +4768,7 @@ int main(int argc, char *argv[])
                                 pinRibbonAction,
                                 unpinRibbonAction,
                                 displayOptionsTitleAction,
+                                autoSaveTitleAction,
                                 shareTitleAction,
                                 commentsTitleAction,
                                 presenceAvatarStripAction,
