@@ -1030,6 +1030,29 @@ class MainWindow(RibbonMainWindow):
         )
         help_group.addWidget(self.tell_me_help_redirect_preview)
 
+        keyboard_group = self.tell_me_page.addGroup("Keyboard")
+        self.key_tips_overlay_action = keyboard_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_ArrowUp),
+            "KeyTips",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.key_tips_overlay_action.setObjectName("keyTipsOverlayAction")
+        self.key_tips_overlay_action.setCheckable(True)
+        self.key_tips_overlay_action.setToolTip(
+            "Show KeyTips overlay for keyboard navigation"
+        )
+        self.key_tips_overlay_action.setStatusTip("KeyTips overlay: hidden")
+        self.key_tips_overlay_preview = QLabel("KeyTips: hidden", keyboard_group)
+        self.key_tips_overlay_preview.setObjectName("keyTipsOverlayPreview")
+        self.key_tips_overlay_preview.setMinimumWidth(190)
+        self.key_tips_overlay_preview.setFixedHeight(30)
+        self.key_tips_overlay_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.key_tips_overlay_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.key_tips_overlay_preview.setToolTip(
+            "Current keyboard KeyTips overlay state"
+        )
+        keyboard_group.addWidget(self.key_tips_overlay_preview)
+
     def _create_shell_page(self):
         window_group = self.shell_page.addGroup("Window")
         self.minimize_ribbon_action = self._add_group_action(
@@ -1630,6 +1653,7 @@ class MainWindow(RibbonMainWindow):
             self.reduced_motion_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
+            self.key_tips_overlay_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
             self.export_quick_access_action,
@@ -1680,6 +1704,7 @@ class MainWindow(RibbonMainWindow):
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
+        self.key_tips_overlay_action.toggled.connect(self.toggle_key_tips_overlay)
         self.minimize_ribbon_action.triggered.connect(
             lambda: self.ribbonBar().setRibbonMinimized(True)
         )
@@ -1980,6 +2005,7 @@ class MainWindow(RibbonMainWindow):
             self.reduced_motion_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
+            self.key_tips_overlay_action,
             self.tell_me_help_redirect_action,
             self.show_customize_action,
             self.reorder_quick_access_action,
@@ -2486,6 +2512,19 @@ class MainWindow(RibbonMainWindow):
         self.ribbonBar().setSearchText(query)
         self.ribbonBar().searchLineEdit().showPopup(query)
         self._message(f"Tell Me help: {query}")
+
+    def toggle_key_tips_overlay(self, enabled):
+        if enabled:
+            self.key_tips_overlay_preview.setText("KeyTips: F H N P")
+            self.key_tips_overlay_preview.setStyleSheet(
+                "QLabel#keyTipsOverlayPreview { color: #ffffff; background: #2b579a; font-weight: 600; }"
+            )
+            self.key_tips_overlay_action.setStatusTip("KeyTips overlay: visible")
+        else:
+            self.key_tips_overlay_preview.setText("KeyTips: hidden")
+            self.key_tips_overlay_preview.setStyleSheet("")
+            self.key_tips_overlay_action.setStatusTip("KeyTips overlay: hidden")
+        self._message(self.key_tips_overlay_action.statusTip())
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()

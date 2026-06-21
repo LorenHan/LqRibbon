@@ -1769,6 +1769,41 @@ def test_example_tell_me_help_redirect_opens_help_search_path():
     window.close()
 
 
+def test_example_key_tips_overlay_toggle_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    ribbon.setCurrentPageIndex(ribbon.pageIndex(window.tell_me_page))
+    _app().processEvents()
+
+    assert window.key_tips_overlay_action.objectName() == "keyTipsOverlayAction"
+    assert window.key_tips_overlay_action.isCheckable()
+    assert not window.key_tips_overlay_action.isChecked()
+    assert not window.key_tips_overlay_action.icon().isNull()
+    assert "keyboard navigation" in window.key_tips_overlay_action.toolTip()
+    assert window.key_tips_overlay_action.statusTip() == "KeyTips overlay: hidden"
+    assert window.key_tips_overlay_preview.objectName() == "keyTipsOverlayPreview"
+    assert window.key_tips_overlay_preview.text() == "KeyTips: hidden"
+    assert window.key_tips_overlay_action in window.search_actions
+    assert ribbon.searchAction("KeyTips") is window.key_tips_overlay_action
+
+    window.key_tips_overlay_action.trigger()
+    _app().processEvents()
+    assert window.key_tips_overlay_action.isChecked()
+    assert window.key_tips_overlay_preview.text() == "KeyTips: F H N P"
+    assert "#keyTipsOverlayPreview" in window.key_tips_overlay_preview.styleSheet()
+    assert "visible" in window.key_tips_overlay_action.statusTip()
+    assert "KeyTips overlay" in window.statusBar().currentMessage()
+
+    window.key_tips_overlay_action.trigger()
+    _app().processEvents()
+    assert not window.key_tips_overlay_action.isChecked()
+    assert window.key_tips_overlay_preview.text() == "KeyTips: hidden"
+    assert "hidden" in window.key_tips_overlay_action.statusTip()
+    window.close()
+
+
 def test_example_collapse_state_preview_tracks_modes():
     window = MainWindow()
     window.show()
@@ -2325,6 +2360,7 @@ def main():
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,
+        test_example_key_tips_overlay_toggle_is_available,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,

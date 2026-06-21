@@ -442,6 +442,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      const QList<QAction *> &tellMePhraseActions,
                      QAction *tellMeHelpRedirectAction,
                      QLabel *tellMeHelpRedirectPreview,
+                     QAction *keyTipsOverlayAction,
+                     QLabel *keyTipsOverlayPreview,
                      QLabel *collaborationStatusText,
                      QFrame *coauthoringIndicatorDot,
                      QLabel *coauthoringIndicatorLabel,
@@ -1688,6 +1690,61 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     ribbonBar->searchBar()->closePopup();
     ribbonBar->searchLineEdit()->clear();
     processCollapseTestEvents();
+
+    QToolButton *keyTipsButton =
+        collapseTestActionButton(ribbonBar, keyTipsOverlayAction);
+    if (!require(keyTipsOverlayAction
+                     && keyTipsOverlayAction->objectName()
+                         == QStringLiteral("keyTipsOverlayAction")
+                     && keyTipsOverlayAction->isCheckable()
+                     && !keyTipsOverlayAction->isChecked()
+                     && !keyTipsOverlayAction->icon().isNull()
+                     && keyTipsOverlayAction->toolTip().contains(
+                         QStringLiteral("keyboard navigation"))
+                     && keyTipsOverlayAction->statusTip()
+                         == QStringLiteral("KeyTips overlay: hidden")
+                     && keyTipsOverlayPreview
+                     && keyTipsOverlayPreview->objectName()
+                         == QStringLiteral("keyTipsOverlayPreview")
+                     && keyTipsOverlayPreview->text()
+                         == QStringLiteral("KeyTips: hidden")
+                     && ribbonBar->searchAction(QStringLiteral("KeyTips"))
+                         == keyTipsOverlayAction
+                     && keyTipsButton
+                     && keyTipsButton->defaultAction() == keyTipsOverlayAction,
+                 QStringLiteral("KeyTips overlay defaults hidden"))) {
+        return 1;
+    }
+    keyTipsOverlayAction->trigger();
+    processCollapseTestEvents();
+    const QString strKeyTipsStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(keyTipsOverlayAction->isChecked()
+                     && keyTipsOverlayAction->statusTip()
+                         == QStringLiteral("KeyTips overlay: visible")
+                     && keyTipsOverlayPreview->text()
+                         == QStringLiteral("KeyTips: F H N P")
+                     && keyTipsOverlayPreview->styleSheet().contains(
+                         QStringLiteral("#keyTipsOverlayPreview"))
+                     && strKeyTipsStatus.contains(
+                         QStringLiteral("KeyTips overlay")),
+                 QStringLiteral("KeyTips overlay shows keyboard hints"))) {
+        return 1;
+    }
+    keyTipsOverlayAction->trigger();
+    processCollapseTestEvents();
+    if (!require(!keyTipsOverlayAction->isChecked()
+                     && keyTipsOverlayAction->statusTip()
+                         == QStringLiteral("KeyTips overlay: hidden")
+                     && keyTipsOverlayPreview->text()
+                         == QStringLiteral("KeyTips: hidden"),
+                 QStringLiteral("KeyTips overlay hides keyboard hints"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
 
     reset();
     doubleClickCollapseTestTab(ribbonBar, firstIndex);
@@ -5021,6 +5078,31 @@ int main(int argc, char *argv[])
         QObject::tr("Fallback path for commands that are not found"));
     tellMeHelpGroup->addWidget(tellMeHelpRedirectPreview);
 
+    LqRibbon::RibbonGroup *tellMeKeyboardGroup =
+        tellMePage->addGroup(QObject::tr("Keyboard"));
+    QAction *keyTipsOverlayAction = tellMeKeyboardGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_ArrowUp),
+        QObject::tr("KeyTips"),
+        Qt::ToolButtonTextBesideIcon);
+    keyTipsOverlayAction->setObjectName(
+        QStringLiteral("keyTipsOverlayAction"));
+    keyTipsOverlayAction->setCheckable(true);
+    keyTipsOverlayAction->setToolTip(
+        QObject::tr("Show KeyTips overlay for keyboard navigation"));
+    keyTipsOverlayAction->setStatusTip(
+        QObject::tr("KeyTips overlay: hidden"));
+    QLabel *keyTipsOverlayPreview = new QLabel(tellMeKeyboardGroup);
+    keyTipsOverlayPreview->setObjectName(
+        QStringLiteral("keyTipsOverlayPreview"));
+    keyTipsOverlayPreview->setText(QObject::tr("KeyTips: hidden"));
+    keyTipsOverlayPreview->setMinimumWidth(190);
+    keyTipsOverlayPreview->setFixedHeight(30);
+    keyTipsOverlayPreview->setAlignment(Qt::AlignCenter);
+    keyTipsOverlayPreview->setFrameShape(QFrame::StyledPanel);
+    keyTipsOverlayPreview->setToolTip(
+        QObject::tr("Current keyboard KeyTips overlay state"));
+    tellMeKeyboardGroup->addWidget(keyTipsOverlayPreview);
+
     LqRibbon::RibbonPage *shellPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Shell"));
     LqRibbon::RibbonGroup *windowGroup =
@@ -5544,6 +5626,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), keyTipsOverlayAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     showQuickAccessBarAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
@@ -6723,6 +6806,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(reducedMotionAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
+    mainWindow.ribbonBar()->registerSearchAction(keyTipsOverlayAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
     mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
     mainWindow.ribbonBar()->registerSearchAction(reorderQuickAccessAction);
@@ -7230,6 +7314,30 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(keyTipsOverlayAction,
+                     &QAction::toggled,
+                     [&mainWindow,
+                      keyTipsOverlayAction,
+                      keyTipsOverlayPreview](bool enabled) {
+                         if (enabled) {
+                             keyTipsOverlayPreview->setText(
+                                 QObject::tr("KeyTips: F H N P"));
+                             keyTipsOverlayPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#keyTipsOverlayPreview { color: #ffffff; background: #2b579a; font-weight: 600; }"));
+                             keyTipsOverlayAction->setStatusTip(
+                                 QObject::tr("KeyTips overlay: visible"));
+                         } else {
+                             keyTipsOverlayPreview->setText(
+                                 QObject::tr("KeyTips: hidden"));
+                             keyTipsOverlayPreview->setStyleSheet(QString());
+                             keyTipsOverlayAction->setStatusTip(
+                                 QObject::tr("KeyTips overlay: hidden"));
+                         }
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 keyTipsOverlayAction->statusTip(), 2500);
+                         }
+                     });
     auto applyTellMePhrase =
         [&mainWindow, centerSearchAction](const QString &strPhrase) {
         centerSearchAction->setChecked(true);
@@ -7395,6 +7503,8 @@ int main(int argc, char *argv[])
                                 tellMePhraseActions,
                                 tellMeHelpRedirectAction,
                                 tellMeHelpRedirectPreview,
+                                keyTipsOverlayAction,
+                                keyTipsOverlayPreview,
                                 collaborationStatusText,
                                 coauthoringIndicatorDot,
                                 coauthoringIndicatorLabel,
