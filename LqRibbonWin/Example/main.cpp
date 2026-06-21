@@ -211,6 +211,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *pinRibbonAction,
                      QAction *unpinRibbonAction,
                      QAction *displayOptionsTitleAction,
+                     QAction *shareTitleAction,
                      QAction *feedbackTitleAction,
                      QAction *accountTitleAction,
                      QAction *showTabsAndCommandsAction,
@@ -1050,6 +1051,37 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
 
     QToolBar *titleButtonBar = ribbonBar->findChild<QToolBar *>(
         QStringLiteral("lqRibbonTitleButtonBar"));
+    QToolButton *shareButton =
+        titleButtonBar
+            ? qobject_cast<QToolButton *>(
+                titleButtonBar->widgetForAction(shareTitleAction))
+            : nullptr;
+    if (shareTitleAction) {
+        shareTitleAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strShareStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(shareTitleAction
+                     && shareTitleAction->objectName()
+                         == QStringLiteral("shareTitleAction")
+                     && !shareTitleAction->icon().isNull()
+                     && shareTitleAction->toolTip().contains(
+                         QStringLiteral("document"))
+                     && titleButtonBar
+                     && titleButtonBar->actions().contains(shareTitleAction)
+                     && shareButton
+                     && shareButton->toolButtonStyle()
+                         == Qt::ToolButtonIconOnly
+                     && strShareStatus.contains(QStringLiteral("Share")),
+                 QStringLiteral("Share title button is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
     QToolButton *feedbackButton =
         titleButtonBar
             ? qobject_cast<QToolButton *>(
@@ -4187,6 +4219,13 @@ int main(int argc, char *argv[])
         }
     }
 
+    QAction *shareTitleAction = mainWindow.ribbonBar()->addTitleButton(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogOpenButton),
+        QObject::tr("Share"));
+    shareTitleAction->setObjectName(QStringLiteral("shareTitleAction"));
+    shareTitleAction->setToolTip(QObject::tr("Share this document"));
+    shareTitleAction->setStatusTip(
+        QObject::tr("Share: invite people to this document"));
     QAction *feedbackTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxInformation),
         QObject::tr("Feedback"));
@@ -4215,6 +4254,13 @@ int main(int argc, char *argv[])
         if (mainWindow.statusBar()) {
             mainWindow.statusBar()->showMessage(
                 QObject::tr("Account: signed in as Local User"),
+                2500);
+        }
+    });
+    QObject::connect(shareTitleAction, &QAction::triggered, [&mainWindow]() {
+        if (mainWindow.statusBar()) {
+            mainWindow.statusBar()->showMessage(
+                QObject::tr("Share: invite people to this document"),
                 2500);
         }
     });
@@ -4339,6 +4385,7 @@ int main(int argc, char *argv[])
                                 pinRibbonAction,
                                 unpinRibbonAction,
                                 displayOptionsTitleAction,
+                                shareTitleAction,
                                 feedbackTitleAction,
                                 accountTitleAction,
                                 showTabsAndCommandsAction,

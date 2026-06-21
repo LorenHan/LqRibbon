@@ -1041,6 +1041,13 @@ class MainWindow(RibbonMainWindow):
         if isinstance(display_button, QToolButton):
             display_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
+        self.share_title_action = self.ribbonBar().addTitleButton(
+            self._icon(QStyle.StandardPixmap.SP_DialogOpenButton),
+            "Share",
+        )
+        self.share_title_action.setObjectName("shareTitleAction")
+        self.share_title_action.setToolTip("Share this document")
+        self.share_title_action.setStatusTip("Share: invite people to this document")
         self.feedback_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_MessageBoxInformation),
             "Feedback",
@@ -1057,6 +1064,9 @@ class MainWindow(RibbonMainWindow):
         self.account_title_action.setObjectName("accountTitleAction")
         self.account_title_action.setToolTip("Open account and profile settings")
         self.account_title_action.setStatusTip("Account: signed in as Local User")
+        self.share_title_action.triggered.connect(
+            lambda: self._message("Share: invite people to this document")
+        )
         self.feedback_title_action.triggered.connect(
             lambda: self._message("Feedback: send product feedback")
         )
