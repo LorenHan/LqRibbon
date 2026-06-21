@@ -1052,6 +1052,26 @@ class MainWindow(RibbonMainWindow):
             "Current keyboard KeyTips overlay state"
         )
         keyboard_group.addWidget(self.key_tips_overlay_preview)
+        self.alt_key_tabs_action = keyboard_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_ArrowForward),
+            "Alt Tabs",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.alt_key_tabs_action.setObjectName("altKeyTabsAction")
+        self.alt_key_tabs_action.setShortcut(QKeySequence("Alt"))
+        self.alt_key_tabs_action.setProperty("shortcutHint", "Alt")
+        self.alt_key_tabs_action.setToolTip(
+            "Activate ribbon tabs from the Alt key"
+        )
+        self.alt_key_tabs_action.setStatusTip("Alt key tabs: inactive")
+        self.alt_key_tabs_preview = QLabel("Alt tabs: inactive", keyboard_group)
+        self.alt_key_tabs_preview.setObjectName("altKeyTabsPreview")
+        self.alt_key_tabs_preview.setMinimumWidth(190)
+        self.alt_key_tabs_preview.setFixedHeight(30)
+        self.alt_key_tabs_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.alt_key_tabs_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.alt_key_tabs_preview.setToolTip("Current Alt key tab activation state")
+        keyboard_group.addWidget(self.alt_key_tabs_preview)
 
     def _create_shell_page(self):
         window_group = self.shell_page.addGroup("Window")
@@ -1654,6 +1674,7 @@ class MainWindow(RibbonMainWindow):
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.key_tips_overlay_action,
+            self.alt_key_tabs_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
             self.export_quick_access_action,
@@ -1705,6 +1726,7 @@ class MainWindow(RibbonMainWindow):
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
         self.key_tips_overlay_action.toggled.connect(self.toggle_key_tips_overlay)
+        self.alt_key_tabs_action.triggered.connect(self.activate_alt_key_tabs)
         self.minimize_ribbon_action.triggered.connect(
             lambda: self.ribbonBar().setRibbonMinimized(True)
         )
@@ -2006,6 +2028,7 @@ class MainWindow(RibbonMainWindow):
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.key_tips_overlay_action,
+            self.alt_key_tabs_action,
             self.tell_me_help_redirect_action,
             self.show_customize_action,
             self.reorder_quick_access_action,
@@ -2525,6 +2548,18 @@ class MainWindow(RibbonMainWindow):
             self.key_tips_overlay_preview.setStyleSheet("")
             self.key_tips_overlay_action.setStatusTip("KeyTips overlay: hidden")
         self._message(self.key_tips_overlay_action.statusTip())
+
+    def activate_alt_key_tabs(self):
+        ribbon = self.ribbonBar()
+        ribbon.setCurrentPageIndex(ribbon.pageIndex(self.general_page))
+        if not self.key_tips_overlay_action.isChecked():
+            self.key_tips_overlay_action.setChecked(True)
+        self.alt_key_tabs_preview.setText("Alt tabs: General F")
+        self.alt_key_tabs_preview.setStyleSheet(
+            "QLabel#altKeyTabsPreview { color: #ffffff; background: #107c41; font-weight: 600; }"
+        )
+        self.alt_key_tabs_action.setStatusTip("Alt key tabs: active")
+        self._message(self.alt_key_tabs_action.statusTip())
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()

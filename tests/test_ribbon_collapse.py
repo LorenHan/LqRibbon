@@ -1804,6 +1804,36 @@ def test_example_key_tips_overlay_toggle_is_available():
     window.close()
 
 
+def test_example_alt_key_tab_activation_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    ribbon.setCurrentPageIndex(ribbon.pageIndex(window.tell_me_page))
+    _app().processEvents()
+
+    assert window.alt_key_tabs_action.objectName() == "altKeyTabsAction"
+    assert not window.alt_key_tabs_action.icon().isNull()
+    assert "Activate ribbon tabs" in window.alt_key_tabs_action.toolTip()
+    assert window.alt_key_tabs_action.property("shortcutHint") == "Alt"
+    assert window.alt_key_tabs_action.statusTip() == "Alt key tabs: inactive"
+    assert window.alt_key_tabs_preview.objectName() == "altKeyTabsPreview"
+    assert window.alt_key_tabs_preview.text() == "Alt tabs: inactive"
+    assert window.alt_key_tabs_action in window.search_actions
+    assert ribbon.searchAction("Alt Tabs") is window.alt_key_tabs_action
+
+    window.alt_key_tabs_action.trigger()
+    _app().processEvents()
+    assert ribbon.currentPage() is window.general_page
+    assert window.key_tips_overlay_action.isChecked()
+    assert window.key_tips_overlay_preview.text() == "KeyTips: F H N P"
+    assert window.alt_key_tabs_preview.text() == "Alt tabs: General F"
+    assert "#altKeyTabsPreview" in window.alt_key_tabs_preview.styleSheet()
+    assert window.alt_key_tabs_action.statusTip() == "Alt key tabs: active"
+    assert "Alt key tabs" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_collapse_state_preview_tracks_modes():
     window = MainWindow()
     window.show()
@@ -2361,6 +2391,7 @@ def main():
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,
         test_example_key_tips_overlay_toggle_is_available,
+        test_example_alt_key_tab_activation_is_available,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,

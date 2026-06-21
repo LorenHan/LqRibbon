@@ -444,6 +444,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *tellMeHelpRedirectPreview,
                      QAction *keyTipsOverlayAction,
                      QLabel *keyTipsOverlayPreview,
+                     QAction *altKeyTabsAction,
+                     QLabel *altKeyTabsPreview,
                      QLabel *collaborationStatusText,
                      QFrame *coauthoringIndicatorDot,
                      QLabel *coauthoringIndicatorLabel,
@@ -1740,6 +1742,56 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && keyTipsOverlayPreview->text()
                          == QStringLiteral("KeyTips: hidden"),
                  QStringLiteral("KeyTips overlay hides keyboard hints"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    if (!require(altKeyTabsAction
+                     && altKeyTabsAction->objectName()
+                         == QStringLiteral("altKeyTabsAction")
+                     && !altKeyTabsAction->icon().isNull()
+                     && altKeyTabsAction->toolTip().contains(
+                         QStringLiteral("Activate ribbon tabs"))
+                     && altKeyTabsAction->property("shortcutHint").toString()
+                         == QStringLiteral("Alt")
+                     && altKeyTabsAction->statusTip()
+                         == QStringLiteral("Alt key tabs: inactive")
+                     && altKeyTabsPreview
+                     && altKeyTabsPreview->objectName()
+                         == QStringLiteral("altKeyTabsPreview")
+                     && altKeyTabsPreview->text()
+                         == QStringLiteral("Alt tabs: inactive")
+                     && ribbonBar->searchAction(QStringLiteral("Alt Tabs"))
+                         == altKeyTabsAction,
+                 QStringLiteral("Alt key tab activation defaults inactive"))) {
+        return 1;
+    }
+    const int generalPageIndexForAlt = ribbonBar->indexOf(generalPage);
+    if (tellMePageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(tellMePageIndex);
+        processCollapseTestEvents();
+    }
+    altKeyTabsAction->trigger();
+    processCollapseTestEvents();
+    const QString strAltKeyTabsStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(generalPageIndexForAlt >= 0
+                     && ribbonBar->currentPage() == generalPage
+                     && keyTipsOverlayAction->isChecked()
+                     && keyTipsOverlayPreview->text()
+                         == QStringLiteral("KeyTips: F H N P")
+                     && altKeyTabsPreview->text()
+                         == QStringLiteral("Alt tabs: General F")
+                     && altKeyTabsPreview->styleSheet().contains(
+                         QStringLiteral("#altKeyTabsPreview"))
+                     && altKeyTabsAction->statusTip()
+                         == QStringLiteral("Alt key tabs: active")
+                     && strAltKeyTabsStatus.contains(
+                         QStringLiteral("Alt key tabs")),
+                 QStringLiteral("Alt key activates ribbon tab KeyTips"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -5102,6 +5154,26 @@ int main(int argc, char *argv[])
     keyTipsOverlayPreview->setToolTip(
         QObject::tr("Current keyboard KeyTips overlay state"));
     tellMeKeyboardGroup->addWidget(keyTipsOverlayPreview);
+    QAction *altKeyTabsAction = tellMeKeyboardGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_ArrowForward),
+        QObject::tr("Alt Tabs"),
+        Qt::ToolButtonTextBesideIcon);
+    altKeyTabsAction->setObjectName(QStringLiteral("altKeyTabsAction"));
+    altKeyTabsAction->setShortcut(QKeySequence(QStringLiteral("Alt")));
+    altKeyTabsAction->setProperty("shortcutHint", QStringLiteral("Alt"));
+    altKeyTabsAction->setToolTip(
+        QObject::tr("Activate ribbon tabs from the Alt key"));
+    altKeyTabsAction->setStatusTip(QObject::tr("Alt key tabs: inactive"));
+    QLabel *altKeyTabsPreview = new QLabel(tellMeKeyboardGroup);
+    altKeyTabsPreview->setObjectName(QStringLiteral("altKeyTabsPreview"));
+    altKeyTabsPreview->setText(QObject::tr("Alt tabs: inactive"));
+    altKeyTabsPreview->setMinimumWidth(190);
+    altKeyTabsPreview->setFixedHeight(30);
+    altKeyTabsPreview->setAlignment(Qt::AlignCenter);
+    altKeyTabsPreview->setFrameShape(QFrame::StyledPanel);
+    altKeyTabsPreview->setToolTip(
+        QObject::tr("Current Alt key tab activation state"));
+    tellMeKeyboardGroup->addWidget(altKeyTabsPreview);
 
     LqRibbon::RibbonPage *shellPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Shell"));
@@ -5627,6 +5699,7 @@ int main(int argc, char *argv[])
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
     customizeManager->addToCategory(QObject::tr("Actions"), keyTipsOverlayAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), altKeyTabsAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     showQuickAccessBarAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
@@ -6807,6 +6880,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(keyTipsOverlayAction);
+    mainWindow.ribbonBar()->registerSearchAction(altKeyTabsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
     mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
     mainWindow.ribbonBar()->registerSearchAction(reorderQuickAccessAction);
@@ -7338,6 +7412,33 @@ int main(int argc, char *argv[])
                                  keyTipsOverlayAction->statusTip(), 2500);
                          }
                      });
+    QObject::connect(altKeyTabsAction,
+                     &QAction::triggered,
+                     [&mainWindow,
+                      generalPage,
+                      keyTipsOverlayAction,
+                      altKeyTabsAction,
+                      altKeyTabsPreview]() {
+                         const int generalIndex =
+                             mainWindow.ribbonBar()->indexOf(generalPage);
+                         if (generalIndex >= 0) {
+                             mainWindow.ribbonBar()->setCurrentPageIndex(
+                                 generalIndex);
+                         }
+                         if (!keyTipsOverlayAction->isChecked()) {
+                             keyTipsOverlayAction->setChecked(true);
+                         }
+                         altKeyTabsPreview->setText(
+                             QObject::tr("Alt tabs: General F"));
+                         altKeyTabsPreview->setStyleSheet(
+                             QStringLiteral("QLabel#altKeyTabsPreview { color: #ffffff; background: #107c41; font-weight: 600; }"));
+                         altKeyTabsAction->setStatusTip(
+                             QObject::tr("Alt key tabs: active"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 altKeyTabsAction->statusTip(), 2500);
+                         }
+                     });
     auto applyTellMePhrase =
         [&mainWindow, centerSearchAction](const QString &strPhrase) {
         centerSearchAction->setChecked(true);
@@ -7505,6 +7606,8 @@ int main(int argc, char *argv[])
                                 tellMeHelpRedirectPreview,
                                 keyTipsOverlayAction,
                                 keyTipsOverlayPreview,
+                                altKeyTabsAction,
+                                altKeyTabsPreview,
                                 collaborationStatusText,
                                 coauthoringIndicatorDot,
                                 coauthoringIndicatorLabel,
