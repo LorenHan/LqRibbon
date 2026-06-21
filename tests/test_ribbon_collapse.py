@@ -1219,6 +1219,31 @@ def test_example_translator_command_surface():
     window.close()
 
 
+def test_example_read_aloud_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.read_aloud_action.objectName() == "readAloudAction"
+    assert window.read_aloud_action.isCheckable()
+    assert not window.read_aloud_action.isChecked()
+    assert not window.read_aloud_action.icon().isNull()
+    assert "Read selected text aloud" in window.read_aloud_action.toolTip()
+    assert window.read_aloud_preview.objectName() == "readAloudPreview"
+    assert window.read_aloud_preview.text() == "Read Aloud: stopped"
+    assert window.read_aloud_action in window.search_actions
+    assert ribbon.searchAction("Read Aloud") is window.read_aloud_action
+
+    window.read_aloud_action.trigger()
+    _app().processEvents()
+    assert window.read_aloud_action.isChecked()
+    assert window.read_aloud_preview.text() == "Read Aloud: playing paragraph"
+    assert "#readAloudPreview" in window.read_aloud_preview.styleSheet()
+    assert "Read Aloud" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1855,6 +1880,7 @@ def main():
         test_example_editor_pane_command_surface,
         test_example_spelling_grammar_card_surface,
         test_example_translator_command_surface,
+        test_example_read_aloud_command_surface,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,

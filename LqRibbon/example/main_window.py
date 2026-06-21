@@ -682,6 +682,29 @@ class MainWindow(RibbonMainWindow):
         self.translator_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.translator_preview.setToolTip("Translator pane preview")
         language_group.addWidget(self.translator_preview)
+        self.read_aloud_action = language_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_MediaPlay),
+            "Read Aloud",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.read_aloud_action.setObjectName("readAloudAction")
+        self.read_aloud_action.setCheckable(True)
+        self.read_aloud_action.setToolTip(
+            "Read selected text aloud with speech playback"
+        )
+        self.read_aloud_action.setStatusTip(
+            "Read Aloud: start speech playback"
+        )
+        self.read_aloud_preview = QLabel(
+            "Read Aloud: stopped", language_group
+        )
+        self.read_aloud_preview.setObjectName("readAloudPreview")
+        self.read_aloud_preview.setMinimumWidth(190)
+        self.read_aloud_preview.setFixedHeight(30)
+        self.read_aloud_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.read_aloud_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.read_aloud_preview.setToolTip("Speech playback status preview")
+        language_group.addWidget(self.read_aloud_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -1298,6 +1321,7 @@ class MainWindow(RibbonMainWindow):
             self.editor_pane_action,
             self.spelling_grammar_action,
             self.translator_action,
+            self.read_aloud_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1332,6 +1356,7 @@ class MainWindow(RibbonMainWindow):
             self.show_spelling_grammar_card
         )
         self.translator_action.triggered.connect(self.open_translator)
+        self.read_aloud_action.toggled.connect(self.toggle_read_aloud)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1602,6 +1627,7 @@ class MainWindow(RibbonMainWindow):
             self.editor_pane_action,
             self.spelling_grammar_action,
             self.translator_action,
+            self.read_aloud_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -1952,6 +1978,22 @@ class MainWindow(RibbonMainWindow):
             "QLabel#translatorPreview { color: #0f6cbd; font-weight: 600; }"
         )
         self._message("Translator: English to Chinese")
+
+    def toggle_read_aloud(self, enabled):
+        if enabled:
+            self.read_aloud_preview.setText("Read Aloud: playing paragraph")
+            self.read_aloud_preview.setStyleSheet(
+                "QLabel#readAloudPreview { color: #107c41; font-weight: 600; }"
+            )
+            self.read_aloud_action.setToolTip("Stop speech playback")
+            self._message("Read Aloud: playing paragraph")
+        else:
+            self.read_aloud_preview.setText("Read Aloud: stopped")
+            self.read_aloud_preview.setStyleSheet("")
+            self.read_aloud_action.setToolTip(
+                "Read selected text aloud with speech playback"
+            )
+            self._message("Read Aloud: stopped")
 
     def toggle_dictate_microphone(self, enabled):
         if enabled:

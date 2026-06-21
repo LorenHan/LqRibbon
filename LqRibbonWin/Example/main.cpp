@@ -287,6 +287,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *spellingGrammarCard,
                      QAction *translatorAction,
                      QLabel *translatorPreview,
+                     QAction *readAloudAction,
+                     QLabel *readAloudPreview,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -948,6 +950,42 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strTranslatorStatus.contains(
                          QStringLiteral("Translator")),
                  QStringLiteral("Translator command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *readAloudButton =
+        collapseTestActionButton(ribbonBar, readAloudAction);
+    if (readAloudAction) {
+        readAloudAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strReadAloudStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(readAloudAction
+                     && readAloudAction->objectName()
+                         == QStringLiteral("readAloudAction")
+                     && readAloudAction->isCheckable()
+                     && readAloudAction->isChecked()
+                     && !readAloudAction->icon().isNull()
+                     && readAloudAction->toolTip().contains(
+                         QStringLiteral("speech playback"))
+                     && readAloudButton
+                     && readAloudPreview
+                     && readAloudPreview->objectName()
+                         == QStringLiteral("readAloudPreview")
+                     && readAloudPreview->text()
+                         == QStringLiteral("Read Aloud: playing paragraph")
+                     && readAloudPreview->styleSheet().contains(
+                         QStringLiteral("#readAloudPreview"))
+                     && ribbonBar->searchAction(QStringLiteral("Read Aloud"))
+                         == readAloudAction
+                     && strReadAloudStatus.contains(
+                         QStringLiteral("Read Aloud")),
+                 QStringLiteral("Read Aloud command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3721,6 +3759,26 @@ int main(int argc, char *argv[])
     translatorPreview->setFrameShape(QFrame::StyledPanel);
     translatorPreview->setToolTip(QObject::tr("Translator pane preview"));
     languageGroup->addWidget(translatorPreview);
+    QAction *readAloudAction = languageGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MediaPlay),
+        QObject::tr("Read Aloud"),
+        Qt::ToolButtonTextUnderIcon);
+    readAloudAction->setObjectName(QStringLiteral("readAloudAction"));
+    readAloudAction->setCheckable(true);
+    readAloudAction->setToolTip(
+        QObject::tr("Read selected text aloud with speech playback"));
+    readAloudAction->setStatusTip(
+        QObject::tr("Read Aloud: start speech playback"));
+    QLabel *readAloudPreview = new QLabel(languageGroup);
+    readAloudPreview->setObjectName(QStringLiteral("readAloudPreview"));
+    readAloudPreview->setText(QObject::tr("Read Aloud: stopped"));
+    readAloudPreview->setMinimumWidth(190);
+    readAloudPreview->setFixedHeight(30);
+    readAloudPreview->setAlignment(Qt::AlignCenter);
+    readAloudPreview->setFrameShape(QFrame::StyledPanel);
+    readAloudPreview->setToolTip(
+        QObject::tr("Speech playback status preview"));
+    languageGroup->addWidget(readAloudPreview);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -4301,6 +4359,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     spellingGrammarAction);
     customizeManager->addToCategory(QObject::tr("Actions"), translatorAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), readAloudAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -5402,6 +5461,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(editorPaneAction);
     mainWindow.ribbonBar()->registerSearchAction(spellingGrammarAction);
     mainWindow.ribbonBar()->registerSearchAction(translatorAction);
+    mainWindow.ribbonBar()->registerSearchAction(readAloudAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -5659,6 +5719,38 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(readAloudAction,
+                     &QAction::toggled,
+                     [&mainWindow, readAloudAction, readAloudPreview](
+                         bool enabled) {
+                         if (enabled) {
+                             readAloudPreview->setText(
+                                 QObject::tr(
+                                     "Read Aloud: playing paragraph"));
+                             readAloudPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#readAloudPreview { color: #107c41; font-weight: 600; }"));
+                             readAloudAction->setToolTip(
+                                 QObject::tr("Stop speech playback"));
+                             if (mainWindow.statusBar()) {
+                                 mainWindow.statusBar()->showMessage(
+                                     QObject::tr(
+                                         "Read Aloud: playing paragraph"),
+                                     2500);
+                             }
+                             return;
+                         }
+                         readAloudPreview->setText(
+                             QObject::tr("Read Aloud: stopped"));
+                         readAloudPreview->setStyleSheet(QString());
+                         readAloudAction->setToolTip(
+                             QObject::tr(
+                                 "Read selected text aloud with speech playback"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Read Aloud: stopped"),
+                                 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -5805,6 +5897,8 @@ int main(int argc, char *argv[])
                                 spellingGrammarCard,
                                 translatorAction,
                                 translatorPreview,
+                                readAloudAction,
+                                readAloudPreview,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,
