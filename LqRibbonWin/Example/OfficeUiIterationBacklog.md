@@ -133,7 +133,7 @@ Default style remains `Office 2016 Blue`.
 | 102 | Reset all ribbon customizations | Customize dialog | Complete |
 | 103 | Export ribbon customization | Customize dialog | Complete |
 | 104 | Import ribbon customization | Customize dialog | Complete |
-| 105 | Backstage info page | Backstage | Planned |
+| 105 | Backstage info page | Backstage | Complete |
 | 106 | Backstage account page | Backstage | Planned |
 | 107 | Backstage open page | Backstage | Planned |
 | 108 | Backstage export page | Backstage | Planned |

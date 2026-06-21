@@ -659,6 +659,10 @@ QAction *RibbonBackstageView::addPage(QWidget *widget)
     action->setCheckable(true);
     m_actionPages.insert(action, widget);
     QWidget::addAction(action);
+    QObject::connect(action,
+                     &QAction::triggered,
+                     this,
+                     [this, widget]() { setActivePage(widget); });
     widget->setParent(m_pageStack);
     m_pageStack->addWidget(widget);
     if (!activePage()) {

@@ -1337,6 +1337,7 @@ class LqRibbonBackstageView(QWidget):
         self._action_pages[action] = widget
         self.stack.addWidget(widget)
         self._action_buttons[action].setTabStyle(True)
+        action.triggered.connect(lambda _checked=False: self.setActivePage(widget))
         self._action_buttons[action].clicked.connect(lambda: self.setActivePage(widget))
         if self.stack.count() == 1:
             self.setActivePage(widget)

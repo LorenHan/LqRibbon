@@ -465,6 +465,10 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *normalStatusViewAction,
                      QAction *compactStatusViewAction,
                      LqRibbon::RibbonBackstageView *backstage,
+                     QAction *backstageInfoAction,
+                     QWidget *backstageInfoPage,
+                     QLabel *backstageInfoProductLabel,
+                     QLabel *backstageInfoModeLabel,
                      QAction *saveCopyAction,
                      QComboBox *cloudLocationCombo,
                      LqRibbon::RibbonPageSystemRecentFileList *recentFiles,
@@ -1975,6 +1979,49 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strAltKeyTabsStatus.contains(
                          QStringLiteral("Alt key tabs")),
                  QStringLiteral("Alt key activates ribbon tab KeyTips"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    if (backstage && backstageInfoPage) {
+        backstage->setActivePage(backstageInfoPage);
+    }
+    if (backstageInfoAction) {
+        backstageInfoAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strBackstageInfoStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(backstage
+                     && backstageInfoAction
+                     && backstageInfoAction->objectName()
+                         == QStringLiteral("backstageInfoAction")
+                     && backstageInfoAction->isCheckable()
+                     && backstageInfoAction->toolTip().contains(
+                         QStringLiteral("document information"))
+                     && backstageInfoPage
+                     && backstageInfoPage->objectName()
+                         == QStringLiteral("backstageInfoPage")
+                     && backstageInfoPage->windowTitle()
+                         == QStringLiteral("Info")
+                     && backstage->activePage() == backstageInfoPage
+                     && backstageInfoAction->isChecked()
+                     && backstageInfoProductLabel
+                     && backstageInfoProductLabel->objectName()
+                         == QStringLiteral("backstageInfoProductLabel")
+                     && backstageInfoProductLabel->text()
+                         == QStringLiteral("LqRibbon Demo")
+                     && backstageInfoModeLabel
+                     && backstageInfoModeLabel->objectName()
+                         == QStringLiteral("backstageInfoModeLabel")
+                     && backstageInfoModeLabel->text()
+                         == QStringLiteral("Backstage page")
+                     && strBackstageInfoStatus.contains(
+                         QStringLiteral("Info:")),
+                 QStringLiteral("Backstage info page is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6253,13 +6300,23 @@ int main(int argc, char *argv[])
                          }
                      });
     backstage->addSeparator();
-    QWidget *backstagePage = new QWidget(backstage);
-    QFormLayout *backstageLayout = new QFormLayout(backstagePage);
+    QWidget *backstageInfoPage = new QWidget(backstage);
+    backstageInfoPage->setObjectName(QStringLiteral("backstageInfoPage"));
+    backstageInfoPage->setWindowTitle(QObject::tr("Info"));
+    QFormLayout *backstageLayout = new QFormLayout(backstageInfoPage);
+    QLabel *backstageInfoProductLabel =
+        new QLabel(QObject::tr("LqRibbon Demo"), backstageInfoPage);
+    backstageInfoProductLabel->setObjectName(
+        QStringLiteral("backstageInfoProductLabel"));
+    QLabel *backstageInfoModeLabel =
+        new QLabel(QObject::tr("Backstage page"), backstageInfoPage);
+    backstageInfoModeLabel->setObjectName(
+        QStringLiteral("backstageInfoModeLabel"));
     backstageLayout->addRow(QObject::tr("Product"),
-                            new QLabel(QObject::tr("LqRibbon Demo"), backstagePage));
+                            backstageInfoProductLabel);
     backstageLayout->addRow(QObject::tr("Mode"),
-                            new QLabel(QObject::tr("Backstage page"), backstagePage));
-    QComboBox *cloudLocationCombo = new QComboBox(backstagePage);
+                            backstageInfoModeLabel);
+    QComboBox *cloudLocationCombo = new QComboBox(backstageInfoPage);
     cloudLocationCombo->setObjectName(QStringLiteral("cloudLocationPicker"));
     cloudLocationCombo->addItems(QStringList()
                                  << QObject::tr("OneDrive - Contoso")
@@ -6280,7 +6337,7 @@ int main(int argc, char *argv[])
     backstageLayout->addRow(QObject::tr("Cloud location"), cloudLocationCombo);
     QLabel *uploadBeforeSharePrompt = new QLabel(
         QObject::tr("Upload required before sharing"),
-        backstagePage);
+        backstageInfoPage);
     uploadBeforeSharePrompt->setObjectName(
         QStringLiteral("uploadBeforeSharePrompt"));
     uploadBeforeSharePrompt->setToolTip(
@@ -6288,7 +6345,23 @@ int main(int argc, char *argv[])
     uploadBeforeSharePrompt->setWordWrap(true);
     backstageLayout->addRow(QObject::tr("Share readiness"),
                             uploadBeforeSharePrompt);
-    backstage->addPage(backstagePage);
+    QAction *backstageInfoAction = backstage->addPage(backstageInfoPage);
+    backstageInfoAction->setObjectName(QStringLiteral("backstageInfoAction"));
+    backstageInfoAction->setToolTip(
+        QObject::tr("Open document information"));
+    backstageInfoAction->setStatusTip(
+        QObject::tr("Info: document properties and sharing state"));
+    QObject::connect(backstageInfoAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Info: document properties and sharing state"),
+                                 2500);
+                         }
+                     });
     QWidget *versionHistoryPage = new QWidget(backstage);
     versionHistoryPage->setObjectName(QStringLiteral("versionHistoryPage"));
     versionHistoryPage->setWindowTitle(QObject::tr("Version History"));
@@ -8944,6 +9017,10 @@ int main(int argc, char *argv[])
                                 normalViewAction,
                                 compactViewAction,
                                 backstage,
+                                backstageInfoAction,
+                                backstageInfoPage,
+                                backstageInfoProductLabel,
+                                backstageInfoModeLabel,
                                 saveCopyAction,
                                 cloudLocationCombo,
                                 recentFiles,

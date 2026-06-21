@@ -1541,12 +1541,17 @@ class MainWindow(RibbonMainWindow):
         )
         self.backstage.addSeparator()
 
-        backstage_page = QWidget(self.backstage)
-        backstage_page.setWindowTitle("Info")
-        backstage_layout = QFormLayout(backstage_page)
-        backstage_layout.addRow("Product", QLabel("LqRibbon Demo", backstage_page))
-        backstage_layout.addRow("Mode", QLabel("Backstage page", backstage_page))
-        self.cloud_location_combo = QComboBox(backstage_page)
+        self.backstage_info_page = QWidget(self.backstage)
+        self.backstage_info_page.setObjectName("backstageInfoPage")
+        self.backstage_info_page.setWindowTitle("Info")
+        backstage_layout = QFormLayout(self.backstage_info_page)
+        self.backstage_info_product_label = QLabel("LqRibbon Demo", self.backstage_info_page)
+        self.backstage_info_product_label.setObjectName("backstageInfoProductLabel")
+        self.backstage_info_mode_label = QLabel("Backstage page", self.backstage_info_page)
+        self.backstage_info_mode_label.setObjectName("backstageInfoModeLabel")
+        backstage_layout.addRow("Product", self.backstage_info_product_label)
+        backstage_layout.addRow("Mode", self.backstage_info_mode_label)
+        self.cloud_location_combo = QComboBox(self.backstage_info_page)
         self.cloud_location_combo.setObjectName("cloudLocationPicker")
         self.cloud_location_combo.addItems(
             [
@@ -1564,7 +1569,7 @@ class MainWindow(RibbonMainWindow):
         backstage_layout.addRow("Cloud location", self.cloud_location_combo)
         self.upload_before_share_prompt = QLabel(
             "Upload required before sharing",
-            backstage_page,
+            self.backstage_info_page,
         )
         self.upload_before_share_prompt.setObjectName("uploadBeforeSharePrompt")
         self.upload_before_share_prompt.setToolTip(
@@ -1572,7 +1577,13 @@ class MainWindow(RibbonMainWindow):
         )
         self.upload_before_share_prompt.setWordWrap(True)
         backstage_layout.addRow("Share readiness", self.upload_before_share_prompt)
-        self.backstage.addPage(backstage_page)
+        self.backstage_info_action = self.backstage.addPage(self.backstage_info_page)
+        self.backstage_info_action.setObjectName("backstageInfoAction")
+        self.backstage_info_action.setToolTip("Open document information")
+        self.backstage_info_action.setStatusTip("Info: document properties and sharing state")
+        self.backstage_info_action.triggered.connect(
+            lambda: self._message("Info: document properties and sharing state")
+        )
         self.version_history_page = QWidget(self.backstage)
         self.version_history_page.setObjectName("versionHistoryPage")
         self.version_history_page.setWindowTitle("Version History")

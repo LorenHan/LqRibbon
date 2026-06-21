@@ -451,6 +451,34 @@ def test_example_upload_before_share_prompt_is_available():
     window.close()
 
 
+def test_example_backstage_info_page_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    assert window.backstage_info_action.objectName() == "backstageInfoAction"
+    assert window.backstage_info_action.isCheckable()
+    assert "document information" in window.backstage_info_action.toolTip()
+    assert window.backstage_info_page.objectName() == "backstageInfoPage"
+    assert window.backstage_info_page.windowTitle() == "Info"
+    assert window.backstage_info_product_label.objectName() == "backstageInfoProductLabel"
+    assert window.backstage_info_product_label.text() == "LqRibbon Demo"
+    assert window.backstage_info_mode_label.objectName() == "backstageInfoModeLabel"
+    assert window.backstage_info_mode_label.text() == "Backstage page"
+
+    window.backstage.setActivePage(window.backstage_info_page)
+    _app().processEvents()
+    assert window.backstage.activePage() is window.backstage_info_page
+    assert window.backstage_info_action.isChecked()
+    window.backstage_info_action.trigger()
+    _app().processEvents()
+    assert window.backstage.activePage() is window.backstage_info_page
+    assert window.backstage_info_action.isChecked()
+    assert "Info:" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_auto_save_title_toggle_is_available():
     window = MainWindow()
     window.show()
@@ -2794,6 +2822,7 @@ def main():
         test_example_feedback_title_button_is_available,
         test_example_account_title_button_is_available,
         test_example_account_privacy_settings_entry_is_available,
+        test_example_backstage_info_page_is_available,
         test_example_share_title_button_is_available,
         test_example_upload_before_share_prompt_is_available,
         test_example_auto_save_title_toggle_is_available,
