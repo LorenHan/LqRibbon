@@ -320,6 +320,9 @@ class MainWindow(RibbonMainWindow):
         self.animation_page = ribbon.addPage("Animation")
         self._create_animation_page()
 
+        self.design_page = ribbon.addPage("Design")
+        self._create_design_page()
+
         self.tell_me_page = ribbon.addPage("Tell Me")
         self._create_command_discovery_page()
 
@@ -1159,6 +1162,27 @@ class MainWindow(RibbonMainWindow):
         self.model_3d_animation_preview.setToolTip("Current 3D animation preview state")
         model_group.addWidget(self.model_3d_animation_preview)
         self.model_3d_animation_action.toggled.connect(self.toggle_3d_animation)
+
+    def _create_design_page(self):
+        ideas_group = self.design_page.addGroup("Ideas")
+        self.designer_ideas_action = ideas_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogInfoView),
+            "Designer Ideas",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.designer_ideas_action.setObjectName("designerIdeasAction")
+        self.designer_ideas_action.setToolTip(
+            "Generate Designer Ideas layout suggestions"
+        )
+        self.designer_ideas_action.setStatusTip("Designer Ideas: suggestions ready")
+        self.designer_ideas_preview = QLabel("Designer Ideas: not opened", ideas_group)
+        self.designer_ideas_preview.setObjectName("designerIdeasPreview")
+        self.designer_ideas_preview.setMinimumWidth(220)
+        self.designer_ideas_preview.setFixedHeight(30)
+        self.designer_ideas_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.designer_ideas_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.designer_ideas_preview.setToolTip("Designer Ideas suggestion pane state")
+        ideas_group.addWidget(self.designer_ideas_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -2142,6 +2166,7 @@ class MainWindow(RibbonMainWindow):
             self.svg_icon_insert_action,
             self.model_3d_insert_action,
             self.model_3d_animation_action,
+            self.designer_ideas_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2197,6 +2222,7 @@ class MainWindow(RibbonMainWindow):
         self.dark_canvas_action.toggled.connect(self.toggle_dark_canvas)
         self.svg_icon_insert_action.triggered.connect(self.insert_svg_icon)
         self.model_3d_insert_action.triggered.connect(self.insert_3d_model)
+        self.designer_ideas_action.triggered.connect(self.open_designer_ideas)
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
         self.contextual_group_color_action.triggered.connect(
@@ -2529,6 +2555,7 @@ class MainWindow(RibbonMainWindow):
             self.svg_icon_insert_action,
             self.model_3d_insert_action,
             self.model_3d_animation_action,
+            self.designer_ideas_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -3024,6 +3051,13 @@ class MainWindow(RibbonMainWindow):
             self.model_3d_animation_preview.setStyleSheet("")
             self.model_3d_animation_action.setStatusTip("3D Animation: stopped")
         self._message(self.model_3d_animation_action.statusTip())
+
+    def open_designer_ideas(self):
+        self.designer_ideas_preview.setText("Designer Ideas: 3 suggestions")
+        self.designer_ideas_preview.setStyleSheet(
+            "QLabel#designerIdeasPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+        )
+        self._message("Designer Ideas: 3 layout suggestions")
 
     def recolor_svg_icon(self):
         self.svg_recolor_preview.setText("SVG color: blue accent")

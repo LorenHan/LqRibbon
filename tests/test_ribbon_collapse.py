@@ -972,6 +972,33 @@ def test_example_3d_animation_command_surface():
     window.close()
 
 
+def test_example_designer_ideas_command_surface():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert ribbon.pageIndex(window.design_page) >= 0
+    assert window.design_page.title() == "Design"
+    assert window.designer_ideas_action.objectName() == "designerIdeasAction"
+    assert not window.designer_ideas_action.icon().isNull()
+    assert "Designer Ideas layout suggestions" in window.designer_ideas_action.toolTip()
+    assert window.designer_ideas_action.statusTip() == "Designer Ideas: suggestions ready"
+    assert window.designer_ideas_preview.objectName() == "designerIdeasPreview"
+    assert window.designer_ideas_preview.text() == "Designer Ideas: not opened"
+    assert "suggestion pane" in window.designer_ideas_preview.toolTip()
+    assert window.designer_ideas_action in window.search_actions
+    assert ribbon.searchAction("Designer Ideas") is window.designer_ideas_action
+
+    window.designer_ideas_action.trigger()
+    _app().processEvents()
+    assert window.designer_ideas_preview.text() == "Designer Ideas: 3 suggestions"
+    assert "#designerIdeasPreview" in window.designer_ideas_preview.styleSheet()
+    assert "Designer Ideas" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_svg_recolor_command_surface():
     window = MainWindow()
     window.show()
@@ -3222,6 +3249,7 @@ def main():
         test_example_svg_icon_insert_command_surface,
         test_example_3d_model_insert_command_surface,
         test_example_3d_animation_command_surface,
+        test_example_designer_ideas_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,

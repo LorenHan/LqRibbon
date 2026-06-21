@@ -414,6 +414,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *animationPage,
                      QAction *model3DAnimationAction,
                      QLabel *model3DAnimationPreview,
+                     LqRibbon::RibbonPage *designPage,
+                     QAction *designerIdeasAction,
+                     QLabel *designerIdeasPreview,
                      LqRibbon::RibbonPage *formatPage,
                      QAction *svgRecolorAction,
                      QLabel *svgRecolorPreview,
@@ -1094,6 +1097,54 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strModel3DAnimationStatus.contains(
                          QStringLiteral("3D Animation: playing")),
                  QStringLiteral("3D animation command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const int designPageIndex = ribbonBar->indexOf(designPage);
+    if (designPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(designPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *designerIdeasButton =
+        collapseTestActionButton(ribbonBar, designerIdeasAction);
+    if (designerIdeasAction) {
+        designerIdeasAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strDesignerIdeasStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(designPageIndex >= 0
+                     && designPage
+                     && designPage->title() == QStringLiteral("Design")
+                     && designerIdeasAction
+                     && designerIdeasAction->objectName()
+                         == QStringLiteral("designerIdeasAction")
+                     && !designerIdeasAction->icon().isNull()
+                     && designerIdeasAction->toolTip().contains(
+                         QStringLiteral("Designer Ideas layout suggestions"))
+                     && designerIdeasAction->statusTip()
+                         == QStringLiteral("Designer Ideas: suggestions ready")
+                     && designerIdeasPreview
+                     && designerIdeasPreview->objectName()
+                         == QStringLiteral("designerIdeasPreview")
+                     && designerIdeasPreview->text()
+                         == QStringLiteral("Designer Ideas: 3 suggestions")
+                     && designerIdeasPreview->styleSheet().contains(
+                         QStringLiteral("#designerIdeasPreview"))
+                     && designerIdeasPreview->toolTip().contains(
+                         QStringLiteral("suggestion pane"))
+                     && ribbonBar->searchAction(QStringLiteral("Designer Ideas"))
+                         == designerIdeasAction
+                     && designerIdeasButton
+                     && designerIdeasButton->defaultAction()
+                         == designerIdeasAction
+                     && strDesignerIdeasStatus.contains(
+                         QStringLiteral("Designer Ideas")),
+                 QStringLiteral("Designer Ideas command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6440,6 +6491,31 @@ int main(int argc, char *argv[])
         QObject::tr("Current 3D animation preview state"));
     animation3DGroup->addWidget(model3DAnimationPreview);
 
+    LqRibbon::RibbonPage *designPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Design"));
+    LqRibbon::RibbonGroup *designerIdeasGroup =
+        designPage->addGroup(QObject::tr("Ideas"));
+    QAction *designerIdeasAction = designerIdeasGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
+        QObject::tr("Designer Ideas"),
+        Qt::ToolButtonTextUnderIcon);
+    designerIdeasAction->setObjectName(QStringLiteral("designerIdeasAction"));
+    designerIdeasAction->setToolTip(
+        QObject::tr("Generate Designer Ideas layout suggestions"));
+    designerIdeasAction->setStatusTip(
+        QObject::tr("Designer Ideas: suggestions ready"));
+    QLabel *designerIdeasPreview = new QLabel(designerIdeasGroup);
+    designerIdeasPreview->setObjectName(
+        QStringLiteral("designerIdeasPreview"));
+    designerIdeasPreview->setText(QObject::tr("Designer Ideas: not opened"));
+    designerIdeasPreview->setMinimumWidth(220);
+    designerIdeasPreview->setFixedHeight(30);
+    designerIdeasPreview->setAlignment(Qt::AlignCenter);
+    designerIdeasPreview->setFrameShape(QFrame::StyledPanel);
+    designerIdeasPreview->setToolTip(
+        QObject::tr("Designer Ideas suggestion pane state"));
+    designerIdeasGroup->addWidget(designerIdeasPreview);
+
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
     LqRibbon::RibbonGroup *commandDiscoveryGroup =
@@ -8974,6 +9050,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(model3DInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(model3DAnimationAction);
+    mainWindow.ribbonBar()->registerSearchAction(designerIdeasAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
     mainWindow.ribbonBar()->registerSearchAction(contextualGroupColorAction);
@@ -9240,6 +9317,20 @@ int main(int argc, char *argv[])
                          if (mainWindow.statusBar()) {
                              mainWindow.statusBar()->showMessage(
                                  model3DAnimationAction->statusTip(), 2500);
+                         }
+                     });
+    QObject::connect(designerIdeasAction,
+                     &QAction::triggered,
+                     [&mainWindow, designerIdeasPreview]() {
+                         designerIdeasPreview->setText(
+                             QObject::tr("Designer Ideas: 3 suggestions"));
+                         designerIdeasPreview->setStyleSheet(
+                             QStringLiteral("QLabel#designerIdeasPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Designer Ideas: 3 layout suggestions"),
+                                 2500);
                          }
                      });
     QObject::connect(svgRecolorAction,
@@ -9832,6 +9923,9 @@ int main(int argc, char *argv[])
                                 animationPage,
                                 model3DAnimationAction,
                                 model3DAnimationPreview,
+                                designPage,
+                                designerIdeasAction,
+                                designerIdeasPreview,
                                 formatPage,
                                 svgRecolorAction,
                                 svgRecolorPreview,
