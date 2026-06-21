@@ -578,6 +578,36 @@ def test_example_search_shows_document_result_section():
     window.close()
 
 
+def test_example_search_no_result_affordance_keeps_help_path():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    search = window.ribbonBar().searchLineEdit()
+
+    search.setFocus()
+    search.setText("zzzz-missing")
+    search.showPopup("zzzz-missing")
+    _app().processEvents()
+    popup_actions = search._popup.actions()
+    popup_rows = [action.text() for action in popup_actions]
+    no_result_action = next(
+        action
+        for action in popup_actions
+        if action.text() == 'No results found for "zzzz-missing"'
+    )
+
+    assert popup_rows[:4] == [
+        "No Results",
+        'No results found for "zzzz-missing"',
+        "Help",
+        'Get Help "zzzz-missing"',
+    ]
+    assert not no_result_action.isEnabled()
+    assert search._popup.activeAction().text() == 'Get Help "zzzz-missing"'
+    search.closePopup()
+    window.close()
+
+
 def test_example_search_shows_help_result_section():
     window = MainWindow()
     window.show()
@@ -590,7 +620,9 @@ def test_example_search_shows_help_result_section():
     _app().processEvents()
     popup_rows = [action.text() for action in search._popup.actions()]
 
-    assert popup_rows[:2] == [
+    assert popup_rows[:4] == [
+        "No Results",
+        'No results found for "sensor"',
         "Help",
         'Get Help "sensor"',
     ]
@@ -1130,6 +1162,7 @@ def main():
         test_example_search_command_alias_matches_registered_action,
         test_example_search_fuzzy_phrase_matches_registered_action,
         test_example_search_shows_document_result_section,
+        test_example_search_no_result_affordance_keeps_help_path,
         test_example_search_shows_help_result_section,
         test_example_search_shows_related_file_result_section,
         test_example_collapse_state_preview_tracks_modes,

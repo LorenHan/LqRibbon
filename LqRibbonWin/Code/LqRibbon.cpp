@@ -71,7 +71,8 @@ enum RibbonSearchPopupKind
     SearchPopupHeaderItem = 0,
     SearchPopupActionItem,
     SearchPopupResultItem,
-    SearchPopupHelpItem
+    SearchPopupHelpItem,
+    SearchPopupNoResultItem
 };
 
 struct RibbonTranslationEntry
@@ -91,6 +92,11 @@ const RibbonTranslationEntry ribbonTranslationTable[] = {
      "\xE6\x96\x87\xE6\xA1\xA3\xE7\xBB\x93\xE6\x9E\x9C"},
     {"Related Files",
      "\xE7\x9B\xB8\xE5\x85\xB3\xE6\x96\x87\xE4\xBB\xB6"},
+    {"No Results",
+     "\xE6\x97\xA0\xE7\xBB\x93\xE6\x9E\x9C"},
+    {"No results found for \"%1\"",
+     "\xE6\x9C\xAA\xE6\x89\xBE\xE5\x88\xB0\x20\x22\x25\x31\x22\x20"
+     "\xE7\x9A\x84\xE7\xBB\x93\xE6\x9E\x9C"},
     {"Help", "\xE5\xB8\xAE\xE5\x8A\xA9"},
     {"Get Help with \"%1\"",
      "\xE8\x8E\xB7\xE5\x8F\x96\x20\x22\x25\x31\x22\x20"
@@ -1457,6 +1463,22 @@ QStandardItem *createSearchResultItem(const QString &strText, const QIcon &icon)
     QStandardItem *item = new QStandardItem(icon, strText);
     item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     item->setData(SearchPopupResultItem, ribbonSearchPopupKindRole);
+    return item;
+}
+
+///
+/// \brief createSearchNoResultItem
+/// Creates a non-selectable row that explains an empty search result.
+/// \param strText No-result text displayed in the popup.
+/// \param icon Icon displayed before the text.
+/// \return New model item owned by the caller after insertion.
+///
+QStandardItem *createSearchNoResultItem(const QString &strText, const QIcon &icon)
+{
+    QStandardItem *item = new QStandardItem(icon, strText);
+    item->setFlags(Qt::ItemIsEnabled);
+    item->setData(SearchPopupNoResultItem, ribbonSearchPopupKindRole);
+    item->setData(QColor(QStringLiteral("#666666")), Qt::ForegroundRole);
     return item;
 }
 
@@ -4636,6 +4658,20 @@ void RibbonBar::updateSearchPopup()
         for (QAction *action : actionList) {
             m_searchPopupModel->appendRow(createSearchActionItem(action));
         }
+    }
+
+    const bool hasSearchResult = !actionList.isEmpty()
+        || !strDocumentResultList.isEmpty()
+        || !strRelatedFileList.isEmpty();
+    if (!strText.isEmpty() && !hasSearchResult) {
+        m_searchPopupModel->appendRow(
+            createSearchHeaderItem(ribbonText("No Results")));
+        const QString strNoResultText =
+            ribbonText("No results found for \"%1\"").arg(strText);
+        const QIcon noResultIcon =
+            style()->standardIcon(QStyle::SP_MessageBoxInformation);
+        m_searchPopupModel->appendRow(
+            createSearchNoResultItem(strNoResultText, noResultIcon));
     }
 
     if (!strText.isEmpty()) {

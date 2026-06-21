@@ -468,9 +468,21 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                 popupModel->index(row, 0).data(Qt::DisplayRole).toString());
         }
     }
+    const int noResultRow =
+        helpRows.indexOf(QStringLiteral("No Results"));
+    const int helpHeaderRow =
+        helpRows.indexOf(QStringLiteral("Help"));
     if (!require(searchPopupView && searchPopupView->isVisible()
-                     && helpRows.value(0) == QStringLiteral("Help")
+                     && noResultRow == 0
                      && helpRows.value(1)
+                         == QStringLiteral("No results found for \"sensor\"")
+                     && helpHeaderRow == 2,
+                 QStringLiteral("search no-result affordance keeps help path"))) {
+        return 1;
+    }
+    if (!require(searchPopupView && searchPopupView->isVisible()
+                     && helpHeaderRow >= 0
+                     && helpRows.value(helpHeaderRow + 1)
                          == QStringLiteral("Get Help with \"sensor\""),
                  QStringLiteral("search shows help result section"))) {
         return 1;

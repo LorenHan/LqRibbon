@@ -62,6 +62,8 @@ QtnRibbonSearchBarRecentActionsString = "Recently Used"
 QtnRibbonSearchBarSuggestedActionsString = "Suggested Actions"
 QtnRibbonSearchBarDocumentResultsString = "Document Results"
 QtnRibbonSearchBarRelatedFilesString = "Related Files"
+QtnRibbonSearchBarNoResultsString = "No Results"
+QtnRibbonSearchBarNoResultsFoundString = "No results found for"
 QtnRibbonGalleryItemSize = QSize(72, 56)
 QtnRibbonGalleryItemString = "Gallery Item"
 
@@ -1069,6 +1071,16 @@ class LqRibbonSearchBar(QLineEdit):
             self._popup.addAction(action)
             action.setProperty("lqRibbonSearchPopupRole", "action")
             count += 1
+        if normalized and not actions and not document_results and not related_files:
+            self._popup.addSection(QtnRibbonSearchBarNoResultsString)
+            no_result_icon = self.style().standardIcon(
+                QStyle.StandardPixmap.SP_MessageBoxInformation
+            )
+            no_result_action = self._popup.addAction(
+                no_result_icon, f'{QtnRibbonSearchBarNoResultsFoundString} "{text}"'
+            )
+            no_result_action.setEnabled(False)
+            no_result_action.setProperty("lqRibbonSearchPopupRole", "no-result")
         if self._help_enabled and text:
             self._popup.addSection(QtnRibbonSearchBarHelpString)
             help_action = self._popup.addAction(f'{QtnRibbonSearchBarGetHelpString} "{text}"')
