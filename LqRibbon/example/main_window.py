@@ -2474,6 +2474,15 @@ class MainWindow(RibbonMainWindow):
         self.presence_avatar_strip_action.setStatusTip(
             "Presence: 3 collaborators editing"
         )
+        self.copilot_title_action = self.ribbonBar().addTitleButton(
+            self._icon(QStyle.StandardPixmap.SP_DialogHelpButton),
+            "Copilot",
+        )
+        self.copilot_title_action.setObjectName("copilotTitleAction")
+        self.copilot_title_action.setToolTip(
+            "Copilot: Open AI assistance for this document"
+        )
+        self.copilot_title_action.setStatusTip("Copilot: ready to help")
         self.feedback_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_MessageBoxInformation),
             "Feedback",
@@ -2505,6 +2514,9 @@ class MainWindow(RibbonMainWindow):
         self.presence_avatar_strip_action.triggered.connect(
             lambda: self._message("Presence: 3 collaborators editing")
         )
+        self.copilot_title_action.triggered.connect(
+            lambda: self._message("Copilot: ready to help")
+        )
         self.feedback_title_action.triggered.connect(
             lambda: self._message("Feedback: send product feedback")
         )
@@ -2518,6 +2530,7 @@ class MainWindow(RibbonMainWindow):
             self.share_title_action,
             self.comments_title_action,
             self.presence_avatar_strip_action,
+            self.copilot_title_action,
             self.feedback_title_action,
             self.help_title_action,
             self.account_title_action,

@@ -587,6 +587,31 @@ def test_example_presence_avatar_strip_is_available():
     window.close()
 
 
+def test_example_copilot_title_button_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    title_bar = window.ribbonBar()._title_button_bar
+    action = window.copilot_title_action
+    button = title_bar.widgetForAction(action)
+
+    assert action.objectName() == "copilotTitleAction"
+    assert action.text() == "Copilot"
+    assert not action.icon().isNull()
+    assert "AI assistance" in action.toolTip()
+    assert action.statusTip() == "Copilot: ready to help"
+    assert action in title_bar.actions()
+    assert isinstance(button, QToolButton)
+    assert button.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+    assert button.accessibleName() == "Copilot"
+
+    action.trigger()
+    _app().processEvents()
+    assert "Copilot: ready to help" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_icon_only_title_commands_are_available():
     window = MainWindow()
     window.show()
@@ -599,6 +624,7 @@ def test_example_icon_only_title_commands_are_available():
         window.share_title_action,
         window.comments_title_action,
         window.presence_avatar_strip_action,
+        window.copilot_title_action,
         window.feedback_title_action,
         window.help_title_action,
         window.account_title_action,
@@ -3341,6 +3367,7 @@ def main():
         test_example_auto_save_disabled_explanation_is_available,
         test_example_comments_title_button_is_available,
         test_example_presence_avatar_strip_is_available,
+        test_example_copilot_title_button_is_available,
         test_example_icon_only_title_commands_are_available,
         test_example_accessible_tooltip_names_are_available,
         test_example_screen_reader_names_are_available,

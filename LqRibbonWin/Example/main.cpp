@@ -376,6 +376,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *shareTitleAction,
                      QAction *commentsTitleAction,
                      QAction *presenceAvatarStripAction,
+                     QAction *copilotTitleAction,
                      QAction *feedbackTitleAction,
                      QAction *helpTitleAction,
                      QAction *accountTitleAction,
@@ -3075,12 +3076,50 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         mainWindow.statusBar()->clearMessage();
     }
 
+    QToolButton *copilotButton =
+        titleButtonBar
+            ? qobject_cast<QToolButton *>(
+                titleButtonBar->widgetForAction(copilotTitleAction))
+            : nullptr;
+    if (copilotTitleAction) {
+        copilotTitleAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strCopilotStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(copilotTitleAction
+                     && copilotTitleAction->objectName()
+                         == QStringLiteral("copilotTitleAction")
+                     && copilotTitleAction->text() == QStringLiteral("Copilot")
+                     && !copilotTitleAction->icon().isNull()
+                     && copilotTitleAction->toolTip().contains(
+                         QStringLiteral("AI assistance"))
+                     && copilotTitleAction->statusTip()
+                         == QStringLiteral("Copilot: ready to help")
+                     && titleButtonBar
+                     && titleButtonBar->actions().contains(copilotTitleAction)
+                     && copilotButton
+                     && copilotButton->toolButtonStyle()
+                         == Qt::ToolButtonIconOnly
+                     && copilotButton->accessibleName()
+                         == QStringLiteral("Copilot")
+                     && strCopilotStatus.contains(
+                         QStringLiteral("Copilot: ready to help")),
+                 QStringLiteral("Copilot title button is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
     const QList<QAction *> iconOnlyTitleActions = {
         displayOptionsTitleAction,
         autoSaveTitleAction,
         shareTitleAction,
         commentsTitleAction,
         presenceAvatarStripAction,
+        copilotTitleAction,
         feedbackTitleAction,
         helpTitleAction,
         accountTitleAction,
@@ -9450,6 +9489,13 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QAction *copilotTitleAction = mainWindow.ribbonBar()->addTitleButton(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogHelpButton),
+        QObject::tr("Copilot"));
+    copilotTitleAction->setObjectName(QStringLiteral("copilotTitleAction"));
+    copilotTitleAction->setToolTip(
+        QObject::tr("Copilot: Open AI assistance for this document"));
+    copilotTitleAction->setStatusTip(QObject::tr("Copilot: ready to help"));
     QAction *feedbackTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxInformation),
         QObject::tr("Feedback"));
@@ -9476,6 +9522,7 @@ int main(int argc, char *argv[])
         shareTitleAction,
         commentsTitleAction,
         presenceAvatarStripAction,
+        copilotTitleAction,
         feedbackTitleAction,
         helpTitleAction,
         accountTitleAction,
@@ -9543,6 +9590,13 @@ int main(int argc, char *argv[])
         if (mainWindow.statusBar()) {
             mainWindow.statusBar()->showMessage(
                 QObject::tr("Comments: show conversation pane"),
+                2500);
+        }
+    });
+    QObject::connect(copilotTitleAction, &QAction::triggered, [&mainWindow]() {
+        if (mainWindow.statusBar()) {
+            mainWindow.statusBar()->showMessage(
+                QObject::tr("Copilot: ready to help"),
                 2500);
         }
     });
@@ -10236,6 +10290,7 @@ int main(int argc, char *argv[])
                                 shareTitleAction,
                                 commentsTitleAction,
                                 presenceAvatarStripAction,
+                                copilotTitleAction,
                                 feedbackTitleAction,
                                 helpTitleAction,
                                 accountTitleAction,
