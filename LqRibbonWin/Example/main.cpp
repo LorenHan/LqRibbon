@@ -422,6 +422,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *dataPage,
                      QAction *dataTypesAction,
                      QLabel *dataTypesPreview,
+                     QAction *pivotRecommendationAction,
+                     QLabel *pivotRecommendationPreview,
                      LqRibbon::RibbonPage *formatPage,
                      QAction *svgRecolorAction,
                      QLabel *svgRecolorPreview,
@@ -1238,6 +1240,46 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strDataTypesStatus.contains(
                          QStringLiteral("Data Types")),
                  QStringLiteral("Data Types command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *pivotRecommendationButton =
+        collapseTestActionButton(ribbonBar, pivotRecommendationAction);
+    if (pivotRecommendationAction) {
+        pivotRecommendationAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strPivotRecommendationStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(pivotRecommendationAction
+                     && pivotRecommendationAction->objectName()
+                         == QStringLiteral("pivotRecommendationAction")
+                     && !pivotRecommendationAction->icon().isNull()
+                     && pivotRecommendationAction->toolTip().contains(
+                         QStringLiteral("pivot table layout"))
+                     && pivotRecommendationAction->statusTip()
+                         == QStringLiteral("Recommended Pivot: suggestions ready")
+                     && pivotRecommendationPreview
+                     && pivotRecommendationPreview->objectName()
+                         == QStringLiteral("pivotRecommendationPreview")
+                     && pivotRecommendationPreview->text()
+                         == QStringLiteral("Pivot: sales by region")
+                     && pivotRecommendationPreview->styleSheet().contains(
+                         QStringLiteral("#pivotRecommendationPreview"))
+                     && pivotRecommendationPreview->toolTip().contains(
+                         QStringLiteral("Recommended pivot"))
+                     && ribbonBar->searchAction(QStringLiteral("Recommended Pivot"))
+                         == pivotRecommendationAction
+                     && pivotRecommendationButton
+                     && pivotRecommendationButton->defaultAction()
+                         == pivotRecommendationAction
+                     && strPivotRecommendationStatus.contains(
+                         QStringLiteral("Recommended Pivot")),
+                 QStringLiteral("Recommended pivot command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6654,6 +6696,30 @@ int main(int argc, char *argv[])
     dataTypesPreview->setToolTip(
         QObject::tr("Linked data type conversion state"));
     dataTypesGroup->addWidget(dataTypesPreview);
+    LqRibbon::RibbonGroup *dataAnalysisGroup =
+        dataPage->addGroup(QObject::tr("Analysis"));
+    QAction *pivotRecommendationAction = dataAnalysisGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogListView),
+        QObject::tr("Recommended Pivot"),
+        Qt::ToolButtonTextUnderIcon);
+    pivotRecommendationAction->setObjectName(
+        QStringLiteral("pivotRecommendationAction"));
+    pivotRecommendationAction->setToolTip(
+        QObject::tr("Suggest a pivot table layout for selected data"));
+    pivotRecommendationAction->setStatusTip(
+        QObject::tr("Recommended Pivot: suggestions ready"));
+    QLabel *pivotRecommendationPreview = new QLabel(dataAnalysisGroup);
+    pivotRecommendationPreview->setObjectName(
+        QStringLiteral("pivotRecommendationPreview"));
+    pivotRecommendationPreview->setText(
+        QObject::tr("Pivot: no recommendation"));
+    pivotRecommendationPreview->setMinimumWidth(220);
+    pivotRecommendationPreview->setFixedHeight(30);
+    pivotRecommendationPreview->setAlignment(Qt::AlignCenter);
+    pivotRecommendationPreview->setFrameShape(QFrame::StyledPanel);
+    pivotRecommendationPreview->setToolTip(
+        QObject::tr("Recommended pivot table state"));
+    dataAnalysisGroup->addWidget(pivotRecommendationPreview);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -9192,6 +9258,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(model3DAnimationAction);
     mainWindow.ribbonBar()->registerSearchAction(designerIdeasAction);
     mainWindow.ribbonBar()->registerSearchAction(dataTypesAction);
+    mainWindow.ribbonBar()->registerSearchAction(pivotRecommendationAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
     mainWindow.ribbonBar()->registerSearchAction(contextualGroupColorAction);
@@ -9498,6 +9565,20 @@ int main(int argc, char *argv[])
                          if (mainWindow.statusBar()) {
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr("Data Types: Geography linked"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(pivotRecommendationAction,
+                     &QAction::triggered,
+                     [&mainWindow, pivotRecommendationPreview]() {
+                         pivotRecommendationPreview->setText(
+                             QObject::tr("Pivot: sales by region"));
+                         pivotRecommendationPreview->setStyleSheet(
+                             QStringLiteral("QLabel#pivotRecommendationPreview { color: #5c2d91; background: #f3e8ff; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Recommended Pivot: sales by region"),
                                  2500);
                          }
                      });
@@ -10099,6 +10180,8 @@ int main(int argc, char *argv[])
                                 dataPage,
                                 dataTypesAction,
                                 dataTypesPreview,
+                                pivotRecommendationAction,
+                                pivotRecommendationPreview,
                                 formatPage,
                                 svgRecolorAction,
                                 svgRecolorPreview,

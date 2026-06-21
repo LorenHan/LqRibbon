@@ -1230,6 +1230,30 @@ class MainWindow(RibbonMainWindow):
         self.data_types_preview.setToolTip("Linked data type conversion state")
         data_types_group.addWidget(self.data_types_preview)
 
+        analysis_group = self.data_page.addGroup("Analysis")
+        self.pivot_recommendation_action = analysis_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogListView),
+            "Recommended Pivot",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.pivot_recommendation_action.setObjectName("pivotRecommendationAction")
+        self.pivot_recommendation_action.setToolTip(
+            "Suggest a pivot table layout for selected data"
+        )
+        self.pivot_recommendation_action.setStatusTip(
+            "Recommended Pivot: suggestions ready"
+        )
+        self.pivot_recommendation_preview = QLabel(
+            "Pivot: no recommendation", analysis_group
+        )
+        self.pivot_recommendation_preview.setObjectName("pivotRecommendationPreview")
+        self.pivot_recommendation_preview.setMinimumWidth(220)
+        self.pivot_recommendation_preview.setFixedHeight(30)
+        self.pivot_recommendation_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.pivot_recommendation_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.pivot_recommendation_preview.setToolTip("Recommended pivot table state")
+        analysis_group.addWidget(self.pivot_recommendation_preview)
+
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
         self.tell_me_lightbulb_action = discovery_group.addAction(
@@ -2215,6 +2239,7 @@ class MainWindow(RibbonMainWindow):
             self.designer_ideas_action,
             self.recommended_chart_action,
             self.data_types_action,
+            self.pivot_recommendation_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2273,6 +2298,9 @@ class MainWindow(RibbonMainWindow):
         self.designer_ideas_action.triggered.connect(self.open_designer_ideas)
         self.recommended_chart_action.triggered.connect(self.open_recommended_chart)
         self.data_types_action.triggered.connect(self.convert_to_data_type)
+        self.pivot_recommendation_action.triggered.connect(
+            self.open_pivot_recommendation
+        )
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
         self.contextual_group_color_action.triggered.connect(
@@ -2608,6 +2636,7 @@ class MainWindow(RibbonMainWindow):
             self.designer_ideas_action,
             self.recommended_chart_action,
             self.data_types_action,
+            self.pivot_recommendation_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -3124,6 +3153,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#dataTypesPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
         )
         self._message("Data Types: Geography linked")
+
+    def open_pivot_recommendation(self):
+        self.pivot_recommendation_preview.setText("Pivot: sales by region")
+        self.pivot_recommendation_preview.setStyleSheet(
+            "QLabel#pivotRecommendationPreview { color: #5c2d91; background: #f3e8ff; font-weight: 600; }"
+        )
+        self._message("Recommended Pivot: sales by region")
 
     def recolor_svg_icon(self):
         self.svg_recolor_preview.setText("SVG color: blue accent")

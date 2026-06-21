@@ -1052,6 +1052,32 @@ def test_example_data_types_command_surface():
     window.close()
 
 
+def test_example_pivot_recommendation_command_surface():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.data_page.title() == "Data"
+    assert window.pivot_recommendation_action.objectName() == "pivotRecommendationAction"
+    assert not window.pivot_recommendation_action.icon().isNull()
+    assert "pivot table layout" in window.pivot_recommendation_action.toolTip()
+    assert window.pivot_recommendation_action.statusTip() == "Recommended Pivot: suggestions ready"
+    assert window.pivot_recommendation_preview.objectName() == "pivotRecommendationPreview"
+    assert window.pivot_recommendation_preview.text() == "Pivot: no recommendation"
+    assert "Recommended pivot" in window.pivot_recommendation_preview.toolTip()
+    assert window.pivot_recommendation_action in window.search_actions
+    assert ribbon.searchAction("Recommended Pivot") is window.pivot_recommendation_action
+
+    window.pivot_recommendation_action.trigger()
+    _app().processEvents()
+    assert window.pivot_recommendation_preview.text() == "Pivot: sales by region"
+    assert "#pivotRecommendationPreview" in window.pivot_recommendation_preview.styleSheet()
+    assert "Recommended Pivot" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_svg_recolor_command_surface():
     window = MainWindow()
     window.show()
@@ -3305,6 +3331,7 @@ def main():
         test_example_3d_animation_command_surface,
         test_example_designer_ideas_command_surface,
         test_example_data_types_command_surface,
+        test_example_pivot_recommendation_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,
