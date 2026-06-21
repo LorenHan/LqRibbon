@@ -7,4 +7,8 @@ TARGET = LqRibbonExample
 include(../LqRibbon.pri)
 
 SOURCES += \
-    main.cpp
+    main.cpp \
+    mainwindow.cpp
+
+HEADERS += \
+    mainwindow.h
