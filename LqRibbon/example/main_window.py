@@ -1041,11 +1041,21 @@ class MainWindow(RibbonMainWindow):
         if isinstance(display_button, QToolButton):
             display_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
+        self.feedback_title_action = self.ribbonBar().addTitleButton(
+            self._icon(QStyle.StandardPixmap.SP_MessageBoxInformation),
+            "Feedback",
+        )
+        self.feedback_title_action.setObjectName("feedbackTitleAction")
+        self.feedback_title_action.setToolTip("Send feedback about this document")
+        self.feedback_title_action.setStatusTip("Feedback: send product feedback")
         self.help_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_MessageBoxQuestion), "Help"
         )
         self.account_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_DirHomeIcon), "Account"
+        )
+        self.feedback_title_action.triggered.connect(
+            lambda: self._message("Feedback: send product feedback")
         )
         self.help_title_action.triggered.connect(
             lambda: QMessageBox.information(self, "LqRibbon", "Help")

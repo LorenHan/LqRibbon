@@ -294,6 +294,27 @@ def test_example_display_options_menu_controls_ribbon_modes():
     window.close()
 
 
+def test_example_feedback_title_button_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    title_bar = ribbon._title_button_bar
+    feedback_button = title_bar.widgetForAction(window.feedback_title_action)
+
+    assert window.feedback_title_action.objectName() == "feedbackTitleAction"
+    assert not window.feedback_title_action.icon().isNull()
+    assert "feedback" in window.feedback_title_action.toolTip()
+    assert window.feedback_title_action in title_bar.actions()
+    assert isinstance(feedback_button, QToolButton)
+    assert feedback_button.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+
+    window.feedback_title_action.trigger()
+    _app().processEvents()
+    assert "Feedback" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_caption_search_defaults_to_centered_microsoft_box():
     window = MainWindow()
     window.show()
@@ -1275,6 +1296,7 @@ def main():
         test_example_classic_action_restores_multi_line_ribbon,
         test_example_pin_unpin_actions_control_display_policy,
         test_example_display_options_menu_controls_ribbon_modes,
+        test_example_feedback_title_button_is_available,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,

@@ -211,6 +211,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *pinRibbonAction,
                      QAction *unpinRibbonAction,
                      QAction *displayOptionsTitleAction,
+                     QAction *feedbackTitleAction,
                      QAction *showTabsAndCommandsAction,
                      QAction *showTabsOnlyAction,
                      QAction *alwaysShowRibbonAction,
@@ -1044,6 +1045,39 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && !collapseTestCommandAreaVisible(ribbonBar),
                  QStringLiteral("display menu auto hides ribbon"))) {
         return 1;
+    }
+
+    QToolBar *titleButtonBar = ribbonBar->findChild<QToolBar *>(
+        QStringLiteral("lqRibbonTitleButtonBar"));
+    QToolButton *feedbackButton =
+        titleButtonBar
+            ? qobject_cast<QToolButton *>(
+                titleButtonBar->widgetForAction(feedbackTitleAction))
+            : nullptr;
+    if (feedbackTitleAction) {
+        feedbackTitleAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strFeedbackStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(feedbackTitleAction
+                     && feedbackTitleAction->objectName()
+                         == QStringLiteral("feedbackTitleAction")
+                     && !feedbackTitleAction->icon().isNull()
+                     && feedbackTitleAction->toolTip().contains(
+                         QStringLiteral("feedback"))
+                     && titleButtonBar
+                     && titleButtonBar->actions().contains(feedbackTitleAction)
+                     && feedbackButton
+                     && feedbackButton->toolButtonStyle()
+                         == Qt::ToolButtonIconOnly
+                     && strFeedbackStatus.contains(QStringLiteral("Feedback")),
+                 QStringLiteral("Feedback title button is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
     }
 
     reset();
@@ -4121,6 +4155,14 @@ int main(int argc, char *argv[])
         }
     }
 
+    QAction *feedbackTitleAction = mainWindow.ribbonBar()->addTitleButton(
+        mainWindow.style()->standardIcon(QStyle::SP_MessageBoxInformation),
+        QObject::tr("Feedback"));
+    feedbackTitleAction->setObjectName(QStringLiteral("feedbackTitleAction"));
+    feedbackTitleAction->setToolTip(
+        QObject::tr("Send feedback about this document"));
+    feedbackTitleAction->setStatusTip(
+        QObject::tr("Feedback: send product feedback"));
     QAction *helpTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxQuestion),
         QObject::tr("Help"));
@@ -4136,6 +4178,13 @@ int main(int argc, char *argv[])
         QMessageBox::information(&mainWindow,
                                  QObject::tr("LqRibbon"),
                                  QObject::tr("Account"));
+    });
+    QObject::connect(feedbackTitleAction, &QAction::triggered, [&mainWindow]() {
+        if (mainWindow.statusBar()) {
+            mainWindow.statusBar()->showMessage(
+                QObject::tr("Feedback: send product feedback"),
+                2500);
+        }
     });
     QObject::connect(smartLookupAction,
                      &QAction::triggered,
@@ -4251,6 +4300,7 @@ int main(int argc, char *argv[])
                                 pinRibbonAction,
                                 unpinRibbonAction,
                                 displayOptionsTitleAction,
+                                feedbackTitleAction,
                                 showTabsAndCommandsAction,
                                 showTabsOnlyAction,
                                 alwaysShowRibbonAction,
