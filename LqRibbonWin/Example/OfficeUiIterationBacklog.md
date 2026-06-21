@@ -84,7 +84,7 @@ Default style remains `Office 2016 Blue`.
 | 053 | Comments button in title area | Title buttons | Complete |
 | 054 | Presence avatar strip | Title buttons | Complete |
 | 055 | Collaboration status text | Status bar | Complete |
-| 056 | Coauthoring indicator | Status bar | Planned |
+| 056 | Coauthoring indicator | Status bar | Complete |
 | 057 | Version history entry | Backstage | Planned |
 | 058 | AutoSave toggle in title/QAT | Title/QAT command | Planned |
 | 059 | AutoSave disabled explanation | Tooltip/callout | Planned |

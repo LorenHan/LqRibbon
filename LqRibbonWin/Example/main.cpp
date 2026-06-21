@@ -273,6 +273,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *tellMeHelpRedirectAction,
                      QLabel *tellMeHelpRedirectPreview,
                      QLabel *collaborationStatusText,
+                     QFrame *coauthoringIndicatorDot,
+                     QLabel *coauthoringIndicatorLabel,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
                      const std::function<void(QMenu *, QAction *)> &populateActionContextMenu,
                      const std::function<void(QMenu *, QAction *)> &populateQuickAccessActionContextMenu,
@@ -1216,6 +1218,27 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
+    }
+
+    if (!require(coauthoringIndicatorDot
+                     && coauthoringIndicatorDot->objectName()
+                         == QStringLiteral("coauthoringIndicatorDot")
+                     && coauthoringIndicatorDot->isVisible()
+                     && coauthoringIndicatorDot->size() == QSize(10, 10)
+                     && coauthoringIndicatorDot->styleSheet().contains(
+                         QStringLiteral("#107c41"))
+                     && coauthoringIndicatorDot->toolTip().contains(
+                         QStringLiteral("coauthoring"), Qt::CaseInsensitive)
+                     && coauthoringIndicatorLabel
+                     && coauthoringIndicatorLabel->objectName()
+                         == QStringLiteral("coauthoringIndicator")
+                     && coauthoringIndicatorLabel->isVisible()
+                     && coauthoringIndicatorLabel->text()
+                         == QStringLiteral("Coauthoring")
+                     && coauthoringIndicatorLabel->toolTip().contains(
+                         QStringLiteral("coauthoring"), Qt::CaseInsensitive),
+                 QStringLiteral("Coauthoring indicator is available"))) {
+        return 1;
     }
 
     QToolButton *feedbackButton =
@@ -4173,6 +4196,24 @@ int main(int argc, char *argv[])
     collaborationStatusText->setMinimumWidth(160);
     ribbonStatusBar->addSeparator();
     ribbonStatusBar->addWidget(collaborationStatusText);
+    QFrame *coauthoringIndicatorDot = new QFrame(ribbonStatusBar);
+    coauthoringIndicatorDot->setObjectName(
+        QStringLiteral("coauthoringIndicatorDot"));
+    coauthoringIndicatorDot->setFixedSize(10, 10);
+    coauthoringIndicatorDot->setStyleSheet(QStringLiteral(
+        "#coauthoringIndicatorDot { background: #107c41; border-radius: 5px; }"));
+    coauthoringIndicatorDot->setToolTip(
+        QObject::tr("Live coauthoring is active"));
+    QLabel *coauthoringIndicatorLabel =
+        new QLabel(QObject::tr("Coauthoring"), ribbonStatusBar);
+    coauthoringIndicatorLabel->setObjectName(
+        QStringLiteral("coauthoringIndicator"));
+    coauthoringIndicatorLabel->setToolTip(
+        QObject::tr("Live coauthoring is active"));
+    coauthoringIndicatorLabel->setMinimumWidth(92);
+    ribbonStatusBar->addSeparator();
+    ribbonStatusBar->addWidget(coauthoringIndicatorDot);
+    ribbonStatusBar->addWidget(coauthoringIndicatorLabel);
     densityStatusPreview = new QLabel(ribbonStatusBar);
     densityStatusPreview->setObjectName(QStringLiteral("ribbonDensityStatusPreview"));
     densityStatusPreview->setMinimumWidth(180);
@@ -4594,6 +4635,8 @@ int main(int argc, char *argv[])
                                 tellMeHelpRedirectAction,
                                 tellMeHelpRedirectPreview,
                                 collaborationStatusText,
+                                coauthoringIndicatorDot,
+                                coauthoringIndicatorLabel,
                                 populateQuickAccessMenu,
                                 populateActionContextMenu,
                                 populateQuickAccessActionContextMenu,
