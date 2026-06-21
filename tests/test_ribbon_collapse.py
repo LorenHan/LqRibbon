@@ -776,6 +776,34 @@ def test_example_svg_recolor_command_surface():
     window.close()
 
 
+def test_example_svg_convert_shape_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.format_page.title() == "Format"
+    assert window.svg_convert_shape_action.objectName() == "svgConvertShapeAction"
+    assert not window.svg_convert_shape_action.icon().isNull()
+    assert "editable vector shapes" in window.svg_convert_shape_action.toolTip()
+    assert (
+        window.svg_convert_shape_action.statusTip()
+        == "Convert to Shape: editable vector preview ready"
+    )
+    assert window.svg_convert_shape_preview.objectName() == "svgConvertShapePreview"
+    assert window.svg_convert_shape_preview.text() == "SVG shape: vector icon"
+    assert "shape conversion" in window.svg_convert_shape_preview.toolTip()
+    assert window.svg_convert_shape_action in window.search_actions
+    assert ribbon.searchAction("Convert to Shape") is window.svg_convert_shape_action
+
+    window.svg_convert_shape_action.trigger()
+    _app().processEvents()
+    assert window.svg_convert_shape_preview.text() == "SVG shape: editable shape"
+    assert "#svgConvertShapePreview" in window.svg_convert_shape_preview.styleSheet()
+    assert "Convert to Shape" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2164,6 +2192,7 @@ def main():
         test_example_app_icon_color_set_is_available,
         test_example_svg_icon_insert_command_surface,
         test_example_svg_recolor_command_surface,
+        test_example_svg_convert_shape_command_surface,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

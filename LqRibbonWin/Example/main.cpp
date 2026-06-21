@@ -245,6 +245,33 @@ QIcon createSvgRecolorIcon()
     return QIcon(pixmap);
 }
 
+QIcon createSvgConvertShapeIcon()
+{
+    QPixmap pixmap(48, 48);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QPen(QColor(QStringLiteral("#0f766e")), 3));
+    painter.setBrush(QColor(QStringLiteral("#ccfbf1")));
+    painter.drawRoundedRect(QRect(7, 7, 34, 34), 6, 6);
+    painter.setPen(QPen(QColor(QStringLiteral("#0f766e")), 2));
+    painter.drawLine(17, 17, 31, 17);
+    painter.drawLine(31, 17, 31, 31);
+    painter.drawLine(31, 31, 17, 31);
+    painter.drawLine(17, 31, 17, 17);
+    painter.setBrush(Qt::white);
+    const QRect nodes[] = {
+        QRect(13, 13, 8, 8),
+        QRect(27, 13, 8, 8),
+        QRect(27, 27, 8, 8),
+        QRect(13, 27, 8, 8),
+    };
+    for (const QRect &node : nodes) {
+        painter.drawEllipse(node);
+    }
+    return QIcon(pixmap);
+}
+
 QTabBar *collapseTestTabBar(LqRibbon::RibbonBar *ribbonBar)
 {
     return ribbonBar->findChild<QTabBar *>();
@@ -379,6 +406,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *formatPage,
                      QAction *svgRecolorAction,
                      QLabel *svgRecolorPreview,
+                     QAction *svgConvertShapeAction,
+                     QLabel *svgConvertShapePreview,
                      QAction *smartLookupAction,
                      LqRibbon::RibbonPage *reviewPage,
                      QLabel *smartLookupPreview,
@@ -957,6 +986,49 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strSvgRecolorStatus.contains(
                          QStringLiteral("Recolor SVG")),
                  QStringLiteral("SVG recolor command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *svgConvertShapeButton =
+        collapseTestActionButton(ribbonBar, svgConvertShapeAction);
+    if (svgConvertShapeAction) {
+        svgConvertShapeAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strSvgConvertShapeStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(formatPageIndex >= 0
+                     && svgConvertShapeAction
+                     && svgConvertShapeAction->objectName()
+                         == QStringLiteral("svgConvertShapeAction")
+                     && !svgConvertShapeAction->icon().isNull()
+                     && svgConvertShapeAction->toolTip().contains(
+                         QStringLiteral("editable vector shapes"))
+                     && svgConvertShapeAction->statusTip()
+                         == QStringLiteral(
+                             "Convert to Shape: editable vector preview ready")
+                     && svgConvertShapePreview
+                     && svgConvertShapePreview->objectName()
+                         == QStringLiteral("svgConvertShapePreview")
+                     && svgConvertShapePreview->text()
+                         == QStringLiteral("SVG shape: editable shape")
+                     && svgConvertShapePreview->styleSheet().contains(
+                         QStringLiteral("#svgConvertShapePreview"))
+                     && svgConvertShapePreview->toolTip().contains(
+                         QStringLiteral("shape conversion"))
+                     && ribbonBar->searchAction(
+                         QStringLiteral("Convert to Shape"))
+                         == svgConvertShapeAction
+                     && svgConvertShapeButton
+                     && svgConvertShapeButton->defaultAction()
+                         == svgConvertShapeAction
+                     && strSvgConvertShapeStatus.contains(
+                         QStringLiteral("Convert to Shape")),
+                 QStringLiteral("SVG convert to shape command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -4250,6 +4322,28 @@ int main(int argc, char *argv[])
     svgRecolorPreview->setToolTip(QObject::tr("Selected SVG recolor state"));
     svgFormatGroup->addWidget(svgRecolorPreview);
 
+    QAction *svgConvertShapeAction = svgFormatGroup->addAction(
+        createSvgConvertShapeIcon(),
+        QObject::tr("Convert to Shape"),
+        Qt::ToolButtonTextUnderIcon);
+    svgConvertShapeAction->setObjectName(
+        QStringLiteral("svgConvertShapeAction"));
+    svgConvertShapeAction->setToolTip(
+        QObject::tr("Convert the selected SVG icon into editable vector shapes"));
+    svgConvertShapeAction->setStatusTip(
+        QObject::tr("Convert to Shape: editable vector preview ready"));
+    QLabel *svgConvertShapePreview = new QLabel(svgFormatGroup);
+    svgConvertShapePreview->setObjectName(
+        QStringLiteral("svgConvertShapePreview"));
+    svgConvertShapePreview->setText(QObject::tr("SVG shape: vector icon"));
+    svgConvertShapePreview->setMinimumWidth(210);
+    svgConvertShapePreview->setFixedHeight(30);
+    svgConvertShapePreview->setAlignment(Qt::AlignCenter);
+    svgConvertShapePreview->setFrameShape(QFrame::StyledPanel);
+    svgConvertShapePreview->setToolTip(
+        QObject::tr("Selected SVG shape conversion state"));
+    svgFormatGroup->addWidget(svgConvertShapePreview);
+
     LqRibbon::RibbonPage *reviewPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Review"));
     LqRibbon::RibbonGroup *insightsGroup =
@@ -5058,6 +5152,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), darkCanvasAction);
     customizeManager->addToCategory(QObject::tr("Actions"), svgIconInsertAction);
     customizeManager->addToCategory(QObject::tr("Actions"), svgRecolorAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), svgConvertShapeAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -6234,6 +6329,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(darkCanvasAction);
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
+    mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -6435,6 +6531,20 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr(
                                      "Recolor SVG: blue accent applied"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(svgConvertShapeAction,
+                     &QAction::triggered,
+                     [&mainWindow, svgConvertShapePreview]() {
+                         svgConvertShapePreview->setText(
+                             QObject::tr("SVG shape: editable shape"));
+                         svgConvertShapePreview->setStyleSheet(
+                             QStringLiteral("QLabel#svgConvertShapePreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Convert to Shape: editable vector created"),
                                  2500);
                          }
                      });
@@ -6799,6 +6909,8 @@ int main(int argc, char *argv[])
                                 formatPage,
                                 svgRecolorAction,
                                 svgRecolorPreview,
+                                svgConvertShapeAction,
+                                svgConvertShapePreview,
                                 smartLookupAction,
                                 reviewPage,
                                 smartLookupPreview,

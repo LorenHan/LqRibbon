@@ -604,6 +604,30 @@ class MainWindow(RibbonMainWindow):
         self.svg_recolor_preview.setToolTip("Selected SVG recolor state")
         svg_format_group.addWidget(self.svg_recolor_preview)
 
+        self.svg_convert_shape_action = svg_format_group.addAction(
+            self._svg_convert_shape_icon(),
+            "Convert to Shape",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.svg_convert_shape_action.setObjectName("svgConvertShapeAction")
+        self.svg_convert_shape_action.setToolTip(
+            "Convert the selected SVG icon into editable vector shapes"
+        )
+        self.svg_convert_shape_action.setStatusTip(
+            "Convert to Shape: editable vector preview ready"
+        )
+
+        self.svg_convert_shape_preview = QLabel(
+            "SVG shape: vector icon", svg_format_group
+        )
+        self.svg_convert_shape_preview.setObjectName("svgConvertShapePreview")
+        self.svg_convert_shape_preview.setMinimumWidth(210)
+        self.svg_convert_shape_preview.setFixedHeight(30)
+        self.svg_convert_shape_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.svg_convert_shape_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.svg_convert_shape_preview.setToolTip("Selected SVG shape conversion state")
+        svg_format_group.addWidget(self.svg_convert_shape_preview)
+
     def _create_review_page(self):
         insights_group = self.review_page.addGroup("Insights")
         self.smart_lookup_action = insights_group.addAction(
@@ -1524,6 +1548,7 @@ class MainWindow(RibbonMainWindow):
             self.dark_canvas_action,
             self.svg_icon_insert_action,
             self.svg_recolor_action,
+            self.svg_convert_shape_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1567,6 +1592,7 @@ class MainWindow(RibbonMainWindow):
         self.dark_canvas_action.toggled.connect(self.toggle_dark_canvas)
         self.svg_icon_insert_action.triggered.connect(self.insert_svg_icon)
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
+        self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1843,6 +1869,7 @@ class MainWindow(RibbonMainWindow):
             self.dark_canvas_action,
             self.svg_icon_insert_action,
             self.svg_recolor_action,
+            self.svg_convert_shape_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -2289,6 +2316,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#svgRecolorPreview { color: #ffffff; background: #2563eb; font-weight: 600; }"
         )
         self._message("Recolor SVG: blue accent applied")
+
+    def convert_svg_to_shape(self):
+        self.svg_convert_shape_preview.setText("SVG shape: editable shape")
+        self.svg_convert_shape_preview.setStyleSheet(
+            "QLabel#svgConvertShapePreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+        )
+        self._message("Convert to Shape: editable vector created")
 
     def toggle_dictate_microphone(self, enabled):
         if enabled:
@@ -2765,6 +2799,30 @@ class MainWindow(RibbonMainWindow):
         painter.setPen(QPen(QColor("#ffffff"), 2))
         painter.drawLine(20, 24, 24, 28)
         painter.drawLine(24, 28, 31, 19)
+        painter.end()
+        return QIcon(pixmap)
+
+    def _svg_convert_shape_icon(self):
+        pixmap = QPixmap(48, 48)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(QColor("#0f766e"), 3))
+        painter.setBrush(QColor("#ccfbf1"))
+        painter.drawRoundedRect(QRect(7, 7, 34, 34), 6, 6)
+        painter.setPen(QPen(QColor("#0f766e"), 2))
+        painter.drawLine(17, 17, 31, 17)
+        painter.drawLine(31, 17, 31, 31)
+        painter.drawLine(31, 31, 17, 31)
+        painter.drawLine(17, 31, 17, 17)
+        painter.setBrush(QColor("#ffffff"))
+        for point in (
+            QRect(13, 13, 8, 8),
+            QRect(27, 13, 8, 8),
+            QRect(27, 27, 8, 8),
+            QRect(13, 27, 8, 8),
+        ):
+            painter.drawEllipse(point)
         painter.end()
         return QIcon(pixmap)
 
