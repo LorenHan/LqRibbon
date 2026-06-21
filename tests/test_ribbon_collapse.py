@@ -849,6 +849,24 @@ def test_example_popup_gallery_menu_is_available():
     window.close()
 
 
+def test_example_gallery_checked_item_state_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    gallery = window.style_gallery
+
+    assert gallery.checkedIndex() == 1
+    assert gallery.checkedItem().caption() == "Compact"
+
+    gallery.setCheckedIndex(3)
+    _app().processEvents()
+    assert gallery.checkedIndex() == 3
+    assert gallery.checkedItem().caption() == "Network"
+    window.close()
+
+
 def test_example_svg_icon_insert_command_surface():
     window = MainWindow()
     window.show()
@@ -3043,6 +3061,7 @@ def main():
         test_example_high_dpi_gallery_icon_is_available,
         test_example_app_icon_color_set_is_available,
         test_example_popup_gallery_menu_is_available,
+        test_example_gallery_checked_item_state_is_available,
         test_example_svg_icon_insert_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,

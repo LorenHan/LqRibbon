@@ -1785,6 +1785,24 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         return 1;
     }
 
+    const bool galleryDefaultChecked =
+        styleGallery && styleGallery->checkedIndex() == 1
+        && styleGallery->checkedItem()
+        && styleGallery->checkedItem()->caption() == QStringLiteral("Compact");
+    if (styleGallery) {
+        styleGallery->setCheckedIndex(3);
+        processCollapseTestEvents();
+    }
+    if (!require(styleGallery
+                     && galleryDefaultChecked
+                     && styleGallery->checkedIndex() == 3
+                     && styleGallery->checkedItem()
+                     && styleGallery->checkedItem()->caption()
+                         == QStringLiteral("Network"),
+                 QStringLiteral("Gallery checked-item state is available"))) {
+        return 1;
+    }
+
     const int tellMePageIndex = ribbonBar->indexOf(tellMePage);
     if (tellMePageIndex >= 0) {
         ribbonBar->setCurrentPageIndex(tellMePageIndex);
