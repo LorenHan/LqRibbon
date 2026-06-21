@@ -1032,6 +1032,36 @@ def test_example_title_groups_visibility_toggle_is_available():
     window.close()
 
 
+def test_example_custom_tab_creation_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    initial_count = ribbon.pageCount()
+
+    assert window.add_page_action.objectName() == "addPageAction"
+    assert not window.add_page_action.icon().isNull()
+    assert "custom ribbon tab" in window.add_page_action.toolTip()
+    assert window.add_page_action.statusTip() == "Custom tab: not created"
+    assert window.custom_tab_preview.objectName() == "customTabPreview"
+    assert window.custom_tab_preview.text() == "Custom tab: none"
+    assert window.add_page_action in window.search_actions
+    assert ribbon.searchAction("Add Page") is window.add_page_action
+
+    window.add_page_action.trigger()
+    _app().processEvents()
+    new_page = ribbon.currentPage()
+    assert ribbon.pageCount() == initial_count + 1
+    assert new_page.title() == "Runtime 1"
+    assert new_page.group(0).title() == "Generated"
+    assert window.customize_manager.pageId(new_page) == "runtime1"
+    assert window.custom_tab_preview.text() == "Custom tab: Runtime 1"
+    assert "#customTabPreview" in window.custom_tab_preview.styleSheet()
+    assert window.add_page_action.statusTip() == "Custom tab: Runtime 1"
+    assert "Custom tab" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2493,6 +2523,7 @@ def main():
         test_example_contextual_tab_group_color_preview_is_available,
         test_example_contextual_tab_show_hide_toggle_is_available,
         test_example_title_groups_visibility_toggle_is_available,
+        test_example_custom_tab_creation_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

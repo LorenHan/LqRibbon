@@ -481,6 +481,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      const std::function<void(QMenu *, QAction *)> &populateQuickAccessActionContextMenu,
                      const QList<QAction *> &defaultQuickAccessActions,
                      const QByteArray *exportedQuickAccessState,
+                     QAction *addPageAction,
+                     QLabel *customTabPreview,
                      QAction *renamePageAction,
                      QAction *moveGalleryAction,
                      QAction *toggleGroupAction,
@@ -3511,6 +3513,51 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("minimization disabled blocks collapse"))) {
         return 1;
     }
+    ribbonBar->setMinimizationEnabled(true);
+    const int pageCountBeforeCustomTab = ribbonBar->pageCount();
+    if (!require(addPageAction
+                     && addPageAction->objectName()
+                         == QStringLiteral("addPageAction")
+                     && !addPageAction->icon().isNull()
+                     && addPageAction->toolTip().contains(
+                         QStringLiteral("custom ribbon tab"))
+                     && addPageAction->statusTip()
+                         == QStringLiteral("Custom tab: not created")
+                     && customTabPreview
+                     && customTabPreview->objectName()
+                         == QStringLiteral("customTabPreview")
+                     && customTabPreview->text()
+                         == QStringLiteral("Custom tab: none")
+                     && ribbonBar->searchAction(QStringLiteral("Add Page"))
+                         == addPageAction,
+                 QStringLiteral("Custom tab creation defaults empty"))) {
+        return 1;
+    }
+    addPageAction->trigger();
+    processCollapseTestEvents();
+    LqRibbon::RibbonPage *customPage = ribbonBar->currentPage();
+    const QString strCustomTabStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(ribbonBar->pageCount() == pageCountBeforeCustomTab + 1
+                     && customPage
+                     && customPage->title() == QStringLiteral("Runtime 1")
+                     && customPage->group(0)
+                     && customPage->group(0)->title()
+                         == QStringLiteral("Generated")
+                     && customPage->property("customizePageId").toString()
+                         == QStringLiteral("runtime1")
+                     && customTabPreview->text()
+                         == QStringLiteral("Custom tab: Runtime 1")
+                     && customTabPreview->styleSheet().contains(
+                         QStringLiteral("#customTabPreview"))
+                     && addPageAction->statusTip()
+                         == QStringLiteral("Custom tab: Runtime 1")
+                     && strCustomTabStatus.contains(
+                         QStringLiteral("Custom tab")),
+                 QStringLiteral("Custom tab creation adds runtime tab"))) {
+        return 1;
+    }
 
     return 0;
 }
@@ -5469,6 +5516,19 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogNewFolder),
         QObject::tr("Add Page"),
         Qt::ToolButtonTextUnderIcon);
+    addPageAction->setObjectName(QStringLiteral("addPageAction"));
+    addPageAction->setToolTip(QObject::tr("Create a custom ribbon tab"));
+    addPageAction->setStatusTip(QObject::tr("Custom tab: not created"));
+    QLabel *customTabPreview = new QLabel(runtimeGroup);
+    customTabPreview->setObjectName(QStringLiteral("customTabPreview"));
+    customTabPreview->setText(QObject::tr("Custom tab: none"));
+    customTabPreview->setMinimumWidth(180);
+    customTabPreview->setFixedHeight(30);
+    customTabPreview->setAlignment(Qt::AlignCenter);
+    customTabPreview->setFrameShape(QFrame::StyledPanel);
+    customTabPreview->setToolTip(
+        QObject::tr("Last custom tab created from Customize"));
+    runtimeGroup->addWidget(customTabPreview);
     QAction *renamePageAction = runtimeGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
         QObject::tr("Rename Driver"),
@@ -6744,12 +6804,16 @@ int main(int argc, char *argv[])
                          mainWindow.setFrameThemeEnabled(checked);
                      });
     QObject::connect(addPageAction, &QAction::triggered,
-                     [&mainWindow]() {
+                     [&mainWindow,
+                      addPageAction,
+                      customizeManager,
+                      customTabPreview]() {
                          static int runtimePageCounter = 1;
+                         const int runtimePageNumber = runtimePageCounter++;
                          LqRibbon::RibbonPage *runtimePage =
                              mainWindow.ribbonBar()->addPage(
                                  QObject::tr("Runtime %1")
-                                     .arg(runtimePageCounter++));
+                                     .arg(runtimePageNumber));
                          LqRibbon::RibbonGroup *runtimeGroup =
                              runtimePage->addGroup(QObject::tr("Generated"));
                          runtimeGroup->addAction(
@@ -6757,6 +6821,23 @@ int main(int argc, char *argv[])
                                  QStyle::SP_DialogApplyButton),
                              QObject::tr("Generated Action"),
                              Qt::ToolButtonTextUnderIcon);
+                         customizeManager->addToCategory(
+                             QObject::tr("Pages"), runtimePage);
+                         runtimePage->setProperty(
+                             "customizePageId",
+                             QStringLiteral("runtime%1").arg(runtimePageNumber));
+                         customTabPreview->setText(
+                             QObject::tr("Custom tab: Runtime %1")
+                                 .arg(runtimePageNumber));
+                         customTabPreview->setStyleSheet(
+                             QStringLiteral("QLabel#customTabPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"));
+                         addPageAction->setStatusTip(
+                             QObject::tr("Custom tab: Runtime %1")
+                                 .arg(runtimePageNumber));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 addPageAction->statusTip(), 2500);
+                         }
                          mainWindow.ribbonBar()->setCurrentWidget(runtimePage);
                      });
     QObject::connect(renamePageAction, &QAction::triggered,
@@ -7962,6 +8043,8 @@ int main(int argc, char *argv[])
                                 populateQuickAccessActionContextMenu,
                                 defaultQuickAccessActions,
                                 &exportedQuickAccessState,
+                                addPageAction,
+                                customTabPreview,
                                 renamePageAction,
                                 moveGalleryAction,
                                 toggleGroupAction,

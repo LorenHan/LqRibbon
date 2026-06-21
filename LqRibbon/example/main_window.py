@@ -1224,6 +1224,17 @@ class MainWindow(RibbonMainWindow):
         self.add_page_action = self._add_group_action(
             self.runtime_group, QStyle.StandardPixmap.SP_FileDialogNewFolder, "Add Page"
         )
+        self.add_page_action.setObjectName("addPageAction")
+        self.add_page_action.setToolTip("Create a custom ribbon tab")
+        self.add_page_action.setStatusTip("Custom tab: not created")
+        self.custom_tab_preview = QLabel("Custom tab: none", self.runtime_group)
+        self.custom_tab_preview.setObjectName("customTabPreview")
+        self.custom_tab_preview.setMinimumWidth(180)
+        self.custom_tab_preview.setFixedHeight(30)
+        self.custom_tab_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.custom_tab_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.custom_tab_preview.setToolTip("Last custom tab created from Customize")
+        self.runtime_group.addWidget(self.custom_tab_preview)
         self.rename_page_action = self._add_group_action(
             self.runtime_group,
             QStyle.StandardPixmap.SP_FileDialogInfoView,
@@ -3025,7 +3036,8 @@ class MainWindow(RibbonMainWindow):
             self.showFullScreen()
 
     def add_runtime_page(self):
-        page = self.ribbonBar().addPage(f"Runtime {self.runtime_page_counter}")
+        page_number = self.runtime_page_counter
+        page = self.ribbonBar().addPage(f"Runtime {page_number}")
         self.runtime_page_counter += 1
         group = page.addGroup("Generated")
         group.addAction(
@@ -3033,6 +3045,14 @@ class MainWindow(RibbonMainWindow):
             "Generated Action",
             Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
         )
+        self.customize_manager.addToCategory("Pages", page)
+        self.customize_manager.setPageId(page, f"runtime{page_number}")
+        self.custom_tab_preview.setText(f"Custom tab: Runtime {page_number}")
+        self.custom_tab_preview.setStyleSheet(
+            "QLabel#customTabPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+        )
+        self.add_page_action.setStatusTip(f"Custom tab: Runtime {page_number}")
+        self._message(self.add_page_action.statusTip())
         self.ribbonBar().setCurrentWidget(page)
 
     def rename_driver_page(self):
