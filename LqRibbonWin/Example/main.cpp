@@ -1140,6 +1140,25 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("AutoSave title toggle is available"))) {
         return 1;
     }
+    autoSaveTitleAction->trigger();
+    processCollapseTestEvents();
+    const QString strAutoSaveDisabledStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(!autoSaveTitleAction->isChecked()
+                     && autoSaveTitleAction->toolTip().contains(
+                         QStringLiteral("local draft"))
+                     && autoSaveTitleAction->toolTip().contains(
+                         QStringLiteral("cloud location"))
+                     && autoSaveTitleAction->statusTip().contains(
+                         QStringLiteral("save to cloud"))
+                     && strAutoSaveDisabledStatus.contains(
+                         QStringLiteral("save to cloud")),
+                 QStringLiteral("AutoSave disabled explanation is available"))) {
+        return 1;
+    }
+    autoSaveTitleAction->trigger();
+    processCollapseTestEvents();
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
     }
@@ -4555,12 +4574,15 @@ int main(int argc, char *argv[])
         autoSaveTitleAction->setToolTip(
             enabled
                 ? QObject::tr("AutoSave is on for this cloud document")
-                : QObject::tr("AutoSave is off for this local draft"));
+                : QObject::tr(
+                    "AutoSave is off for this local draft. Save to a cloud location to enable it."));
         autoSaveTitleAction->setStatusTip(
-            QObject::tr("AutoSave: %1").arg(strState));
+            enabled
+                ? QObject::tr("AutoSave: %1").arg(strState)
+                : QObject::tr("AutoSave: off - save to cloud to enable"));
         if (mainWindow.statusBar()) {
             mainWindow.statusBar()->showMessage(
-                QObject::tr("AutoSave: %1").arg(strState),
+                autoSaveTitleAction->statusTip(),
                 2500);
         }
     };

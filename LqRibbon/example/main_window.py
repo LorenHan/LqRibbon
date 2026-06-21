@@ -1836,11 +1836,16 @@ class MainWindow(RibbonMainWindow):
         detail = (
             "AutoSave is on for this cloud document"
             if enabled
-            else "AutoSave is off for this local draft"
+            else "AutoSave is off for this local draft. Save to a cloud location to enable it."
         )
         self.auto_save_title_action.setToolTip(detail)
-        self.auto_save_title_action.setStatusTip(f"AutoSave: {state}")
-        self._message(f"AutoSave: {state}")
+        status = (
+            f"AutoSave: {state}"
+            if enabled
+            else "AutoSave: off - save to cloud to enable"
+        )
+        self.auto_save_title_action.setStatusTip(status)
+        self._message(status)
 
     def toggle_full_screen(self):
         if self.windowState() & Qt.WindowState.WindowFullScreen:

@@ -388,6 +388,21 @@ def test_example_auto_save_title_toggle_is_available():
     window.close()
 
 
+def test_example_auto_save_disabled_explanation_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    window.auto_save_title_action.trigger()
+    _app().processEvents()
+    assert not window.auto_save_title_action.isChecked()
+    assert "local draft" in window.auto_save_title_action.toolTip()
+    assert "cloud location" in window.auto_save_title_action.toolTip()
+    assert "save to cloud" in window.auto_save_title_action.statusTip()
+    assert "save to cloud" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_comments_title_button_is_available():
     window = MainWindow()
     window.show()
@@ -1486,6 +1501,7 @@ def main():
         test_example_account_title_button_is_available,
         test_example_share_title_button_is_available,
         test_example_auto_save_title_toggle_is_available,
+        test_example_auto_save_disabled_explanation_is_available,
         test_example_comments_title_button_is_available,
         test_example_presence_avatar_strip_is_available,
         test_example_collaboration_status_text_is_available,

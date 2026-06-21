@@ -87,7 +87,7 @@ Default style remains `Office 2016 Blue`.
 | 056 | Coauthoring indicator | Status bar | Complete |
 | 057 | Version history entry | Backstage | Complete |
 | 058 | AutoSave toggle in title/QAT | Title/QAT command | Complete |
-| 059 | AutoSave disabled explanation | Tooltip/callout | Planned |
+| 059 | AutoSave disabled explanation | Tooltip/callout | Complete |
 | 060 | Save a Copy command replacing Save As | Backstage | Planned |
 | 061 | Cloud location picker | Backstage | Planned |
 | 062 | Recent file pinning | Backstage recent list | Planned |
