@@ -710,6 +710,29 @@ class LqRibbonGallery(QWidget):
         self.setCheckedIndex(index)
         self.itemClicked.emit(item)
 
+    def keyPressEvent(self, event):
+        key = event.key()
+        next_index = 0 if self._selected_index < 0 else self._selected_index
+        if key == Qt.Key.Key_Left:
+            next_index -= 1
+        elif key == Qt.Key.Key_Right:
+            next_index += 1
+        elif key == Qt.Key.Key_Up:
+            next_index -= self._column_count
+        elif key == Qt.Key.Key_Down:
+            next_index += self._column_count
+        elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            if self.item(self._selected_index) is not None:
+                self._activate_item(self._selected_index)
+            event.accept()
+            return
+        else:
+            super().keyPressEvent(event)
+            return
+        if self.itemCount():
+            self.setSelectedItem(max(0, min(next_index, self.itemCount() - 1)))
+        event.accept()
+
 
 class LqRibbonGalleryControl(LqRibbonWidgetControl):
     def __init__(self, parent=None, gallery=None):

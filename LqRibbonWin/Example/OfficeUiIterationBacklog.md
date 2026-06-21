@@ -146,7 +146,7 @@ Default style remains `Office 2016 Blue`.
 | 115 | In-ribbon gallery | Gallery page | Complete |
 | 116 | Popup gallery menu | Gallery page | Complete |
 | 117 | Gallery checked-item state | Gallery page | Complete |
-| 118 | Gallery keyboard navigation | Gallery page | Planned |
+| 118 | Gallery keyboard navigation | Gallery page | Complete |
 | 119 | Draw tab | Draw page | Planned |
 | 120 | Pen gallery | Draw page | Planned |
 | 121 | Ruler toggle | Draw page | Planned |

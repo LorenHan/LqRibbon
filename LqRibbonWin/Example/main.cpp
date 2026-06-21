@@ -1803,6 +1803,32 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         return 1;
     }
 
+    if (styleGallery) {
+        styleGallery->setSelectedItem(0);
+        styleGallery->setFocus(Qt::OtherFocusReason);
+        sendCollapseTestKey(styleGallery, Qt::Key_Down, Qt::NoModifier);
+        processCollapseTestEvents();
+        sendCollapseTestKey(styleGallery, Qt::Key_Return, Qt::NoModifier);
+        processCollapseTestEvents();
+    }
+    const QString strGalleryKeyboardStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(styleGallery
+                     && styleGallery->selectedItem() == 4
+                     && styleGallery->checkedIndex() == 4
+                     && styleGallery->checkedItem()
+                     && styleGallery->checkedItem()->caption()
+                         == QStringLiteral("Apply")
+                     && strGalleryKeyboardStatus.contains(
+                         QStringLiteral("Gallery style: Apply")),
+                 QStringLiteral("Gallery keyboard navigation is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
     const int tellMePageIndex = ribbonBar->indexOf(tellMePage);
     if (tellMePageIndex >= 0) {
         ribbonBar->setCurrentPageIndex(tellMePageIndex);
@@ -5671,6 +5697,17 @@ int main(int argc, char *argv[])
     resetStyleGalleryAction->setObjectName(
         QStringLiteral("resetStyleGalleryAction"));
     styleGallery->setPopupMenu(galleryMenu);
+    QObject::connect(styleGallery,
+                     &LqRibbon::RibbonGallery::itemClicked,
+                     &mainWindow,
+                     [&mainWindow](LqRibbon::RibbonGalleryItem *item) {
+                         if (item && mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Gallery style: %1")
+                                     .arg(item->caption()),
+                                 2500);
+                         }
+                     });
 
     LqRibbon::RibbonGalleryControl *styleGalleryControl =
         new LqRibbon::RibbonGalleryControl(styleGroup, styleGallery);

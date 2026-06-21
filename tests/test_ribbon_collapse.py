@@ -867,6 +867,30 @@ def test_example_gallery_checked_item_state_is_available():
     window.close()
 
 
+def test_example_gallery_keyboard_navigation_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    gallery = window.style_gallery
+    clicked = []
+    gallery.itemClicked.connect(lambda item: clicked.append(item.caption()))
+    gallery.setSelectedItem(0)
+    gallery.setFocus()
+
+    QTest.keyClick(gallery, Qt.Key.Key_Down)
+    _app().processEvents()
+    assert gallery.selectedItem() == 4
+    QTest.keyClick(gallery, Qt.Key.Key_Return)
+    _app().processEvents()
+    assert gallery.checkedIndex() == 4
+    assert gallery.checkedItem().caption() == "Apply"
+    assert clicked[-1] == "Apply"
+    assert "Gallery style: Apply" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_svg_icon_insert_command_surface():
     window = MainWindow()
     window.show()
@@ -3062,6 +3086,7 @@ def main():
         test_example_app_icon_color_set_is_available,
         test_example_popup_gallery_menu_is_available,
         test_example_gallery_checked_item_state_is_available,
+        test_example_gallery_keyboard_navigation_is_available,
         test_example_svg_icon_insert_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
