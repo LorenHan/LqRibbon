@@ -1381,10 +1381,12 @@ class MainWindow(RibbonMainWindow):
         progress_bar.setValue(100)
         progress_bar.setToolTip("Zoom percentage progress")
 
-        sync_action = QAction(
+        self.sync_status_action = QAction(
             self._icon(QStyle.StandardPixmap.SP_BrowserReload), "Sync", status_bar
         )
-        status_bar.addPermanentAction(sync_action)
+        self.sync_status_action.setObjectName("syncStatusAction")
+        self.sync_status_action.setToolTip("Sync document changes to cloud")
+        status_bar.addPermanentAction(self.sync_status_action)
         status_bar.addPermanentWidget(switch_group)
         status_bar.addPermanentWidget(self.zoom_status_label)
         status_bar.addPermanentWidget(zoom_slider)
@@ -1399,6 +1401,7 @@ class MainWindow(RibbonMainWindow):
         self.compact_status_view_action.triggered.connect(
             lambda: self.set_status_view_mode("Compact View")
         )
+        self.sync_status_action.triggered.connect(self.sync_document_status)
         zoom_slider.valueChanged.connect(self.update_zoom_status)
 
     def set_status_view_mode(self, mode):
@@ -1409,6 +1412,10 @@ class MainWindow(RibbonMainWindow):
         self.zoom_status_label.setText(f"{value}%")
         self.progress_bar.setValueSafe(value)
         self._message(f"Zoom: {value}%")
+
+    def sync_document_status(self):
+        self.collaboration_status_label.setText("Saved to cloud | synced just now")
+        self._message("Sync: Up to date")
 
     def _create_customize_state(self):
         self.customize_manager = self.ribbonBar().customizeManager()

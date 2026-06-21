@@ -107,7 +107,7 @@ Default style remains `Office 2016 Blue`.
 | 076 | Zoom slider in status bar | Status bar | Complete |
 | 077 | View switch buttons in status bar | Status bar | Complete |
 | 078 | Character count status item | Status bar | Complete |
-| 079 | Sync status action | Status bar | Planned |
+| 079 | Sync status action | Status bar | Complete |
 | 080 | High-DPI scalable icons | Icon gallery | Planned |
 | 081 | New app icon color set | Icon gallery | Planned |
 | 082 | SVG icon insert command | Insert page | Planned |

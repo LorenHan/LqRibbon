@@ -667,6 +667,27 @@ def test_example_character_count_status_item_is_available():
     window.close()
 
 
+def test_example_sync_status_action_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    action = window.sync_status_action
+
+    assert action.objectName() == "syncStatusAction"
+    assert action.text() == "Sync"
+    assert not action.icon().isNull()
+    assert "Sync document changes" in action.toolTip()
+
+    action.trigger()
+    _app().processEvents()
+    assert window.collaboration_status_label.text() == (
+        "Saved to cloud | synced just now"
+    )
+    assert "Sync: Up to date" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2050,6 +2071,7 @@ def main():
         test_example_zoom_slider_status_item_is_available,
         test_example_view_switch_status_buttons_are_available,
         test_example_character_count_status_item_is_available,
+        test_example_sync_status_action_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

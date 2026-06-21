@@ -306,6 +306,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QFrame *coauthoringIndicatorDot,
                      QLabel *coauthoringIndicatorLabel,
                      QLabel *characterCountStatusLabel,
+                     QAction *syncStatusAction,
                      LqRibbon::RibbonSliderPane *zoomSlider,
                      QLabel *zoomStatusLabel,
                      LqRibbon::RibbonProgressBar *zoomProgressBar,
@@ -1783,6 +1784,32 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && characterCountStatusLabel->minimumWidth() >= 112,
                  QStringLiteral("Character count status item is available"))) {
         return 1;
+    }
+
+    if (!require(syncStatusAction
+                     && syncStatusAction->objectName()
+                         == QStringLiteral("syncStatusAction")
+                     && syncStatusAction->text() == QStringLiteral("Sync")
+                     && !syncStatusAction->icon().isNull()
+                     && syncStatusAction->toolTip().contains(
+                         QStringLiteral("Sync document changes")),
+                 QStringLiteral("Sync status action is available"))) {
+        return 1;
+    }
+    syncStatusAction->trigger();
+    processCollapseTestEvents();
+    const QString strSyncStatusMessage =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(collaborationStatusText->text()
+                     == QStringLiteral("Saved to cloud | synced just now")
+                     && strSyncStatusMessage.contains(
+                         QStringLiteral("Sync: Up to date")),
+                 QStringLiteral("Sync status action updates state"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
     }
 
     if (!require(zoomSlider
@@ -5726,6 +5753,8 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_BrowserReload),
         QObject::tr("Sync"),
         ribbonStatusBar);
+    syncAction->setObjectName(QStringLiteral("syncStatusAction"));
+    syncAction->setToolTip(QObject::tr("Sync document changes to cloud"));
     ribbonStatusBar->addPermanentAction(syncAction);
     ribbonStatusBar->addPermanentWidget(switchGroup);
     ribbonStatusBar->addPermanentWidget(zoomStatusLabel);
@@ -5745,6 +5774,17 @@ int main(int argc, char *argv[])
                          if (mainWindow.statusBar()) {
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr("Zoom: %1%").arg(value),
+                                 2500);
+                         }
+                     });
+    QObject::connect(syncAction,
+                     &QAction::triggered,
+                     [&mainWindow, collaborationStatusText]() {
+                         collaborationStatusText->setText(
+                             QObject::tr("Saved to cloud | synced just now"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Sync: Up to date"),
                                  2500);
                          }
                      });
@@ -6430,6 +6470,7 @@ int main(int argc, char *argv[])
                                 coauthoringIndicatorDot,
                                 coauthoringIndicatorLabel,
                                 characterCountStatusLabel,
+                                syncAction,
                                 zoomSlider,
                                 zoomStatusLabel,
                                 progressBar,
