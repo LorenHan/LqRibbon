@@ -294,6 +294,34 @@ def test_example_display_options_menu_controls_ribbon_modes():
     window.close()
 
 
+def test_example_dictate_microphone_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.dictate_microphone_action.objectName() == "dictateMicrophoneAction"
+    assert window.dictate_microphone_action.isCheckable()
+    assert not window.dictate_microphone_action.isChecked()
+    assert not window.dictate_microphone_action.icon().isNull()
+    assert "voice dictation" in window.dictate_microphone_action.toolTip()
+    assert (
+        window.dictate_microphone_preview.objectName()
+        == "dictateMicrophonePreview"
+    )
+    assert window.dictate_microphone_preview.text() == "Dictate: microphone idle"
+    assert window.dictate_microphone_action in window.search_actions
+    assert ribbon.searchAction("Dictate") is window.dictate_microphone_action
+
+    window.dictate_microphone_action.trigger()
+    _app().processEvents()
+    assert window.dictate_microphone_action.isChecked()
+    assert window.dictate_microphone_preview.text() == "Dictate: listening"
+    assert "#dictateMicrophonePreview" in window.dictate_microphone_preview.styleSheet()
+    assert "Dictate" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_feedback_title_button_is_available():
     window = MainWindow()
     window.show()
@@ -1768,6 +1796,7 @@ def main():
         test_example_classic_action_restores_multi_line_ribbon,
         test_example_pin_unpin_actions_control_display_policy,
         test_example_display_options_menu_controls_ribbon_modes,
+        test_example_dictate_microphone_command_surface,
         test_example_feedback_title_button_is_available,
         test_example_account_title_button_is_available,
         test_example_account_privacy_settings_entry_is_available,

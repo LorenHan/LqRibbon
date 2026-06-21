@@ -98,7 +98,7 @@ Default style remains `Office 2016 Blue`.
 | 067 | Accessibility checker command | Review page | Complete |
 | 068 | Editor pane command | Review page | Complete |
 | 069 | Spelling and grammar card | Review page | Complete |
-| 070 | Dictate microphone command | Home page | Planned |
+| 070 | Dictate microphone command | Home page | Complete |
 | 071 | Translator command | Review page | Planned |
 | 072 | Read Aloud command | Review page | Planned |
 | 073 | Immersive Reader command | View page | Planned |

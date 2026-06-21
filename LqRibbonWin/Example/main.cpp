@@ -240,6 +240,9 @@ QToolButton *collapseTestActionButton(LqRibbon::RibbonBar *ribbonBar,
 
 int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *classicRibbonAction,
+                     LqRibbon::RibbonPage *generalPage,
+                     QAction *dictateMicrophoneAction,
+                     QLabel *dictateMicrophonePreview,
                      QAction *pinRibbonAction,
                      QAction *unpinRibbonAction,
                      QAction *displayOptionsTitleAction,
@@ -1250,6 +1253,49 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && !collapseTestCommandAreaVisible(ribbonBar),
                  QStringLiteral("display menu auto hides ribbon"))) {
         return 1;
+    }
+
+    showTabsAndCommandsAction->trigger();
+    processCollapseTestEvents();
+    const int generalPageIndex = ribbonBar->indexOf(generalPage);
+    if (generalPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(generalPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *dictateMicrophoneButton =
+        collapseTestActionButton(ribbonBar, dictateMicrophoneAction);
+    if (dictateMicrophoneAction) {
+        dictateMicrophoneAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strDictateStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(generalPage
+                     && dictateMicrophoneAction
+                     && dictateMicrophoneAction->objectName()
+                         == QStringLiteral("dictateMicrophoneAction")
+                     && dictateMicrophoneAction->isCheckable()
+                     && dictateMicrophoneAction->isChecked()
+                     && !dictateMicrophoneAction->icon().isNull()
+                     && dictateMicrophoneAction->toolTip().contains(
+                         QStringLiteral("voice dictation"))
+                     && dictateMicrophoneButton
+                     && dictateMicrophonePreview
+                     && dictateMicrophonePreview->objectName()
+                         == QStringLiteral("dictateMicrophonePreview")
+                     && dictateMicrophonePreview->text()
+                         == QStringLiteral("Dictate: listening")
+                     && dictateMicrophonePreview->styleSheet().contains(
+                         QStringLiteral("#dictateMicrophonePreview"))
+                     && ribbonBar->searchAction(QStringLiteral("Dictate"))
+                         == dictateMicrophoneAction
+                     && strDictateStatus.contains(QStringLiteral("Dictate")),
+                 QStringLiteral("Dictate microphone command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
     }
 
     QToolBar *titleButtonBar = ribbonBar->findChild<QToolBar *>(
@@ -3298,7 +3344,7 @@ int main(int argc, char *argv[])
                       stylePreview,
                       stateTimingPreview,
                       &settings,
-                      persistStyleChoice](int index) {
+                     persistStyleChoice](int index) {
                          const LqRibbon::RibbonBar::RibbonStyle style =
                              ribbonStyleFromComboIndex(styleCombo, index);
                          updateRibbonStylePreview(stylePreview, style);
@@ -3311,6 +3357,30 @@ int main(int argc, char *argv[])
                                  ribbonStyleChoiceFromComboIndex(styleCombo, index));
                          }
                      });
+    LqRibbon::RibbonGroup *voiceGroup =
+        generalPage->addGroup(QObject::tr("Voice"));
+    QAction *dictateMicrophoneAction = voiceGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MediaVolume),
+        QObject::tr("Dictate"),
+        Qt::ToolButtonTextUnderIcon);
+    dictateMicrophoneAction->setObjectName(
+        QStringLiteral("dictateMicrophoneAction"));
+    dictateMicrophoneAction->setCheckable(true);
+    dictateMicrophoneAction->setToolTip(
+        QObject::tr("Start voice dictation from the microphone"));
+    dictateMicrophoneAction->setStatusTip(
+        QObject::tr("Dictate: microphone ready"));
+    QLabel *dictateMicrophonePreview = new QLabel(voiceGroup);
+    dictateMicrophonePreview->setObjectName(
+        QStringLiteral("dictateMicrophonePreview"));
+    dictateMicrophonePreview->setText(QObject::tr("Dictate: microphone idle"));
+    dictateMicrophonePreview->setMinimumWidth(190);
+    dictateMicrophonePreview->setFixedHeight(30);
+    dictateMicrophonePreview->setAlignment(Qt::AlignCenter);
+    dictateMicrophonePreview->setFrameShape(QFrame::StyledPanel);
+    dictateMicrophonePreview->setToolTip(
+        QObject::tr("Current dictation microphone state"));
+    voiceGroup->addWidget(dictateMicrophonePreview);
 
     LqRibbon::RibbonPage *driverPage = mainWindow.ribbonBar()->addPage(QObject::tr("Driver"));
     LqRibbon::RibbonGroup *communicationGroup = driverPage->addGroup(QObject::tr("Communication"));
@@ -4156,6 +4226,8 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), shellPage);
     customizeManager->addToCategory(QObject::tr("Actions"), fullScreenAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
+    customizeManager->addToCategory(QObject::tr("Actions"),
+                                    dictateMicrophoneAction);
     customizeManager->addToCategory(QObject::tr("Actions"), classicRibbonAction);
     customizeManager->addToCategory(QObject::tr("Actions"), pinRibbonAction);
     customizeManager->addToCategory(QObject::tr("Actions"), unpinRibbonAction);
@@ -4902,6 +4974,37 @@ int main(int argc, char *argv[])
                                  QObject::tr("LqRibbon"),
                                  QObject::tr("Connect"));
     });
+    QObject::connect(dictateMicrophoneAction,
+                     &QAction::toggled,
+                     [&mainWindow, dictateMicrophoneAction, dictateMicrophonePreview](bool enabled) {
+                         if (enabled) {
+                             dictateMicrophonePreview->setText(
+                                 QObject::tr("Dictate: listening"));
+                             dictateMicrophonePreview->setStyleSheet(
+                                 QStringLiteral("QLabel#dictateMicrophonePreview { color: #107c41; font-weight: 600; }"));
+                             dictateMicrophoneAction->setToolTip(
+                                 QObject::tr(
+                                     "Stop voice dictation from the microphone"));
+                             if (mainWindow.statusBar()) {
+                                 mainWindow.statusBar()->showMessage(
+                                     QObject::tr(
+                                         "Dictate: listening from microphone"),
+                                     2500);
+                             }
+                         } else {
+                             dictateMicrophonePreview->setText(
+                                 QObject::tr("Dictate: microphone idle"));
+                             dictateMicrophonePreview->setStyleSheet(QString());
+                             dictateMicrophoneAction->setToolTip(
+                                 QObject::tr(
+                                     "Start voice dictation from the microphone"));
+                             if (mainWindow.statusBar()) {
+                                 mainWindow.statusBar()->showMessage(
+                                     QObject::tr("Dictate: microphone idle"),
+                                     2500);
+                             }
+                         }
+                     });
     QObject::connect(specialistOptionsAction, &QAction::triggered,
                      [&mainWindow]() {
                          mainWindow.statusBar()->showMessage(
@@ -5209,6 +5312,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(tabAction);
     mainWindow.ribbonBar()->registerSearchAction(settingsAction);
     mainWindow.ribbonBar()->registerSearchAction(connectAction);
+    mainWindow.ribbonBar()->registerSearchAction(dictateMicrophoneAction);
     mainWindow.ribbonBar()->registerSearchAction(basicAction);
     mainWindow.ribbonBar()->registerSearchAction(driverAction);
     mainWindow.ribbonBar()->registerSearchAction(
@@ -5583,6 +5687,9 @@ int main(int argc, char *argv[])
     if (collapseTestsRequested) {
         return runCollapseTests(mainWindow,
                                 classicRibbonAction,
+                                generalPage,
+                                dictateMicrophoneAction,
+                                dictateMicrophonePreview,
                                 pinRibbonAction,
                                 unpinRibbonAction,
                                 displayOptionsTitleAction,

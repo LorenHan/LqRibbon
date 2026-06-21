@@ -232,6 +232,32 @@ class MainWindow(RibbonMainWindow):
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
         self._create_style_switch_group()
+        voice_group = self.general_page.addGroup("Voice")
+        self.dictate_microphone_action = voice_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_MediaVolume),
+            "Dictate",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.dictate_microphone_action.setObjectName("dictateMicrophoneAction")
+        self.dictate_microphone_action.setCheckable(True)
+        self.dictate_microphone_action.setToolTip(
+            "Start voice dictation from the microphone"
+        )
+        self.dictate_microphone_action.setStatusTip(
+            "Dictate: microphone ready"
+        )
+        self.dictate_microphone_preview = QLabel(
+            "Dictate: microphone idle", voice_group
+        )
+        self.dictate_microphone_preview.setObjectName("dictateMicrophonePreview")
+        self.dictate_microphone_preview.setMinimumWidth(190)
+        self.dictate_microphone_preview.setFixedHeight(30)
+        self.dictate_microphone_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.dictate_microphone_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.dictate_microphone_preview.setToolTip(
+            "Current dictation microphone state"
+        )
+        voice_group.addWidget(self.dictate_microphone_preview)
 
         self.driver_page = ribbon.addPage("Driver")
         communication_group = self.driver_page.addGroup("Communication")
@@ -1235,6 +1261,7 @@ class MainWindow(RibbonMainWindow):
         for action in [
             self.full_screen_action,
             self.connect_action,
+            self.dictate_microphone_action,
             self.office_popup_action,
             self.show_customize_action,
             self.center_search_action,
@@ -1268,6 +1295,9 @@ class MainWindow(RibbonMainWindow):
         self.connect_action.triggered.connect(lambda: self._message("Connect"))
         self.basic_action.triggered.connect(lambda: self._message("Basic Operation"))
         self.driver_action.triggered.connect(lambda: self._message("Driver Configuration"))
+        self.dictate_microphone_action.toggled.connect(
+            self.toggle_dictate_microphone
+        )
         self.smart_lookup_action.triggered.connect(self.open_smart_lookup)
         self.sensitivity_label_action.triggered.connect(self.apply_sensitivity_label)
         self.accessibility_checker_action.triggered.connect(
@@ -1538,6 +1568,7 @@ class MainWindow(RibbonMainWindow):
             self.quick_access_above_action,
             self.quick_access_below_action,
             self.quick_access_labels_action,
+            self.dictate_microphone_action,
             self.office_popup_action,
             self.office_menu_action,
             self.smart_lookup_action,
@@ -1888,6 +1919,24 @@ class MainWindow(RibbonMainWindow):
             "QLabel#spellingGrammarCard { color: #a80000; font-weight: 600; }"
         )
         self._message("Spelling & Grammar: 3 issues ready")
+
+    def toggle_dictate_microphone(self, enabled):
+        if enabled:
+            self.dictate_microphone_preview.setText("Dictate: listening")
+            self.dictate_microphone_preview.setStyleSheet(
+                "QLabel#dictateMicrophonePreview { color: #107c41; font-weight: 600; }"
+            )
+            self.dictate_microphone_action.setToolTip(
+                "Stop voice dictation from the microphone"
+            )
+            self._message("Dictate: listening from microphone")
+        else:
+            self.dictate_microphone_preview.setText("Dictate: microphone idle")
+            self.dictate_microphone_preview.setStyleSheet("")
+            self.dictate_microphone_action.setToolTip(
+                "Start voice dictation from the microphone"
+            )
+            self._message("Dictate: microphone idle")
 
     def open_tell_me_help_redirect(self):
         query = self.ribbonBar().searchText().strip() or "unmatched Tell Me phrase"
