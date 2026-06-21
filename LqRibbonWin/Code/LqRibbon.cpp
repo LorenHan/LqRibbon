@@ -2612,9 +2612,12 @@ RibbonBar::RibbonBar(QWidget *parent)
         }
 
         if (!triggerSearchAction(strText)) {
-            emit searchAccepted(strText);
+            const QString strAcceptedText = strText;
+            finishSearch();
+            emit searchAccepted(strAcceptedText);
+        } else {
+            finishSearch();
         }
-        finishSearch();
     });
     connect(m_minimizeButton, &QToolButton::clicked, this, [this]() {
         if (QWidget *topLevelWidget = window()) {
@@ -2657,9 +2660,12 @@ RibbonBar::RibbonBar(QWidget *parent)
         }
 
         if (!triggerSearchAction(strText)) {
-            emit searchAccepted(strText);
+            const QString strAcceptedText = strText;
+            finishSearch();
+            emit searchAccepted(strAcceptedText);
+        } else {
+            finishSearch();
         }
-        finishSearch();
     });
     connect(m_searchCompleter,
             QOverload<const QString &>::of(&QCompleter::activated),
@@ -2667,9 +2673,12 @@ RibbonBar::RibbonBar(QWidget *parent)
                 m_searchEdit->setText(strText);
                 emit searchSuggestionActivated(strText);
                 if (!triggerSearchAction(strText)) {
-                    emit searchAccepted(strText);
+                    const QString strAcceptedText = strText;
+                    finishSearch();
+                    emit searchAccepted(strAcceptedText);
+                } else {
+                    finishSearch();
                 }
-                finishSearch();
             });
 
     updateStyleSheet();
@@ -4849,8 +4858,8 @@ void RibbonBar::activateSearchPopupIndex(const QModelIndex &index)
 
     if (itemKind == SearchPopupHelpItem) {
         const QString strText = m_searchEdit->text().trimmed();
-        emit searchAccepted(strText);
         finishSearch();
+        emit searchAccepted(strText);
     }
 }
 

@@ -932,6 +932,50 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("search fuzzy phrase matches registered action"))) {
         return 1;
     }
+
+    QString strAcceptedHelpText;
+    QMetaObject::Connection acceptedHelpConnection =
+        QObject::connect(ribbonBar,
+                         &LqRibbon::RibbonBar::searchAccepted,
+                         [&strAcceptedHelpText](const QString &strText) {
+                             strAcceptedHelpText = strText;
+                         });
+    ribbonBar->setSearchText(QStringLiteral("missing-help"));
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    QModelIndex helpClickIndex;
+    if (searchPopupView && searchPopupView->model()) {
+        QAbstractItemModel *popupModel = searchPopupView->model();
+        for (int row = 0; row < popupModel->rowCount(); ++row) {
+            const QModelIndex rowIndex = popupModel->index(row, 0);
+            if (rowIndex.data(Qt::DisplayRole)
+                    .toString()
+                    .contains(QStringLiteral("Get Help"))) {
+                helpClickIndex = rowIndex;
+                break;
+            }
+        }
+    }
+    if (!require(searchPopupView && searchPopupView->isVisible()
+                     && helpClickIndex.isValid()
+                     && searchPopupView->viewport(),
+                 QStringLiteral("search help row is available for click"))) {
+        QObject::disconnect(acceptedHelpConnection);
+        return 1;
+    }
+    clickCollapseTestWidget(searchPopupView->viewport(),
+                            searchPopupView->visualRect(helpClickIndex)
+                                .center());
+    if (!require(strAcceptedHelpText == QStringLiteral("missing-help")
+                     && !searchPopupView->isVisible()
+                     && ribbonBar->searchText().isEmpty()
+                     && ribbonBar->searchLineEdit()->hasFocus(),
+                 QStringLiteral("search help row accepts without popup reentry"))) {
+        QObject::disconnect(acceptedHelpConnection);
+        return 1;
+    }
+    QObject::disconnect(acceptedHelpConnection);
+
     ribbonBar->searchLineEdit()->clear();
     searchPopupView->hide();
     ribbonBar->clearRecentSearchActions();
@@ -1016,6 +1060,29 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     searchPopupView->hide();
     ribbonBar->clearRecentSearchActions();
     processCollapseTestEvents();
+
+    QString strAcceptedSearchText;
+    QMetaObject::Connection acceptedSearchConnection =
+        QObject::connect(ribbonBar,
+                         &LqRibbon::RibbonBar::searchAccepted,
+                         [&strAcceptedSearchText](const QString &strText) {
+                             strAcceptedSearchText = strText;
+                         });
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    ribbonBar->setSearchText(QStringLiteral("zzzz-missing"));
+    processCollapseTestEvents();
+    sendCollapseTestKey(ribbonBar->searchLineEdit(),
+                        Qt::Key_Return,
+                        Qt::NoModifier);
+    if (!require(strAcceptedSearchText == QStringLiteral("zzzz-missing")
+                     && !searchPopupView->isVisible()
+                     && ribbonBar->searchText().isEmpty()
+                     && ribbonBar->searchLineEdit()->hasFocus(),
+                 QStringLiteral("search no-match Enter accepts without popup reentry"))) {
+        QObject::disconnect(acceptedSearchConnection);
+        return 1;
+    }
+    QObject::disconnect(acceptedSearchConnection);
 
     const int insertPageIndex = ribbonBar->indexOf(insertPage);
     if (insertPageIndex >= 0) {
@@ -10754,12 +10821,26 @@ int runLqRibbonExampleMainWindow(QApplication &application,
                          updateCollapseStatePreview();
                      });
 
-    QObject::connect(mainWindow.ribbonBar(), &LqRibbon::RibbonBar::searchAccepted,
-                     [&mainWindow](const QString &strText) {
-                         QMessageBox::information(&mainWindow,
-                                                  QObject::tr("Search"),
-                                                  QObject::tr("No command: %1").arg(strText));
-                     });
+    if (collapseTestsRequested || styleTestsRequested) {
+        QObject::connect(mainWindow.ribbonBar(),
+                         &LqRibbon::RibbonBar::searchAccepted,
+                         [&mainWindow](const QString &strText) {
+                             if (mainWindow.statusBar()) {
+                                 mainWindow.statusBar()->showMessage(
+                                     QObject::tr("No command: %1").arg(strText),
+                                     2500);
+                             }
+                         });
+    } else {
+        QObject::connect(mainWindow.ribbonBar(),
+                         &LqRibbon::RibbonBar::searchAccepted,
+                         [&mainWindow](const QString &strText) {
+                             QMessageBox::information(
+                                 &mainWindow,
+                                 QObject::tr("Search"),
+                                 QObject::tr("No command: %1").arg(strText));
+                         });
+    }
 
     mainWindow.show();
 
