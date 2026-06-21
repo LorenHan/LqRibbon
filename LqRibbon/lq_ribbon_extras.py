@@ -2,6 +2,8 @@
 Additional LqRibbon widgets and compatibility helpers.
 """
 
+import xml.etree.ElementTree as ET
+
 from PySide6.QtCore import Qt, QObject, QPoint, QRect, QSize, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
@@ -1762,13 +1764,35 @@ class LqRibbonCustomizeManager:
         return False
 
     def loadStateFromDevice(self, device):
+        payload = b""
         if hasattr(device, "readAll"):
-            device.readAll()
-            return True
-        if hasattr(device, "read"):
-            device.read()
-            return True
-        return False
+            data = device.readAll()
+            payload = bytes(data) if not isinstance(data, bytes) else data
+        elif hasattr(device, "read"):
+            payload = device.read()
+        if not payload:
+            return False
+        try:
+            root = ET.fromstring(payload.decode("utf-8"))
+        except (ET.ParseError, UnicodeDecodeError):
+            return False
+        page_titles = []
+        if root.tag == "ribbon":
+            page_titles = [
+                title for title in root.attrib.get("pages", "").split("|") if title
+            ]
+        elif root.tag == "LqRibbonState":
+            page_titles = [
+                page.attrib.get("title", "")
+                for page in root.findall("Page")
+                if page.attrib.get("title", "")
+            ]
+        existing_titles = {str(page.title()) for page in self.ribbon_bar.pages()}
+        for title in page_titles:
+            if title not in existing_titles:
+                self.ribbon_bar.addPage(title)
+                existing_titles.add(title)
+        return True
 
 
 class LqRibbonCustomizeDialog(QDialog):

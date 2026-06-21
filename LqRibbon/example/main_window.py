@@ -1359,6 +1359,23 @@ class MainWindow(RibbonMainWindow):
         self.export_customization_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.export_customization_preview.setToolTip("Last exported ribbon customization size")
         self.runtime_group.addWidget(self.export_customization_preview)
+        self.import_customization_action = self._add_group_action(
+            self.runtime_group,
+            QStyle.StandardPixmap.SP_DialogOpenButton,
+            "Import Ribbon",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.import_customization_action.setObjectName("importRibbonCustomizationAction")
+        self.import_customization_action.setToolTip("Import ribbon customization state")
+        self.import_customization_action.setStatusTip("Ribbon import: no export")
+        self.import_customization_preview = QLabel("Ribbon import: none", self.runtime_group)
+        self.import_customization_preview.setObjectName("importRibbonCustomizationPreview")
+        self.import_customization_preview.setMinimumWidth(190)
+        self.import_customization_preview.setFixedHeight(30)
+        self.import_customization_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.import_customization_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.import_customization_preview.setToolTip("Last imported ribbon customization size")
+        self.runtime_group.addWidget(self.import_customization_preview)
         self.rename_page_action = self._add_group_action(
             self.runtime_group,
             QStyle.StandardPixmap.SP_FileDialogInfoView,
@@ -1883,6 +1900,7 @@ class MainWindow(RibbonMainWindow):
             self.reset_selected_tab_action,
             self.reset_all_customizations_action,
             self.export_customization_action,
+            self.import_customization_action,
             self.connect_action,
             self.dictate_microphone_action,
             self.office_popup_action,
@@ -1992,6 +2010,7 @@ class MainWindow(RibbonMainWindow):
         self.reset_selected_tab_action.triggered.connect(self.reset_selected_custom_tab)
         self.reset_all_customizations_action.triggered.connect(self.reset_all_ribbon_customizations)
         self.export_customization_action.triggered.connect(self.export_ribbon_customization)
+        self.import_customization_action.triggered.connect(self.import_ribbon_customization)
         self.rename_page_action.triggered.connect(self.rename_driver_page)
         self.move_gallery_action.triggered.connect(self.move_gallery_page)
         self.toggle_group_action.triggered.connect(self.toggle_specialist_group)
@@ -2257,6 +2276,7 @@ class MainWindow(RibbonMainWindow):
             self.reset_selected_tab_action,
             self.reset_all_customizations_action,
             self.export_customization_action,
+            self.import_customization_action,
             self.rename_page_action,
             self.move_gallery_action,
             self.toggle_group_action,
@@ -3346,6 +3366,22 @@ class MainWindow(RibbonMainWindow):
         )
         self.export_customization_action.setStatusTip(f"Ribbon export: {size} bytes")
         self._message(self.export_customization_action.statusTip())
+
+    def import_ribbon_customization(self):
+        if not self.exported_ribbon_customization_state:
+            self.import_customization_action.setStatusTip("Ribbon import: no export")
+            self._message(self.import_customization_action.statusTip())
+            return
+        self.customize_manager.loadStateFromDevice(
+            io.BytesIO(self.exported_ribbon_customization_state)
+        )
+        size = len(self.exported_ribbon_customization_state)
+        self.import_customization_preview.setText(f"Ribbon import: {size} bytes")
+        self.import_customization_preview.setStyleSheet(
+            "QLabel#importRibbonCustomizationPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+        )
+        self.import_customization_action.setStatusTip(f"Ribbon import: {size} bytes")
+        self._message(self.import_customization_action.statusTip())
 
     def rename_driver_page(self):
         self.driver_page.setTitle("Drive" if self.driver_page.title() == "Driver" else "Driver")

@@ -1320,6 +1320,43 @@ def test_example_export_ribbon_customization_is_available():
     window.close()
 
 
+def test_example_import_ribbon_customization_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    initial_page_count = ribbon.pageCount()
+
+    window.add_page_action.trigger()
+    window.export_customization_action.trigger()
+    exported = window.exported_ribbon_customization_state
+    window.reset_all_customizations_action.trigger()
+    _app().processEvents()
+    assert ribbon.pageCount() == initial_page_count
+
+    assert window.import_customization_action.objectName() == "importRibbonCustomizationAction"
+    assert not window.import_customization_action.icon().isNull()
+    assert "ribbon customization state" in window.import_customization_action.toolTip()
+    assert window.import_customization_action.statusTip() == "Ribbon import: no export"
+    assert window.import_customization_preview.objectName() == "importRibbonCustomizationPreview"
+    assert window.import_customization_preview.text() == "Ribbon import: none"
+    assert window.import_customization_action in window.search_actions
+    assert ribbon.searchAction("Import Ribbon") is window.import_customization_action
+
+    window.import_customization_action.trigger()
+    _app().processEvents()
+    titles = [page.title() for page in ribbon.pages()]
+    assert ribbon.pageCount() == initial_page_count + 1
+    assert "Runtime 1" in titles
+    assert window.import_customization_preview.text() == f"Ribbon import: {len(exported)} bytes"
+    assert "#importRibbonCustomizationPreview" in window.import_customization_preview.styleSheet()
+    assert window.import_customization_action.statusTip() == (
+        f"Ribbon import: {len(exported)} bytes"
+    )
+    assert "Ribbon import" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2789,6 +2826,7 @@ def main():
         test_example_reset_selected_custom_tab_is_available,
         test_example_reset_all_customizations_is_available,
         test_example_export_ribbon_customization_is_available,
+        test_example_import_ribbon_customization_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

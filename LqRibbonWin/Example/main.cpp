@@ -499,6 +499,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *exportCustomizationAction,
                      QLabel *exportCustomizationPreview,
                      const QByteArray *exportedRibbonCustomizationState,
+                     QAction *importCustomizationAction,
+                     QLabel *importCustomizationPreview,
                      QAction *renamePageAction,
                      QAction *moveGalleryAction,
                      QAction *toggleGroupAction,
@@ -3895,6 +3897,58 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("Export ribbon customization captures state"))) {
         return 1;
     }
+    const int pageCountBeforeImportReset = ribbonBar->pageCount();
+    resetAllCustomizationsAction->trigger();
+    processCollapseTestEvents();
+    if (!require(ribbonBar->pageCount() == pageCountBeforeImportReset - 1,
+                 QStringLiteral("Import setup removes exported runtime tab"))) {
+        return 1;
+    }
+    if (!require(importCustomizationAction
+                     && importCustomizationAction->objectName()
+                         == QStringLiteral("importRibbonCustomizationAction")
+                     && !importCustomizationAction->icon().isNull()
+                     && importCustomizationAction->toolTip().contains(
+                         QStringLiteral("ribbon customization state"))
+                     && importCustomizationAction->statusTip()
+                         == QStringLiteral("Ribbon import: no export")
+                     && importCustomizationPreview
+                     && importCustomizationPreview->objectName()
+                         == QStringLiteral(
+                             "importRibbonCustomizationPreview")
+                     && importCustomizationPreview->text()
+                         == QStringLiteral("Ribbon import: none")
+                     && ribbonBar->searchAction(
+                            QStringLiteral("Import Ribbon"))
+                         == importCustomizationAction,
+                 QStringLiteral("Import ribbon customization defaults empty"))) {
+        return 1;
+    }
+    importCustomizationAction->trigger();
+    processCollapseTestEvents();
+    QStringList importedPageTitles;
+    for (LqRibbon::RibbonPage *page : ribbonBar->pages()) {
+        importedPageTitles.append(page->title());
+    }
+    const QString strImportRibbonStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(ribbonBar->pageCount() == pageCountBeforeImportReset
+                     && importedPageTitles.contains(
+                         QStringLiteral("Runtime 1"))
+                     && importCustomizationPreview->text()
+                         == QStringLiteral("Ribbon import: %1 bytes")
+                                .arg(exportedRibbonSize)
+                     && importCustomizationPreview->styleSheet().contains(
+                         QStringLiteral("#importRibbonCustomizationPreview"))
+                     && importCustomizationAction->statusTip()
+                         == QStringLiteral("Ribbon import: %1 bytes")
+                                .arg(exportedRibbonSize)
+                     && strImportRibbonStatus.contains(
+                         QStringLiteral("Ribbon import")),
+                 QStringLiteral("Import ribbon customization restores page"))) {
+        return 1;
+    }
 
     return 0;
 }
@@ -6006,6 +6060,27 @@ int main(int argc, char *argv[])
     exportCustomizationPreview->setToolTip(
         QObject::tr("Last exported ribbon customization size"));
     runtimeGroup->addWidget(exportCustomizationPreview);
+    QAction *importCustomizationAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogOpenButton),
+        QObject::tr("Import Ribbon"),
+        Qt::ToolButtonTextBesideIcon);
+    importCustomizationAction->setObjectName(
+        QStringLiteral("importRibbonCustomizationAction"));
+    importCustomizationAction->setToolTip(
+        QObject::tr("Import ribbon customization state"));
+    importCustomizationAction->setStatusTip(
+        QObject::tr("Ribbon import: no export"));
+    QLabel *importCustomizationPreview = new QLabel(runtimeGroup);
+    importCustomizationPreview->setObjectName(
+        QStringLiteral("importRibbonCustomizationPreview"));
+    importCustomizationPreview->setText(QObject::tr("Ribbon import: none"));
+    importCustomizationPreview->setMinimumWidth(190);
+    importCustomizationPreview->setFixedHeight(30);
+    importCustomizationPreview->setAlignment(Qt::AlignCenter);
+    importCustomizationPreview->setFrameShape(QFrame::StyledPanel);
+    importCustomizationPreview->setToolTip(
+        QObject::tr("Last imported ribbon customization size"));
+    runtimeGroup->addWidget(importCustomizationPreview);
     QAction *renamePageAction = runtimeGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
         QObject::tr("Rename Driver"),
@@ -6451,6 +6526,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), resetSelectedTabAction);
     customizeManager->addToCategory(QObject::tr("Actions"), resetAllCustomizationsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), exportCustomizationAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), importCustomizationAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     dictateMicrophoneAction);
@@ -7638,6 +7714,41 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(importCustomizationAction, &QAction::triggered,
+                     [&mainWindow,
+                      customizeManager,
+                      importCustomizationAction,
+                      importCustomizationPreview,
+                      &exportedRibbonCustomizationState]() {
+                         if (exportedRibbonCustomizationState.isEmpty()) {
+                             importCustomizationAction->setStatusTip(
+                                 QObject::tr("Ribbon import: no export"));
+                             if (mainWindow.statusBar()) {
+                                 mainWindow.statusBar()->showMessage(
+                                     importCustomizationAction->statusTip(),
+                                     2500);
+                             }
+                             return;
+                         }
+                         QBuffer buffer(&exportedRibbonCustomizationState);
+                         buffer.open(QIODevice::ReadOnly);
+                         customizeManager->loadStateFromDevice(&buffer);
+                         const int size =
+                             exportedRibbonCustomizationState.size();
+                         importCustomizationPreview->setText(
+                             QObject::tr("Ribbon import: %1 bytes")
+                                 .arg(size));
+                         importCustomizationPreview->setStyleSheet(
+                             QStringLiteral("QLabel#importRibbonCustomizationPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"));
+                         importCustomizationAction->setStatusTip(
+                             QObject::tr("Ribbon import: %1 bytes")
+                                 .arg(size));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 importCustomizationAction->statusTip(),
+                                 2500);
+                         }
+                     });
     QObject::connect(renamePageAction, &QAction::triggered,
                      [driverPage]() {
                          driverPage->setTitle(
@@ -7981,6 +8092,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(resetSelectedTabAction);
     mainWindow.ribbonBar()->registerSearchAction(resetAllCustomizationsAction);
     mainWindow.ribbonBar()->registerSearchAction(exportCustomizationAction);
+    mainWindow.ribbonBar()->registerSearchAction(importCustomizationAction);
     mainWindow.ribbonBar()->registerSearchAction(renamePageAction);
     mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
     mainWindow.ribbonBar()->registerSearchAction(toggleGroupAction);
@@ -8866,6 +8978,8 @@ int main(int argc, char *argv[])
                                 exportCustomizationAction,
                                 exportCustomizationPreview,
                                 &exportedRibbonCustomizationState,
+                                importCustomizationAction,
+                                importCustomizationPreview,
                                 renamePageAction,
                                 moveGalleryAction,
                                 toggleGroupAction,

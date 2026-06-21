@@ -2186,6 +2186,10 @@ bool RibbonCustomizeManager::loadStateFromXML(IXmlStreamReader *xmlreader)
     if (!xmlreader || !m_ribbonBar) {
         return false;
     }
+    QStringList existingPageTitles;
+    for (RibbonPage *page : m_ribbonBar->pages()) {
+        existingPageTitles.append(page->title());
+    }
     while (!xmlreader->atEnd()) {
         xmlreader->readNext();
         if (!xmlreader->isStartElement()) {
@@ -2196,9 +2200,10 @@ bool RibbonCustomizeManager::loadStateFromXML(IXmlStreamReader *xmlreader)
                 xmlreader->attributes().value(QStringLiteral("title")).toString();
             const QString visible =
                 xmlreader->attributes().value(QStringLiteral("visible")).toString();
-            if (!title.isEmpty()) {
+            if (!title.isEmpty() && !existingPageTitles.contains(title)) {
                 RibbonPage *page = m_ribbonBar->addPage(title);
                 page->setVisible(visible != QStringLiteral("0"));
+                existingPageTitles.append(title);
             }
         }
     }
