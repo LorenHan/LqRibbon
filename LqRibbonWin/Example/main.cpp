@@ -2105,6 +2105,23 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("Accessible tooltip names are available"))) {
         return 1;
     }
+    bool allScreenReaderNames = true;
+    for (QAction *action : iconOnlyTitleActions) {
+        QToolButton *button =
+            titleButtonBar
+                ? qobject_cast<QToolButton *>(
+                    titleButtonBar->widgetForAction(action))
+                : nullptr;
+        allScreenReaderNames = allScreenReaderNames
+            && action
+            && button
+            && button->accessibleName() == action->text()
+            && button->accessibleDescription() == action->toolTip();
+    }
+    if (!require(allScreenReaderNames,
+                 QStringLiteral("Screen-reader names are available"))) {
+        return 1;
+    }
 
     if (!require(collaborationStatusText
                      && collaborationStatusText->objectName()
@@ -6526,6 +6543,11 @@ int main(int argc, char *argv[])
                 button->setToolTip(action->toolTip().isEmpty()
                                        ? action->text()
                                        : action->toolTip());
+                button->setAccessibleName(action->text());
+                button->setAccessibleDescription(
+                    action->toolTip().isEmpty()
+                        ? action->text()
+                        : action->toolTip());
             }
         }
     }

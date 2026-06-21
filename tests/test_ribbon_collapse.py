@@ -590,6 +590,21 @@ def test_example_accessible_tooltip_names_are_available():
     window.close()
 
 
+def test_example_screen_reader_names_are_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    title_bar = window.ribbonBar()._title_button_bar
+
+    assert window.screen_reader_title_actions == window.icon_only_title_actions
+    for action in window.screen_reader_title_actions:
+        button = title_bar.widgetForAction(action)
+        assert isinstance(button, QToolButton)
+        assert button.accessibleName() == action.text()
+        assert button.accessibleDescription() == action.toolTip()
+    window.close()
+
+
 def test_example_collaboration_status_text_is_available():
     window = MainWindow()
     window.show()
@@ -2230,6 +2245,7 @@ def main():
         test_example_presence_avatar_strip_is_available,
         test_example_icon_only_title_commands_are_available,
         test_example_accessible_tooltip_names_are_available,
+        test_example_screen_reader_names_are_available,
         test_example_collaboration_status_text_is_available,
         test_example_coauthoring_indicator_is_available,
         test_example_zoom_slider_status_item_is_available,

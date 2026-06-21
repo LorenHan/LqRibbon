@@ -1766,6 +1766,7 @@ class MainWindow(RibbonMainWindow):
             self.account_title_action,
         ]
         self.accessible_tooltip_actions = list(self.icon_only_title_actions)
+        self.screen_reader_title_actions = list(self.icon_only_title_actions)
         self._apply_icon_only_title_buttons()
         self.display_show_tabs_commands_action.triggered.connect(
             self.show_tabs_and_commands
@@ -2652,6 +2653,8 @@ class MainWindow(RibbonMainWindow):
             if isinstance(button, QToolButton):
                 button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
                 button.setToolTip(action.toolTip() or action.text())
+                button.setAccessibleName(action.text())
+                button.setAccessibleDescription(action.toolTip() or action.text())
 
     def _update_auto_save_title_action(self, enabled):
         state = "on" if enabled else "off"
