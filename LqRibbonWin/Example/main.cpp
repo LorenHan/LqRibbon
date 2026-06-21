@@ -277,6 +277,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QFrame *coauthoringIndicatorDot,
                      QLabel *coauthoringIndicatorLabel,
                      LqRibbon::RibbonBackstageView *backstage,
+                     QAction *saveCopyAction,
                      QAction *versionHistoryAction,
                      QWidget *versionHistoryPage,
                      QLabel *versionHistoryCurrentLabel,
@@ -1355,6 +1356,45 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
     if (backstage) {
         backstage->hide();
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    if (saveCopyAction) {
+        saveCopyAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strSaveCopyStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    QStringList backstageActionTexts;
+    if (backstage) {
+        const QList<QAction *> backstageActions =
+            backstage->findChildren<QAction *>();
+        for (QAction *action : backstageActions) {
+            if (action && !action->isSeparator()) {
+                backstageActionTexts.append(action->text());
+            }
+        }
+    }
+    if (!require(saveCopyAction
+                     && saveCopyAction->objectName()
+                         == QStringLiteral("saveCopyAction")
+                     && saveCopyAction->text()
+                         == QStringLiteral("Save a Copy")
+                     && saveCopyAction->toolTip().contains(
+                         QStringLiteral("separate copy"))
+                     && saveCopyAction->statusTip().contains(
+                         QStringLiteral("Save a Copy"))
+                     && backstageActionTexts.contains(
+                         QStringLiteral("Save a Copy"))
+                     && !backstageActionTexts.contains(
+                         QStringLiteral("Save As"))
+                     && strSaveCopyStatus.contains(
+                         QStringLiteral("Save a Copy")),
+                 QStringLiteral("Save a Copy replaces Save As backstage command"))) {
+        return 1;
     }
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
@@ -3365,6 +3405,25 @@ int main(int argc, char *argv[])
                          QObject::tr("Open"));
     backstage->addAction(mainWindow.style()->standardIcon(QStyle::SP_DialogSaveButton),
                          QObject::tr("Save"));
+    QAction *saveCopyAction = backstage->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogSaveButton),
+        QObject::tr("Save a Copy"));
+    saveCopyAction->setObjectName(QStringLiteral("saveCopyAction"));
+    saveCopyAction->setToolTip(
+        QObject::tr("Create a separate copy without changing the current document"));
+    saveCopyAction->setStatusTip(
+        QObject::tr("Save a Copy: create a separate file copy"));
+    QObject::connect(saveCopyAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Save a Copy: create a separate file copy"),
+                                 2500);
+                         }
+                     });
     backstage->addSeparator();
     QWidget *backstagePage = new QWidget(backstage);
     QFormLayout *backstageLayout = new QFormLayout(backstagePage);
@@ -4824,6 +4883,7 @@ int main(int argc, char *argv[])
                                 coauthoringIndicatorDot,
                                 coauthoringIndicatorLabel,
                                 backstage,
+                                saveCopyAction,
                                 versionHistoryAction,
                                 versionHistoryPage,
                                 versionHistoryCurrentLabel,

@@ -516,6 +516,31 @@ def test_example_version_history_entry_is_available():
     window.close()
 
 
+def test_example_save_copy_replaces_save_as_backstage_command():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    action = window.save_copy_action
+    action_texts = [
+        child.text()
+        for child in window.backstage.findChildren(type(action))
+        if not child.isSeparator()
+    ]
+
+    assert action.objectName() == "saveCopyAction"
+    assert action.text() == "Save a Copy"
+    assert "separate copy" in action.toolTip()
+    assert "Save a Copy" in action.statusTip()
+    assert "Save a Copy" in action_texts
+    assert "Save As" not in action_texts
+
+    action.trigger()
+    _app().processEvents()
+    assert "Save a Copy" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_caption_search_defaults_to_centered_microsoft_box():
     window = MainWindow()
     window.show()
@@ -1507,6 +1532,7 @@ def main():
         test_example_collaboration_status_text_is_available,
         test_example_coauthoring_indicator_is_available,
         test_example_version_history_entry_is_available,
+        test_example_save_copy_replaces_save_as_backstage_command,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,

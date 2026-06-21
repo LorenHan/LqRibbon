@@ -821,6 +821,19 @@ class MainWindow(RibbonMainWindow):
         self.backstage = RibbonBackstageView(self)
         self.backstage.addAction(self._icon(QStyle.StandardPixmap.SP_DialogOpenButton), "Open")
         self.backstage.addAction(self._icon(QStyle.StandardPixmap.SP_DialogSaveButton), "Save")
+        self.save_copy_action = self.backstage.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DialogSaveButton), "Save a Copy"
+        )
+        self.save_copy_action.setObjectName("saveCopyAction")
+        self.save_copy_action.setToolTip(
+            "Create a separate copy without changing the current document"
+        )
+        self.save_copy_action.setStatusTip(
+            "Save a Copy: create a separate file copy"
+        )
+        self.save_copy_action.triggered.connect(
+            lambda: self._message("Save a Copy: create a separate file copy")
+        )
         self.backstage.addSeparator()
 
         backstage_page = QWidget(self.backstage)
