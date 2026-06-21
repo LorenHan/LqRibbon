@@ -1741,6 +1741,14 @@ class LqRibbonCustomizeManager:
         if group:
             group.setTitle(group_name)
 
+    def appendActions(self, group, actions):
+        if group:
+            for action in actions:
+                group.addAction(action, Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
+    def actionsGroup(self, group):
+        return list(group.actions()) if group else []
+
     def saveStateToDevice(self, device):
         page_titles = [str(page.title) for page in self.ribbon_bar.pages()]
         state = ("<ribbon pages=\"" + "|".join(page_titles) + "\"/>").encode("utf-8")

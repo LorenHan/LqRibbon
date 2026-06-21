@@ -488,6 +488,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *customGroupPreview,
                      QAction *renameCustomAction,
                      QLabel *renameCustomPreview,
+                     QAction *addCommandAction,
+                     QLabel *customCommandPreview,
                      QAction *renamePageAction,
                      QAction *moveGalleryAction,
                      QAction *toggleGroupAction,
@@ -3654,6 +3656,52 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("Rename custom tab/group updates names"))) {
         return 1;
     }
+    const int commandCountBeforeAdd =
+        customizeManager->actionsGroup(customGroup).count();
+    if (!require(addCommandAction
+                     && addCommandAction->objectName()
+                         == QStringLiteral("addCustomCommandAction")
+                     && !addCommandAction->icon().isNull()
+                     && addCommandAction->toolTip().contains(
+                         QStringLiteral("last custom group"))
+                     && addCommandAction->statusTip()
+                         == QStringLiteral("Custom command: not added")
+                     && customCommandPreview
+                     && customCommandPreview->objectName()
+                         == QStringLiteral("customCommandPreview")
+                     && customCommandPreview->text()
+                         == QStringLiteral("Custom command: none")
+                     && ribbonBar->searchAction(QStringLiteral("Add Command"))
+                         == addCommandAction,
+                 QStringLiteral("Add command to custom group defaults empty"))) {
+        return 1;
+    }
+    addCommandAction->trigger();
+    processCollapseTestEvents();
+    const QList<QAction *> customGroupActions =
+        customizeManager->actionsGroup(customGroup);
+    QAction *addedCustomCommand =
+        customGroupActions.isEmpty() ? nullptr : customGroupActions.last();
+    const QString strAddCommandStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(customGroupActions.count() == commandCountBeforeAdd + 1
+                     && addedCustomCommand
+                     && addedCustomCommand->objectName()
+                         == QStringLiteral("customCommand1")
+                     && addedCustomCommand->text()
+                         == QStringLiteral("Custom Command 1")
+                     && customCommandPreview->text()
+                         == QStringLiteral("Custom command: Custom Command 1")
+                     && customCommandPreview->styleSheet().contains(
+                         QStringLiteral("#customCommandPreview"))
+                     && addCommandAction->statusTip()
+                         == QStringLiteral("Custom command: Custom Command 1")
+                     && strAddCommandStatus.contains(
+                         QStringLiteral("Custom command")),
+                 QStringLiteral("Add command to custom group appends action"))) {
+        return 1;
+    }
 
     return 0;
 }
@@ -5660,6 +5708,25 @@ int main(int argc, char *argv[])
     renameCustomPreview->setToolTip(
         QObject::tr("Last custom tab/group rename"));
     runtimeGroup->addWidget(renameCustomPreview);
+    QAction *addCommandAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
+        QObject::tr("Add Command"),
+        Qt::ToolButtonTextBesideIcon);
+    addCommandAction->setObjectName(
+        QStringLiteral("addCustomCommandAction"));
+    addCommandAction->setToolTip(
+        QObject::tr("Add a command to the last custom group"));
+    addCommandAction->setStatusTip(QObject::tr("Custom command: not added"));
+    QLabel *customCommandPreview = new QLabel(runtimeGroup);
+    customCommandPreview->setObjectName(QStringLiteral("customCommandPreview"));
+    customCommandPreview->setText(QObject::tr("Custom command: none"));
+    customCommandPreview->setMinimumWidth(190);
+    customCommandPreview->setFixedHeight(30);
+    customCommandPreview->setAlignment(Qt::AlignCenter);
+    customCommandPreview->setFrameShape(QFrame::StyledPanel);
+    customCommandPreview->setToolTip(
+        QObject::tr("Last command added to a custom group"));
+    runtimeGroup->addWidget(customCommandPreview);
     QAction *renamePageAction = runtimeGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
         QObject::tr("Rename Driver"),
@@ -6100,6 +6167,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), touchSpacingAction);
     customizeManager->addToCategory(QObject::tr("Actions"), addGroupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), renameCustomAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), addCommandAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     dictateMicrophoneAction);
@@ -7063,6 +7131,48 @@ int main(int argc, char *argv[])
                                  renameCustomAction->statusTip(), 2500);
                          }
                      });
+    QObject::connect(addCommandAction, &QAction::triggered,
+                     [&mainWindow,
+                      addGroupAction,
+                      addCommandAction,
+                      customizeManager,
+                      customCommandPreview,
+                      &lastCustomGroup]() {
+                         static int customCommandCounter = 1;
+                         if (!lastCustomGroup) {
+                             addGroupAction->trigger();
+                         }
+                         const int commandNumber = customCommandCounter++;
+                         QAction *action = new QAction(
+                             mainWindow.style()->standardIcon(
+                                 QStyle::SP_DialogApplyButton),
+                             QObject::tr("Custom Command %1")
+                                 .arg(commandNumber),
+                             &mainWindow);
+                         action->setObjectName(
+                             QStringLiteral("customCommand%1")
+                                 .arg(commandNumber));
+                         action->setToolTip(
+                             QObject::tr(
+                                 "Command added through ribbon customization"));
+                         action->setStatusTip(
+                             QObject::tr("Custom command: %1")
+                                 .arg(action->text()));
+                         customizeManager->appendActions(
+                             lastCustomGroup, QList<QAction *>() << action);
+                         customCommandPreview->setText(
+                             QObject::tr("Custom command: %1")
+                                 .arg(action->text()));
+                         customCommandPreview->setStyleSheet(
+                             QStringLiteral("QLabel#customCommandPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"));
+                         addCommandAction->setStatusTip(
+                             QObject::tr("Custom command: %1")
+                                 .arg(action->text()));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 addCommandAction->statusTip(), 2500);
+                         }
+                     });
     QObject::connect(renamePageAction, &QAction::triggered,
                      [driverPage]() {
                          driverPage->setTitle(
@@ -7401,6 +7511,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(addPageAction);
     mainWindow.ribbonBar()->registerSearchAction(addGroupAction);
     mainWindow.ribbonBar()->registerSearchAction(renameCustomAction);
+    mainWindow.ribbonBar()->registerSearchAction(addCommandAction);
     mainWindow.ribbonBar()->registerSearchAction(renamePageAction);
     mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
     mainWindow.ribbonBar()->registerSearchAction(toggleGroupAction);
@@ -8275,6 +8386,8 @@ int main(int argc, char *argv[])
                                 customGroupPreview,
                                 renameCustomAction,
                                 renameCustomPreview,
+                                addCommandAction,
+                                customCommandPreview,
                                 renamePageAction,
                                 moveGalleryAction,
                                 toggleGroupAction,

@@ -208,6 +208,7 @@ class MainWindow(RibbonMainWindow):
         self.runtime_page_counter = 1
         self.runtime_group_counter = 1
         self.rename_custom_counter = 1
+        self.custom_command_counter = 1
         self.last_custom_group = None
         self.saved_ribbon_state = b""
         self.search_actions = []
@@ -1272,6 +1273,23 @@ class MainWindow(RibbonMainWindow):
         self.rename_custom_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.rename_custom_preview.setToolTip("Last custom tab/group rename")
         self.runtime_group.addWidget(self.rename_custom_preview)
+        self.add_command_action = self._add_group_action(
+            self.runtime_group,
+            QStyle.StandardPixmap.SP_DialogApplyButton,
+            "Add Command",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.add_command_action.setObjectName("addCustomCommandAction")
+        self.add_command_action.setToolTip("Add a command to the last custom group")
+        self.add_command_action.setStatusTip("Custom command: not added")
+        self.custom_command_preview = QLabel("Custom command: none", self.runtime_group)
+        self.custom_command_preview.setObjectName("customCommandPreview")
+        self.custom_command_preview.setMinimumWidth(190)
+        self.custom_command_preview.setFixedHeight(30)
+        self.custom_command_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.custom_command_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.custom_command_preview.setToolTip("Last command added to a custom group")
+        self.runtime_group.addWidget(self.custom_command_preview)
         self.rename_page_action = self._add_group_action(
             self.runtime_group,
             QStyle.StandardPixmap.SP_FileDialogInfoView,
@@ -1791,6 +1809,7 @@ class MainWindow(RibbonMainWindow):
             self.touch_spacing_action,
             self.add_group_action,
             self.rename_custom_action,
+            self.add_command_action,
             self.connect_action,
             self.dictate_microphone_action,
             self.office_popup_action,
@@ -1895,6 +1914,7 @@ class MainWindow(RibbonMainWindow):
         self.add_page_action.triggered.connect(self.add_runtime_page)
         self.add_group_action.triggered.connect(self.add_custom_group)
         self.rename_custom_action.triggered.connect(self.rename_custom_tab_and_group)
+        self.add_command_action.triggered.connect(self.add_command_to_custom_group)
         self.rename_page_action.triggered.connect(self.rename_driver_page)
         self.move_gallery_action.triggered.connect(self.move_gallery_page)
         self.toggle_group_action.triggered.connect(self.toggle_specialist_group)
@@ -2155,6 +2175,7 @@ class MainWindow(RibbonMainWindow):
             self.add_page_action,
             self.add_group_action,
             self.rename_custom_action,
+            self.add_command_action,
             self.rename_page_action,
             self.move_gallery_action,
             self.toggle_group_action,
@@ -3143,6 +3164,27 @@ class MainWindow(RibbonMainWindow):
         )
         self.rename_custom_action.setStatusTip(f"Renamed custom: {tab_name} / {group_name}")
         self._message(self.rename_custom_action.statusTip())
+
+    def add_command_to_custom_group(self):
+        if self.last_custom_group is None:
+            self.add_custom_group()
+        command_number = self.custom_command_counter
+        self.custom_command_counter += 1
+        action = QAction(
+            self._icon(QStyle.StandardPixmap.SP_DialogApplyButton),
+            f"Custom Command {command_number}",
+            self,
+        )
+        action.setObjectName(f"customCommand{command_number}")
+        action.setToolTip("Command added through ribbon customization")
+        action.setStatusTip(f"Custom command: Custom Command {command_number}")
+        self.customize_manager.appendActions(self.last_custom_group, [action])
+        self.custom_command_preview.setText(f"Custom command: {action.text()}")
+        self.custom_command_preview.setStyleSheet(
+            "QLabel#customCommandPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+        )
+        self.add_command_action.setStatusTip(f"Custom command: {action.text()}")
+        self._message(self.add_command_action.statusTip())
 
     def rename_driver_page(self):
         self.driver_page.setTitle("Drive" if self.driver_page.title() == "Driver" else "Driver")

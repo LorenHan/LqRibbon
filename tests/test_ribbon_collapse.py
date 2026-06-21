@@ -1133,6 +1133,42 @@ def test_example_rename_custom_tab_and_group_is_available():
     window.close()
 
 
+def test_example_add_command_to_custom_group_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    window.add_page_action.trigger()
+    window.add_group_action.trigger()
+    _app().processEvents()
+    custom_group = window.last_custom_group
+    initial_actions = window.customize_manager.actionsGroup(custom_group)
+
+    assert window.add_command_action.objectName() == "addCustomCommandAction"
+    assert not window.add_command_action.icon().isNull()
+    assert "last custom group" in window.add_command_action.toolTip()
+    assert window.add_command_action.statusTip() == "Custom command: not added"
+    assert window.custom_command_preview.objectName() == "customCommandPreview"
+    assert window.custom_command_preview.text() == "Custom command: none"
+    assert window.add_command_action in window.search_actions
+    assert ribbon.searchAction("Add Command") is window.add_command_action
+
+    window.add_command_action.trigger()
+    _app().processEvents()
+    actions = window.customize_manager.actionsGroup(custom_group)
+    added_action = actions[-1]
+    assert len(actions) == len(initial_actions) + 1
+    assert added_action.objectName() == "customCommand1"
+    assert added_action.text() == "Custom Command 1"
+    assert window.customize_manager.actionsGroup(custom_group)[-1] is added_action
+    assert window.custom_command_preview.text() == "Custom command: Custom Command 1"
+    assert "#customCommandPreview" in window.custom_command_preview.styleSheet()
+    assert window.add_command_action.statusTip() == "Custom command: Custom Command 1"
+    assert "Custom command" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2597,6 +2633,7 @@ def main():
         test_example_custom_tab_creation_is_available,
         test_example_custom_group_creation_is_available,
         test_example_rename_custom_tab_and_group_is_available,
+        test_example_add_command_to_custom_group_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,
