@@ -1315,6 +1315,14 @@ class MainWindow(RibbonMainWindow):
         self.coauthoring_indicator_label.setMinimumWidth(92)
         status_bar.addWidget(self.coauthoring_indicator_label)
         status_bar.addWidget(QLabel("|", status_bar))
+        self.character_count_status_label = QLabel("1,248 characters", status_bar)
+        self.character_count_status_label.setObjectName("characterCountStatusItem")
+        self.character_count_status_label.setToolTip(
+            "Current document character count"
+        )
+        self.character_count_status_label.setMinimumWidth(112)
+        status_bar.addWidget(self.character_count_status_label)
+        status_bar.addWidget(QLabel("|", status_bar))
         self.density_status_preview = QLabel(status_bar)
         self.density_status_preview.setObjectName("ribbonDensityStatusPreview")
         self.density_status_preview.setMinimumWidth(180)

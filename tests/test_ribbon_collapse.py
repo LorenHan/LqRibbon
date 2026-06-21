@@ -652,6 +652,21 @@ def test_example_view_switch_status_buttons_are_available():
     window.close()
 
 
+def test_example_character_count_status_item_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    label = window.character_count_status_label
+
+    assert label.objectName() == "characterCountStatusItem"
+    assert label.text() == "1,248 characters"
+    assert "character count" in label.toolTip()
+    assert label.minimumWidth() >= 112
+    assert label.isVisible()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2034,6 +2049,7 @@ def main():
         test_example_coauthoring_indicator_is_available,
         test_example_zoom_slider_status_item_is_available,
         test_example_view_switch_status_buttons_are_available,
+        test_example_character_count_status_item_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

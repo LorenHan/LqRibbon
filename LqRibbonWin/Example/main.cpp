@@ -305,6 +305,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *collaborationStatusText,
                      QFrame *coauthoringIndicatorDot,
                      QLabel *coauthoringIndicatorLabel,
+                     QLabel *characterCountStatusLabel,
                      LqRibbon::RibbonSliderPane *zoomSlider,
                      QLabel *zoomStatusLabel,
                      LqRibbon::RibbonProgressBar *zoomProgressBar,
@@ -1768,6 +1769,19 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && coauthoringIndicatorLabel->toolTip().contains(
                          QStringLiteral("coauthoring"), Qt::CaseInsensitive),
                  QStringLiteral("Coauthoring indicator is available"))) {
+        return 1;
+    }
+
+    if (!require(characterCountStatusLabel
+                     && characterCountStatusLabel->objectName()
+                         == QStringLiteral("characterCountStatusItem")
+                     && characterCountStatusLabel->isVisible()
+                     && characterCountStatusLabel->text()
+                         == QStringLiteral("1,248 characters")
+                     && characterCountStatusLabel->toolTip().contains(
+                         QStringLiteral("character count"))
+                     && characterCountStatusLabel->minimumWidth() >= 112,
+                 QStringLiteral("Character count status item is available"))) {
         return 1;
     }
 
@@ -5638,6 +5652,15 @@ int main(int argc, char *argv[])
     ribbonStatusBar->addSeparator();
     ribbonStatusBar->addWidget(coauthoringIndicatorDot);
     ribbonStatusBar->addWidget(coauthoringIndicatorLabel);
+    QLabel *characterCountStatusLabel =
+        new QLabel(QObject::tr("1,248 characters"), ribbonStatusBar);
+    characterCountStatusLabel->setObjectName(
+        QStringLiteral("characterCountStatusItem"));
+    characterCountStatusLabel->setToolTip(
+        QObject::tr("Current document character count"));
+    characterCountStatusLabel->setMinimumWidth(112);
+    ribbonStatusBar->addSeparator();
+    ribbonStatusBar->addWidget(characterCountStatusLabel);
     densityStatusPreview = new QLabel(ribbonStatusBar);
     densityStatusPreview->setObjectName(QStringLiteral("ribbonDensityStatusPreview"));
     densityStatusPreview->setMinimumWidth(180);
@@ -6406,6 +6429,7 @@ int main(int argc, char *argv[])
                                 collaborationStatusText,
                                 coauthoringIndicatorDot,
                                 coauthoringIndicatorLabel,
+                                characterCountStatusLabel,
                                 zoomSlider,
                                 zoomStatusLabel,
                                 progressBar,
