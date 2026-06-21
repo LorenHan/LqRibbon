@@ -865,6 +865,41 @@ def test_example_svg_convert_shape_command_surface():
     window.close()
 
 
+def test_example_reduced_motion_option_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.options_page.title() == "Options"
+    assert window.reduced_motion_action.objectName() == "reducedMotionAction"
+    assert window.reduced_motion_action.isCheckable()
+    assert not window.reduced_motion_action.isChecked()
+    assert not window.reduced_motion_action.icon().isNull()
+    assert "minimize animated transitions" in window.reduced_motion_action.toolTip()
+    assert window.reduced_motion_action.statusTip() == "Reduced Motion: off"
+    assert window.reduced_motion_preview.objectName() == "reducedMotionPreview"
+    assert window.reduced_motion_preview.text() == "Motion: full animation"
+    assert window.state_timing_preview.property("reducedMotion") is None
+    assert window.reduced_motion_action in window.search_actions
+    assert ribbon.searchAction("Reduced Motion") is window.reduced_motion_action
+
+    window.reduced_motion_action.trigger()
+    _app().processEvents()
+    assert window.reduced_motion_action.isChecked()
+    assert window.reduced_motion_preview.text() == "Motion: reduced"
+    assert window.state_timing_preview.property("reducedMotion") is True
+    assert "#reducedMotionPreview" in window.reduced_motion_preview.styleSheet()
+    assert "Reduced Motion" in window.statusBar().currentMessage()
+
+    window.reduced_motion_action.trigger()
+    _app().processEvents()
+    assert not window.reduced_motion_action.isChecked()
+    assert window.reduced_motion_preview.text() == "Motion: full animation"
+    assert window.state_timing_preview.property("reducedMotion") is False
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2257,6 +2292,7 @@ def main():
         test_example_svg_icon_insert_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
+        test_example_reduced_motion_option_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

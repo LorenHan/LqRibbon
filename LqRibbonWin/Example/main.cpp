@@ -409,6 +409,10 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *svgRecolorPreview,
                      QAction *svgConvertShapeAction,
                      QLabel *svgConvertShapePreview,
+                     LqRibbon::RibbonPage *optionsPage,
+                     QAction *reducedMotionAction,
+                     QLabel *reducedMotionPreview,
+                     QWidget *stateTimingPreview,
                      QAction *smartLookupAction,
                      LqRibbon::RibbonPage *reviewPage,
                      QLabel *smartLookupPreview,
@@ -1030,6 +1034,74 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strSvgConvertShapeStatus.contains(
                          QStringLiteral("Convert to Shape")),
                  QStringLiteral("SVG convert to shape command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const int optionsPageIndex = ribbonBar->indexOf(optionsPage);
+    if (optionsPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(optionsPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *reducedMotionButton =
+        collapseTestActionButton(ribbonBar, reducedMotionAction);
+    if (reducedMotionAction) {
+        reducedMotionAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strReducedMotionStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(optionsPageIndex >= 0
+                     && optionsPage
+                     && optionsPage->title() == QStringLiteral("Options")
+                     && reducedMotionAction
+                     && reducedMotionAction->objectName()
+                         == QStringLiteral("reducedMotionAction")
+                     && reducedMotionAction->isCheckable()
+                     && reducedMotionAction->isChecked()
+                     && !reducedMotionAction->icon().isNull()
+                     && reducedMotionAction->toolTip().contains(
+                         QStringLiteral("minimize animated transitions"))
+                     && reducedMotionAction->statusTip()
+                         == QStringLiteral("Reduced Motion: on")
+                     && reducedMotionPreview
+                     && reducedMotionPreview->objectName()
+                         == QStringLiteral("reducedMotionPreview")
+                     && reducedMotionPreview->text()
+                         == QStringLiteral("Motion: reduced")
+                     && reducedMotionPreview->styleSheet().contains(
+                         QStringLiteral("#reducedMotionPreview"))
+                     && reducedMotionPreview->toolTip().contains(
+                         QStringLiteral("motion preference"))
+                     && stateTimingPreview
+                     && stateTimingPreview->property("reducedMotion").toBool()
+                     && ribbonBar->searchAction(QStringLiteral("Reduced Motion"))
+                         == reducedMotionAction
+                     && reducedMotionButton
+                     && reducedMotionButton->defaultAction()
+                         == reducedMotionAction
+                     && strReducedMotionStatus.contains(
+                         QStringLiteral("Reduced Motion")),
+                 QStringLiteral("Reduced Motion option is available"))) {
+        return 1;
+    }
+    if (reducedMotionAction) {
+        reducedMotionAction->trigger();
+        processCollapseTestEvents();
+    }
+    if (!require(reducedMotionAction
+                     && !reducedMotionAction->isChecked()
+                     && reducedMotionAction->statusTip()
+                         == QStringLiteral("Reduced Motion: off")
+                     && reducedMotionPreview
+                     && reducedMotionPreview->text()
+                         == QStringLiteral("Motion: full animation")
+                     && stateTimingPreview
+                     && !stateTimingPreview->property("reducedMotion").toBool(),
+                 QStringLiteral("Reduced Motion option toggles off"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -4525,6 +4597,31 @@ int main(int argc, char *argv[])
         QObject::tr("Selected SVG shape conversion state"));
     svgFormatGroup->addWidget(svgConvertShapePreview);
 
+    LqRibbon::RibbonPage *optionsPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Options"));
+    LqRibbon::RibbonGroup *accessibilityOptionsGroup =
+        optionsPage->addGroup(QObject::tr("Accessibility"));
+    QAction *reducedMotionAction = accessibilityOptionsGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MediaStop),
+        QObject::tr("Reduced Motion"),
+        Qt::ToolButtonTextUnderIcon);
+    reducedMotionAction->setObjectName(
+        QStringLiteral("reducedMotionAction"));
+    reducedMotionAction->setCheckable(true);
+    reducedMotionAction->setToolTip(
+        QObject::tr("Reduced Motion: minimize animated transitions"));
+    reducedMotionAction->setStatusTip(QObject::tr("Reduced Motion: off"));
+    QLabel *reducedMotionPreview = new QLabel(accessibilityOptionsGroup);
+    reducedMotionPreview->setObjectName(
+        QStringLiteral("reducedMotionPreview"));
+    reducedMotionPreview->setText(QObject::tr("Motion: full animation"));
+    reducedMotionPreview->setMinimumWidth(190);
+    reducedMotionPreview->setFixedHeight(30);
+    reducedMotionPreview->setAlignment(Qt::AlignCenter);
+    reducedMotionPreview->setFrameShape(QFrame::StyledPanel);
+    reducedMotionPreview->setToolTip(QObject::tr("Current motion preference"));
+    accessibilityOptionsGroup->addWidget(reducedMotionPreview);
+
     LqRibbon::RibbonPage *reviewPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Review"));
     LqRibbon::RibbonGroup *insightsGroup =
@@ -5302,6 +5399,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), galleryPage);
     customizeManager->addToCategory(QObject::tr("Pages"), insertPage);
     customizeManager->addToCategory(QObject::tr("Pages"), formatPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), optionsPage);
     customizeManager->addToCategory(QObject::tr("Pages"), reviewPage);
     customizeManager->addToCategory(QObject::tr("Pages"), viewPage);
     customizeManager->addToCategory(QObject::tr("Pages"), tellMePage);
@@ -5335,6 +5433,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), svgIconInsertAction);
     customizeManager->addToCategory(QObject::tr("Actions"), svgRecolorAction);
     customizeManager->addToCategory(QObject::tr("Actions"), svgConvertShapeAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), reducedMotionAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -6513,6 +6612,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
+    mainWindow.ribbonBar()->registerSearchAction(reducedMotionAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -6761,6 +6861,33 @@ int main(int argc, char *argv[])
                                  QObject::tr(
                                      "Convert to Shape: editable vector created"),
                                  2500);
+                         }
+                     });
+    QObject::connect(reducedMotionAction,
+                     &QAction::toggled,
+                     [&mainWindow,
+                      reducedMotionAction,
+                      reducedMotionPreview,
+                      stateTimingPreview](bool enabled) {
+                         stateTimingPreview->setProperty("reducedMotion",
+                                                         enabled);
+                         if (enabled) {
+                             reducedMotionPreview->setText(
+                                 QObject::tr("Motion: reduced"));
+                             reducedMotionPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#reducedMotionPreview { color: #5b2d00; background: #fff4ce; font-weight: 600; }"));
+                             reducedMotionAction->setStatusTip(
+                                 QObject::tr("Reduced Motion: on"));
+                         } else {
+                             reducedMotionPreview->setText(
+                                 QObject::tr("Motion: full animation"));
+                             reducedMotionPreview->setStyleSheet(QString());
+                             reducedMotionAction->setStatusTip(
+                                 QObject::tr("Reduced Motion: off"));
+                         }
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 reducedMotionAction->statusTip(), 2500);
                          }
                      });
     QObject::connect(smartLookupAction,
@@ -7127,6 +7254,10 @@ int main(int argc, char *argv[])
                                 svgRecolorPreview,
                                 svgConvertShapeAction,
                                 svgConvertShapePreview,
+                                optionsPage,
+                                reducedMotionAction,
+                                reducedMotionPreview,
+                                stateTimingPreview,
                                 smartLookupAction,
                                 reviewPage,
                                 smartLookupPreview,

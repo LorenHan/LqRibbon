@@ -296,6 +296,9 @@ class MainWindow(RibbonMainWindow):
         self.format_page = ribbon.addPage("Format")
         self._create_format_page()
 
+        self.options_page = ribbon.addPage("Options")
+        self._create_options_page()
+
         self.review_page = ribbon.addPage("Review")
         self._create_review_page()
 
@@ -653,6 +656,31 @@ class MainWindow(RibbonMainWindow):
         self.svg_convert_shape_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.svg_convert_shape_preview.setToolTip("Selected SVG shape conversion state")
         svg_format_group.addWidget(self.svg_convert_shape_preview)
+
+    def _create_options_page(self):
+        accessibility_group = self.options_page.addGroup("Accessibility")
+        self.reduced_motion_action = accessibility_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_MediaStop),
+            "Reduced Motion",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.reduced_motion_action.setObjectName("reducedMotionAction")
+        self.reduced_motion_action.setCheckable(True)
+        self.reduced_motion_action.setToolTip(
+            "Reduced Motion: minimize animated transitions"
+        )
+        self.reduced_motion_action.setStatusTip("Reduced Motion: off")
+
+        self.reduced_motion_preview = QLabel(
+            "Motion: full animation", accessibility_group
+        )
+        self.reduced_motion_preview.setObjectName("reducedMotionPreview")
+        self.reduced_motion_preview.setMinimumWidth(190)
+        self.reduced_motion_preview.setFixedHeight(30)
+        self.reduced_motion_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.reduced_motion_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.reduced_motion_preview.setToolTip("Current motion preference")
+        accessibility_group.addWidget(self.reduced_motion_preview)
 
     def _create_review_page(self):
         insights_group = self.review_page.addGroup("Insights")
@@ -1545,6 +1573,7 @@ class MainWindow(RibbonMainWindow):
             self.gallery_page,
             self.insert_page,
             self.format_page,
+            self.options_page,
             self.review_page,
             self.view_page,
             self.tell_me_page,
@@ -1576,6 +1605,7 @@ class MainWindow(RibbonMainWindow):
             self.svg_icon_insert_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
+            self.reduced_motion_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1623,6 +1653,7 @@ class MainWindow(RibbonMainWindow):
         self.svg_icon_insert_action.triggered.connect(self.insert_svg_icon)
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
+        self.reduced_motion_action.toggled.connect(self.toggle_reduced_motion)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1922,6 +1953,7 @@ class MainWindow(RibbonMainWindow):
             self.svg_icon_insert_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
+            self.reduced_motion_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -2375,6 +2407,20 @@ class MainWindow(RibbonMainWindow):
             "QLabel#svgConvertShapePreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
         )
         self._message("Convert to Shape: editable vector created")
+
+    def toggle_reduced_motion(self, enabled):
+        self.state_timing_preview.setProperty("reducedMotion", bool(enabled))
+        if enabled:
+            self.reduced_motion_preview.setText("Motion: reduced")
+            self.reduced_motion_preview.setStyleSheet(
+                "QLabel#reducedMotionPreview { color: #5b2d00; background: #fff4ce; font-weight: 600; }"
+            )
+            self.reduced_motion_action.setStatusTip("Reduced Motion: on")
+        else:
+            self.reduced_motion_preview.setText("Motion: full animation")
+            self.reduced_motion_preview.setStyleSheet("")
+            self.reduced_motion_action.setStatusTip("Reduced Motion: off")
+        self._message(self.reduced_motion_action.statusTip())
 
     def toggle_dictate_microphone(self, enabled):
         if enabled:

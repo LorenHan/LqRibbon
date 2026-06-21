@@ -117,7 +117,7 @@ Default style remains `Office 2016 Blue`.
 | 086 | Accessible tooltip names | Tooltip test path | Complete |
 | 087 | Screen-reader names for commands | Accessibility test path | Complete |
 | 088 | High contrast style pass | Style preview page | Complete |
-| 089 | Reduced motion option | Options page | Planned |
+| 089 | Reduced motion option | Options page | Complete |
 | 090 | Touch/mouse spacing toggle | Style preview page | Planned |
 | 091 | KeyTips overlay | Keyboard overlay | Planned |
 | 092 | Alt key tab activation | Keyboard overlay | Planned |
