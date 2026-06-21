@@ -1095,6 +1095,44 @@ def test_example_custom_group_creation_is_available():
     window.close()
 
 
+def test_example_rename_custom_tab_and_group_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    window.add_page_action.trigger()
+    window.add_group_action.trigger()
+    _app().processEvents()
+    runtime_page = ribbon.currentPage()
+    custom_group = window.last_custom_group
+
+    assert window.rename_custom_action.objectName() == "renameCustomAction"
+    assert not window.rename_custom_action.icon().isNull()
+    assert "custom tab and group" in window.rename_custom_action.toolTip()
+    assert window.rename_custom_action.statusTip() == "Rename custom: pending"
+    assert window.rename_custom_preview.objectName() == "renameCustomPreview"
+    assert window.rename_custom_preview.text() == "Rename custom: pending"
+    assert window.rename_custom_action in window.search_actions
+    assert ribbon.searchAction("Rename Custom") is window.rename_custom_action
+
+    window.rename_custom_action.trigger()
+    _app().processEvents()
+    assert runtime_page.title() == "Renamed Tab 1"
+    assert custom_group.title() == "Renamed Group 1"
+    assert window.customize_manager.pageName(runtime_page) == "Renamed Tab 1"
+    assert window.customize_manager.groupName(custom_group) == "Renamed Group 1"
+    assert window.custom_tab_preview.text() == "Custom tab: Renamed Tab 1"
+    assert window.custom_group_preview.text() == "Custom group: Renamed Group 1"
+    assert window.rename_custom_preview.text() == "Renamed Tab 1 / Renamed Group 1"
+    assert "#renameCustomPreview" in window.rename_custom_preview.styleSheet()
+    assert window.rename_custom_action.statusTip() == (
+        "Renamed custom: Renamed Tab 1 / Renamed Group 1"
+    )
+    assert "Renamed custom" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2558,6 +2596,7 @@ def main():
         test_example_title_groups_visibility_toggle_is_available,
         test_example_custom_tab_creation_is_available,
         test_example_custom_group_creation_is_available,
+        test_example_rename_custom_tab_and_group_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

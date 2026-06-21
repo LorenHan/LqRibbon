@@ -1727,6 +1727,20 @@ class LqRibbonCustomizeManager:
     def groupId(self, group):
         return self._ids.get(group, "")
 
+    def pageName(self, page):
+        return page.title() if page else ""
+
+    def setPageName(self, page, page_name):
+        if page:
+            page.setTitle(page_name)
+
+    def groupName(self, group):
+        return group.title() if group else ""
+
+    def setGroupName(self, group, group_name):
+        if group:
+            group.setTitle(group_name)
+
     def saveStateToDevice(self, device):
         page_titles = [str(page.title) for page in self.ribbon_bar.pages()]
         state = ("<ribbon pages=\"" + "|".join(page_titles) + "\"/>").encode("utf-8")

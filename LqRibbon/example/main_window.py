@@ -207,6 +207,8 @@ class MainWindow(RibbonMainWindow):
         self.resize(920, 560)
         self.runtime_page_counter = 1
         self.runtime_group_counter = 1
+        self.rename_custom_counter = 1
+        self.last_custom_group = None
         self.saved_ribbon_state = b""
         self.search_actions = []
         self.high_contrast_style_pass = False
@@ -1253,6 +1255,23 @@ class MainWindow(RibbonMainWindow):
         self.custom_group_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.custom_group_preview.setToolTip("Last custom group created")
         self.runtime_group.addWidget(self.custom_group_preview)
+        self.rename_custom_action = self._add_group_action(
+            self.runtime_group,
+            QStyle.StandardPixmap.SP_FileDialogInfoView,
+            "Rename Custom",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.rename_custom_action.setObjectName("renameCustomAction")
+        self.rename_custom_action.setToolTip("Rename the active custom tab and group")
+        self.rename_custom_action.setStatusTip("Rename custom: pending")
+        self.rename_custom_preview = QLabel("Rename custom: pending", self.runtime_group)
+        self.rename_custom_preview.setObjectName("renameCustomPreview")
+        self.rename_custom_preview.setMinimumWidth(190)
+        self.rename_custom_preview.setFixedHeight(30)
+        self.rename_custom_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.rename_custom_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.rename_custom_preview.setToolTip("Last custom tab/group rename")
+        self.runtime_group.addWidget(self.rename_custom_preview)
         self.rename_page_action = self._add_group_action(
             self.runtime_group,
             QStyle.StandardPixmap.SP_FileDialogInfoView,
@@ -1771,6 +1790,7 @@ class MainWindow(RibbonMainWindow):
             self.high_contrast_style_action,
             self.touch_spacing_action,
             self.add_group_action,
+            self.rename_custom_action,
             self.connect_action,
             self.dictate_microphone_action,
             self.office_popup_action,
@@ -1874,6 +1894,7 @@ class MainWindow(RibbonMainWindow):
         self.toggle_frame_action.toggled.connect(self.setFrameThemeEnabled)
         self.add_page_action.triggered.connect(self.add_runtime_page)
         self.add_group_action.triggered.connect(self.add_custom_group)
+        self.rename_custom_action.triggered.connect(self.rename_custom_tab_and_group)
         self.rename_page_action.triggered.connect(self.rename_driver_page)
         self.move_gallery_action.triggered.connect(self.move_gallery_page)
         self.toggle_group_action.triggered.connect(self.toggle_specialist_group)
@@ -2133,6 +2154,7 @@ class MainWindow(RibbonMainWindow):
             self.unpin_ribbon_action,
             self.add_page_action,
             self.add_group_action,
+            self.rename_custom_action,
             self.rename_page_action,
             self.move_gallery_action,
             self.toggle_group_action,
@@ -3091,12 +3113,36 @@ class MainWindow(RibbonMainWindow):
         )
         self.customize_manager.addToCategory("Groups", group)
         self.customize_manager.setGroupId(group, f"customGroup{group_number}")
+        self.last_custom_group = group
         self.custom_group_preview.setText(f"Custom group: {group.title()}")
         self.custom_group_preview.setStyleSheet(
             "QLabel#customGroupPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
         )
         self.add_group_action.setStatusTip(f"Custom group: {group.title()}")
         self._message(self.add_group_action.statusTip())
+
+    def rename_custom_tab_and_group(self):
+        page = self.ribbonBar().currentPage()
+        if page is None or not page.title().startswith("Runtime"):
+            self.add_runtime_page()
+            page = self.ribbonBar().currentPage()
+        if self.last_custom_group is None or self.last_custom_group not in page.groups():
+            self.add_custom_group()
+            page = self.ribbonBar().currentPage()
+        rename_number = self.rename_custom_counter
+        self.rename_custom_counter += 1
+        tab_name = f"Renamed Tab {rename_number}"
+        group_name = f"Renamed Group {rename_number}"
+        self.customize_manager.setPageName(page, tab_name)
+        self.customize_manager.setGroupName(self.last_custom_group, group_name)
+        self.custom_tab_preview.setText(f"Custom tab: {tab_name}")
+        self.custom_group_preview.setText(f"Custom group: {group_name}")
+        self.rename_custom_preview.setText(f"{tab_name} / {group_name}")
+        self.rename_custom_preview.setStyleSheet(
+            "QLabel#renameCustomPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+        )
+        self.rename_custom_action.setStatusTip(f"Renamed custom: {tab_name} / {group_name}")
+        self._message(self.rename_custom_action.statusTip())
 
     def rename_driver_page(self):
         self.driver_page.setTitle("Drive" if self.driver_page.title() == "Driver" else "Driver")
