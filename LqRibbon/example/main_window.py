@@ -1664,8 +1664,17 @@ class MainWindow(RibbonMainWindow):
             self.backstage_open_page,
         )
         self.frequent_groups_label.setObjectName("frequentGroupsList")
+        self.pinned_folders_label = QLabel(
+            "Pinned folders: Customer Projects, Servo Profiles",
+            self.backstage_open_page,
+        )
+        self.pinned_folders_label.setObjectName("pinnedFoldersList")
+        self.pinned_folders_label.setToolTip(
+            "Pinned Open locations stay at the top of the file picker"
+        )
         open_page_layout.addRow("Frequent sites", self.frequent_sites_label)
         open_page_layout.addRow("Frequent groups", self.frequent_groups_label)
+        open_page_layout.addRow("Pinned folders", self.pinned_folders_label)
         self.backstage_open_action = self.backstage.addPage(self.backstage_open_page)
         self.backstage_open_action.setObjectName("backstageOpenAction")
         self.backstage_open_action.setToolTip("Open frequent sites and groups")

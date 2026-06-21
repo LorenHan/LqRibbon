@@ -1495,6 +1495,7 @@ def test_example_recent_file_pinning_is_available():
 
 
 def test_example_backstage_open_page_shows_frequent_sites_and_groups():
+    _app()
     window = MainWindow()
     window.show()
     _app().processEvents()
@@ -1511,6 +1512,10 @@ def test_example_backstage_open_page_shows_frequent_sites_and_groups():
     assert window.frequent_groups_label.objectName() == "frequentGroupsList"
     assert "Drive Tuning Team" in window.frequent_groups_label.text()
     assert "Firmware Release Group" in window.frequent_groups_label.text()
+    assert window.pinned_folders_label.objectName() == "pinnedFoldersList"
+    assert "Customer Projects" in window.pinned_folders_label.text()
+    assert "Servo Profiles" in window.pinned_folders_label.text()
+    assert "Pinned Open locations" in window.pinned_folders_label.toolTip()
 
     window.backstage.setActivePage(page)
     _app().processEvents()

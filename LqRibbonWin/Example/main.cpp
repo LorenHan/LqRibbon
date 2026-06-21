@@ -478,6 +478,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QWidget *backstageOpenPage,
                      QLabel *frequentSitesLabel,
                      QLabel *frequentGroupsLabel,
+                     QLabel *pinnedFoldersLabel,
                      QAction *versionHistoryAction,
                      QWidget *versionHistoryPage,
                      QLabel *versionHistoryCurrentLabel,
@@ -2946,6 +2947,15 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          QStringLiteral("Drive Tuning Team"))
                      && frequentGroupsLabel->text().contains(
                          QStringLiteral("Firmware Release Group"))
+                     && pinnedFoldersLabel
+                     && pinnedFoldersLabel->objectName()
+                         == QStringLiteral("pinnedFoldersList")
+                     && pinnedFoldersLabel->text().contains(
+                         QStringLiteral("Customer Projects"))
+                     && pinnedFoldersLabel->text().contains(
+                         QStringLiteral("Servo Profiles"))
+                     && pinnedFoldersLabel->toolTip().contains(
+                         QStringLiteral("Pinned Open locations"))
                      && strBackstageOpenStatus.contains(
                          QStringLiteral("frequent sites and groups")),
                  QStringLiteral("Backstage open page shows frequent sites and groups"))) {
@@ -6481,8 +6491,15 @@ int main(int argc, char *argv[])
         QObject::tr("Drive Tuning Team\nFirmware Release Group"),
         backstageOpenPage);
     frequentGroupsLabel->setObjectName(QStringLiteral("frequentGroupsList"));
+    QLabel *pinnedFoldersLabel = new QLabel(
+        QObject::tr("Pinned folders: Customer Projects, Servo Profiles"),
+        backstageOpenPage);
+    pinnedFoldersLabel->setObjectName(QStringLiteral("pinnedFoldersList"));
+    pinnedFoldersLabel->setToolTip(
+        QObject::tr("Pinned Open locations stay at the top of the file picker"));
     openPageLayout->addRow(QObject::tr("Frequent sites"), frequentSitesLabel);
     openPageLayout->addRow(QObject::tr("Frequent groups"), frequentGroupsLabel);
+    openPageLayout->addRow(QObject::tr("Pinned folders"), pinnedFoldersLabel);
     QAction *backstageOpenAction = backstage->addPage(backstageOpenPage);
     backstageOpenAction->setObjectName(QStringLiteral("backstageOpenAction"));
     backstageOpenAction->setToolTip(
@@ -9049,6 +9066,7 @@ int main(int argc, char *argv[])
                                 backstageOpenPage,
                                 frequentSitesLabel,
                                 frequentGroupsLabel,
+                                pinnedFoldersLabel,
                                 versionHistoryAction,
                                 versionHistoryPage,
                                 versionHistoryCurrentLabel,
