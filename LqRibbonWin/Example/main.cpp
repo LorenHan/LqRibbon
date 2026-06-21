@@ -281,6 +281,10 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QComboBox *cloudLocationCombo,
                      LqRibbon::RibbonPageSystemRecentFileList *recentFiles,
                      QAction *pinRecentFileAction,
+                     QAction *backstageOpenAction,
+                     QWidget *backstageOpenPage,
+                     QLabel *frequentSitesLabel,
+                     QLabel *frequentGroupsLabel,
                      QAction *versionHistoryAction,
                      QWidget *versionHistoryPage,
                      QLabel *versionHistoryCurrentLabel,
@@ -1497,6 +1501,57 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          QStringLiteral("Unpinned recent file")),
                  QStringLiteral("Recent file pinning restores default order"))) {
         return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    if (backstage) {
+        backstage->open();
+        processCollapseTestEvents();
+        backstage->setActivePage(backstageOpenPage);
+        processCollapseTestEvents();
+    }
+    const bool backstageOpenChecked =
+        backstageOpenAction ? backstageOpenAction->isChecked() : false;
+    if (backstageOpenAction) {
+        backstageOpenAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strBackstageOpenStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(backstage
+                     && backstageOpenAction
+                     && backstageOpenAction->objectName()
+                         == QStringLiteral("backstageOpenAction")
+                     && backstageOpenAction->isCheckable()
+                     && backstageOpenPage
+                     && backstageOpenPage->objectName()
+                         == QStringLiteral("backstageOpenPage")
+                     && backstage->activePage() == backstageOpenPage
+                     && backstageOpenChecked
+                     && frequentSitesLabel
+                     && frequentSitesLabel->objectName()
+                         == QStringLiteral("frequentSitesList")
+                     && frequentSitesLabel->text().contains(
+                         QStringLiteral("OneDrive - Contoso"))
+                     && frequentSitesLabel->text().contains(
+                         QStringLiteral("SharePoint Team Site"))
+                     && frequentGroupsLabel
+                     && frequentGroupsLabel->objectName()
+                         == QStringLiteral("frequentGroupsList")
+                     && frequentGroupsLabel->text().contains(
+                         QStringLiteral("Drive Tuning Team"))
+                     && frequentGroupsLabel->text().contains(
+                         QStringLiteral("Firmware Release Group"))
+                     && strBackstageOpenStatus.contains(
+                         QStringLiteral("frequent sites and groups")),
+                 QStringLiteral("Backstage open page shows frequent sites and groups"))) {
+        return 1;
+    }
+    if (backstage) {
+        backstage->hide();
     }
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
@@ -3650,6 +3705,36 @@ int main(int argc, char *argv[])
                      });
     systemMenu->addPageSystemPopup(
         QObject::tr("Pin Recent"), pinRecentFileAction, true);
+    QWidget *backstageOpenPage = new QWidget(backstage);
+    backstageOpenPage->setObjectName(QStringLiteral("backstageOpenPage"));
+    backstageOpenPage->setWindowTitle(QObject::tr("Open"));
+    QFormLayout *openPageLayout = new QFormLayout(backstageOpenPage);
+    QLabel *frequentSitesLabel = new QLabel(
+        QObject::tr("OneDrive - Contoso\nSharePoint Team Site"),
+        backstageOpenPage);
+    frequentSitesLabel->setObjectName(QStringLiteral("frequentSitesList"));
+    QLabel *frequentGroupsLabel = new QLabel(
+        QObject::tr("Drive Tuning Team\nFirmware Release Group"),
+        backstageOpenPage);
+    frequentGroupsLabel->setObjectName(QStringLiteral("frequentGroupsList"));
+    openPageLayout->addRow(QObject::tr("Frequent sites"), frequentSitesLabel);
+    openPageLayout->addRow(QObject::tr("Frequent groups"), frequentGroupsLabel);
+    QAction *backstageOpenAction = backstage->addPage(backstageOpenPage);
+    backstageOpenAction->setObjectName(QStringLiteral("backstageOpenAction"));
+    backstageOpenAction->setToolTip(
+        QObject::tr("Open frequent sites and groups"));
+    backstageOpenAction->setStatusTip(
+        QObject::tr("Open: frequent sites and groups"));
+    QObject::connect(backstageOpenAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Open: frequent sites and groups"),
+                                 2500);
+                         }
+                     });
     if (mainWindow.ribbonBar()->systemButton()) {
         mainWindow.ribbonBar()->systemButton()->setBackstage(backstage);
         mainWindow.ribbonBar()->systemButton()->setSystemMenu(systemMenu);
@@ -5055,6 +5140,10 @@ int main(int argc, char *argv[])
                                 cloudLocationCombo,
                                 recentFiles,
                                 pinRecentFileAction,
+                                backstageOpenAction,
+                                backstageOpenPage,
+                                frequentSitesLabel,
+                                frequentGroupsLabel,
                                 versionHistoryAction,
                                 versionHistoryPage,
                                 versionHistoryCurrentLabel,

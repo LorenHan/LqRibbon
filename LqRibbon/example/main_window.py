@@ -925,6 +925,32 @@ class MainWindow(RibbonMainWindow):
             "Pin Recent", self.pin_recent_file_action, True
         )
 
+        self.backstage_open_page = QWidget(self.backstage)
+        self.backstage_open_page.setObjectName("backstageOpenPage")
+        self.backstage_open_page.setWindowTitle("Open")
+        open_page_layout = QFormLayout(self.backstage_open_page)
+        self.frequent_sites_label = QLabel(
+            "OneDrive - Contoso\nSharePoint Team Site",
+            self.backstage_open_page,
+        )
+        self.frequent_sites_label.setObjectName("frequentSitesList")
+        self.frequent_groups_label = QLabel(
+            "Drive Tuning Team\nFirmware Release Group",
+            self.backstage_open_page,
+        )
+        self.frequent_groups_label.setObjectName("frequentGroupsList")
+        open_page_layout.addRow("Frequent sites", self.frequent_sites_label)
+        open_page_layout.addRow("Frequent groups", self.frequent_groups_label)
+        self.backstage_open_action = self.backstage.addPage(self.backstage_open_page)
+        self.backstage_open_action.setObjectName("backstageOpenAction")
+        self.backstage_open_action.setToolTip("Open frequent sites and groups")
+        self.backstage_open_action.setStatusTip(
+            "Open: frequent sites and groups"
+        )
+        self.backstage_open_action.triggered.connect(
+            lambda: self._message("Open: frequent sites and groups")
+        )
+
         system_button = self.ribbonBar().systemButton()
         if system_button:
             system_button.setBackstage(self.backstage)
