@@ -652,6 +652,29 @@ def test_example_search_shows_related_file_result_section():
     window.close()
 
 
+def test_example_tell_me_lightbulb_entry_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    ribbon.setCurrentPageIndex(ribbon.pageIndex(window.tell_me_page))
+    _app().processEvents()
+
+    assert ribbon.pageIndex(window.tell_me_page) >= 0
+    assert window.tell_me_lightbulb_action.objectName() == "tellMeLightbulbAction"
+    assert not window.tell_me_lightbulb_action.icon().isNull()
+    assert "command discovery" in window.tell_me_lightbulb_action.toolTip()
+    assert window.tell_me_entry_preview.text() == "Ask for a command or phrase"
+    assert window.tell_me_lightbulb_action in window.search_actions
+    assert ribbon.searchAction("Tell Me") is window.tell_me_lightbulb_action
+
+    window.tell_me_lightbulb_action.trigger()
+    _app().processEvents()
+    assert "Tell Me" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_collapse_state_preview_tracks_modes():
     window = MainWindow()
     window.show()
@@ -1165,6 +1188,7 @@ def main():
         test_example_search_no_result_affordance_keeps_help_path,
         test_example_search_shows_help_result_section,
         test_example_search_shows_related_file_result_section,
+        test_example_tell_me_lightbulb_entry_is_available,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,

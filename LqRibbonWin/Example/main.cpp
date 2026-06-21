@@ -23,6 +23,7 @@
 #include <QMouseEvent>
 #include <QPalette>
 #include <QPainter>
+#include <QPen>
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QMenu>
@@ -96,6 +97,21 @@ void exampleTestMessageHandler(QtMsgType,
 void processCollapseTestEvents()
 {
     qApp->processEvents(QEventLoop::AllEvents, 50);
+}
+
+QIcon createTellMeLightbulbIcon()
+{
+    QPixmap pixmap(32, 32);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QPen(QColor(QStringLiteral("#8a6d00")), 2));
+    painter.setBrush(QColor(QStringLiteral("#ffd966")));
+    painter.drawEllipse(QRect(8, 4, 16, 16));
+    painter.setBrush(QColor(QStringLiteral("#8a6d00")));
+    painter.drawRoundedRect(QRect(11, 19, 10, 6), 2, 2);
+    painter.drawLine(12, 27, 20, 27);
+    return QIcon(pixmap);
 }
 
 QTabBar *collapseTestTabBar(LqRibbon::RibbonBar *ribbonBar)
@@ -210,6 +226,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *compactSearchAction,
                      QAction *hiddenSearchAction,
                      QAction *focusSearchAction,
+                     QAction *tellMeLightbulbAction,
+                     LqRibbon::RibbonPage *tellMePage,
+                     QLabel *tellMeEntryPreview,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
                      const std::function<void(QMenu *, QAction *)> &populateActionContextMenu,
                      const std::function<void(QMenu *, QAction *)> &populateQuickAccessActionContextMenu,
@@ -646,6 +665,39 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     searchPopupView->hide();
     ribbonBar->clearRecentSearchActions();
     processCollapseTestEvents();
+
+    const int tellMePageIndex = ribbonBar->indexOf(tellMePage);
+    if (tellMePageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(tellMePageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *tellMeButton =
+        collapseTestActionButton(ribbonBar, tellMeLightbulbAction);
+    tellMeLightbulbAction->trigger();
+    processCollapseTestEvents();
+    const QString strTellMeStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(tellMePageIndex >= 0
+                     && tellMeLightbulbAction
+                     && tellMeLightbulbAction->objectName()
+                         == QStringLiteral("tellMeLightbulbAction")
+                     && !tellMeLightbulbAction->icon().isNull()
+                     && tellMeLightbulbAction->toolTip().contains(
+                         QStringLiteral("command discovery"))
+                     && tellMeButton
+                     && tellMeEntryPreview
+                     && tellMeEntryPreview->text()
+                         == QStringLiteral("Ask for a command or phrase")
+                     && ribbonBar->searchAction(QStringLiteral("Tell Me"))
+                         == tellMeLightbulbAction
+                     && strTellMeStatus.contains(QStringLiteral("Tell Me")),
+                 QStringLiteral("Tell Me lightbulb entry is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
 
     reset();
     doubleClickCollapseTestTab(ribbonBar, firstIndex);
@@ -2490,6 +2542,31 @@ int main(int argc, char *argv[])
         galleryMenu);
     galleryActionGroup->addWidget(galleryToolBar);
 
+    LqRibbon::RibbonPage *tellMePage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
+    LqRibbon::RibbonGroup *commandDiscoveryGroup =
+        tellMePage->addGroup(QObject::tr("Command Discovery"));
+    QAction *tellMeLightbulbAction = commandDiscoveryGroup->addAction(
+        createTellMeLightbulbIcon(),
+        QObject::tr("Tell Me"),
+        Qt::ToolButtonTextUnderIcon);
+    tellMeLightbulbAction->setObjectName(
+        QStringLiteral("tellMeLightbulbAction"));
+    tellMeLightbulbAction->setToolTip(
+        QObject::tr("Open command discovery for natural-language help"));
+    tellMeLightbulbAction->setStatusTip(
+        QObject::tr("Tell Me: type a command or phrase in Search"));
+    QLabel *tellMeEntryPreview = new QLabel(commandDiscoveryGroup);
+    tellMeEntryPreview->setObjectName(QStringLiteral("tellMeEntryPreview"));
+    tellMeEntryPreview->setText(QObject::tr("Ask for a command or phrase"));
+    tellMeEntryPreview->setMinimumWidth(220);
+    tellMeEntryPreview->setFixedHeight(30);
+    tellMeEntryPreview->setAlignment(Qt::AlignCenter);
+    tellMeEntryPreview->setFrameShape(QFrame::StyledPanel);
+    tellMeEntryPreview->setToolTip(
+        QObject::tr("Natural-language command discovery entry"));
+    commandDiscoveryGroup->addWidget(tellMeEntryPreview);
+
     LqRibbon::RibbonPage *shellPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Shell"));
     LqRibbon::RibbonGroup *windowGroup =
@@ -2738,6 +2815,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), driverPage);
     customizeManager->addToCategory(QObject::tr("Pages"), controlsPage);
     customizeManager->addToCategory(QObject::tr("Pages"), galleryPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), tellMePage);
     customizeManager->addToCategory(QObject::tr("Pages"), shellPage);
     customizeManager->addToCategory(QObject::tr("Actions"), fullScreenAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
@@ -2750,6 +2828,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), hiddenSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"), focusSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"), controlModesAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     showQuickAccessBarAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
@@ -2768,6 +2847,7 @@ int main(int argc, char *argv[])
                                     exportQuickAccessAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     importQuickAccessAction);
+    customizeManager->setPageId(tellMePage, QStringLiteral("tellMe"));
     customizeManager->setPageId(shellPage, QStringLiteral("shell"));
     customizeManager->setGroupId(runtimeGroup, QStringLiteral("runtime"));
     QByteArray savedRibbonState;
@@ -3780,6 +3860,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(quickAccessLabelsAction);
     mainWindow.ribbonBar()->registerSearchAction(officePopupAction);
     mainWindow.ribbonBar()->registerSearchAction(officeMenuAction);
+    mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
     mainWindow.ribbonBar()->registerSearchAction(reorderQuickAccessAction);
     mainWindow.ribbonBar()->registerSearchAction(resetQuickAccessAction);
@@ -3836,6 +3917,16 @@ int main(int argc, char *argv[])
                                  QObject::tr("LqRibbon"),
                                  QObject::tr("Account"));
     });
+    QObject::connect(tellMeLightbulbAction,
+                     &QAction::triggered,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Tell Me: type a command or phrase in Search"),
+                                 2500);
+                         }
+                     });
     QObject::connect(showTabsAndCommandsAction, &QAction::triggered,
                      [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setMinimizationEnabled(true);
@@ -3895,6 +3986,9 @@ int main(int argc, char *argv[])
                                 compactSearchAction,
                                 hiddenSearchAction,
                                 focusSearchAction,
+                                tellMeLightbulbAction,
+                                tellMePage,
+                                tellMeEntryPreview,
                                 populateQuickAccessMenu,
                                 populateActionContextMenu,
                                 populateQuickAccessActionContextMenu,

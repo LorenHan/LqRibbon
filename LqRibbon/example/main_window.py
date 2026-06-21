@@ -5,8 +5,17 @@ MainWindow - feature parity demo for the C++ example.
 import io
 import json
 
-from PySide6.QtCore import QDate, QPoint, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QActionGroup, QColor, QKeySequence
+from PySide6.QtCore import QDate, QPoint, QRect, QSize, Qt, QTimer
+from PySide6.QtGui import (
+    QAction,
+    QActionGroup,
+    QColor,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPen,
+    QPixmap,
+)
 from PySide6.QtWidgets import (
     QFormLayout,
     QFrame,
@@ -253,6 +262,9 @@ class MainWindow(RibbonMainWindow):
         self.gallery_page = ribbon.addPage("Gallery")
         self._create_gallery_page()
 
+        self.tell_me_page = ribbon.addPage("Tell Me")
+        self._create_command_discovery_page()
+
         self.shell_page = ribbon.addPage("Shell")
         self._create_shell_page()
         self._create_system_surfaces()
@@ -489,6 +501,33 @@ class MainWindow(RibbonMainWindow):
         more_menu = gallery_toolbar.addMenu(self._icon(QStyle.StandardPixmap.SP_ArrowDown), "More")
         more_menu.addActions(self.gallery_menu.actions())
         gallery_action_group.addWidget(gallery_toolbar)
+
+    def _create_command_discovery_page(self):
+        discovery_group = self.tell_me_page.addGroup("Command Discovery")
+        self.tell_me_lightbulb_action = discovery_group.addAction(
+            self._tell_me_lightbulb_icon(),
+            "Tell Me",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.tell_me_lightbulb_action.setObjectName("tellMeLightbulbAction")
+        self.tell_me_lightbulb_action.setToolTip(
+            "Open command discovery for natural-language help"
+        )
+        self.tell_me_lightbulb_action.setStatusTip(
+            "Tell Me: type a command or phrase in Search"
+        )
+        self.tell_me_entry_preview = QLabel(
+            "Ask for a command or phrase", discovery_group
+        )
+        self.tell_me_entry_preview.setObjectName("tellMeEntryPreview")
+        self.tell_me_entry_preview.setMinimumWidth(220)
+        self.tell_me_entry_preview.setFixedHeight(30)
+        self.tell_me_entry_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tell_me_entry_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.tell_me_entry_preview.setToolTip(
+            "Natural-language command discovery entry"
+        )
+        discovery_group.addWidget(self.tell_me_entry_preview)
 
     def _create_shell_page(self):
         window_group = self.shell_page.addGroup("Window")
@@ -796,6 +835,7 @@ class MainWindow(RibbonMainWindow):
             self.driver_page,
             self.controls_page,
             self.gallery_page,
+            self.tell_me_page,
             self.shell_page,
         ]:
             self.customize_manager.addToCategory("Pages", page)
@@ -809,12 +849,14 @@ class MainWindow(RibbonMainWindow):
             self.hidden_search_action,
             self.focus_search_action,
             self.control_modes_action,
+            self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
             self.export_quick_access_action,
             self.import_quick_access_action,
         ]:
             self.customize_manager.addToCategory("Actions", action)
+        self.customize_manager.setPageId(self.tell_me_page, "tellMe")
         self.customize_manager.setPageId(self.shell_page, "shell")
         self.customize_manager.setGroupId(self.runtime_group, "runtime")
 
@@ -826,6 +868,9 @@ class MainWindow(RibbonMainWindow):
         self.connect_action.triggered.connect(lambda: self._message("Connect"))
         self.basic_action.triggered.connect(lambda: self._message("Basic Operation"))
         self.driver_action.triggered.connect(lambda: self._message("Driver Configuration"))
+        self.tell_me_lightbulb_action.triggered.connect(
+            lambda: self._message("Tell Me: type a command or phrase in Search")
+        )
         self.minimize_ribbon_action.triggered.connect(
             lambda: self.ribbonBar().setRibbonMinimized(True)
         )
@@ -1030,6 +1075,7 @@ class MainWindow(RibbonMainWindow):
             self.quick_access_labels_action,
             self.office_popup_action,
             self.office_menu_action,
+            self.tell_me_lightbulb_action,
             self.show_customize_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
@@ -1648,6 +1694,20 @@ class MainWindow(RibbonMainWindow):
 
     def _icon(self, standard_pixmap):
         return self.style().standardIcon(standard_pixmap)
+
+    def _tell_me_lightbulb_icon(self):
+        pixmap = QPixmap(32, 32)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(QColor("#8a6d00"), 2))
+        painter.setBrush(QColor("#ffd966"))
+        painter.drawEllipse(QRect(8, 4, 16, 16))
+        painter.setBrush(QColor("#8a6d00"))
+        painter.drawRoundedRect(QRect(11, 19, 10, 6), 2, 2)
+        painter.drawLine(12, 27, 20, 27)
+        painter.end()
+        return QIcon(pixmap)
 
     def _message(self, text, timeout=2500):
         self.statusBar().showMessage(text, timeout)
