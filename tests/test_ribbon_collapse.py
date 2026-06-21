@@ -1028,6 +1028,32 @@ def test_example_recommended_chart_command_surface():
     window.close()
 
 
+def test_example_loop_component_command_surface():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.insert_page.title() == "Insert"
+    assert window.loop_component_action.objectName() == "loopComponentAction"
+    assert not window.loop_component_action.icon().isNull()
+    assert "Loop component" in window.loop_component_action.toolTip()
+    assert window.loop_component_action.statusTip() == "Loop Component: ready to insert"
+    assert window.loop_component_preview.objectName() == "loopComponentPreview"
+    assert window.loop_component_preview.text() == "Loop Component: none"
+    assert "Last inserted Loop" in window.loop_component_preview.toolTip()
+    assert window.loop_component_action in window.search_actions
+    assert ribbon.searchAction("Loop Component") is window.loop_component_action
+
+    window.loop_component_action.trigger()
+    _app().processEvents()
+    assert window.loop_component_preview.text() == "Loop Component: task list"
+    assert "#loopComponentPreview" in window.loop_component_preview.styleSheet()
+    assert "Loop Component" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_3d_animation_command_surface():
     _app()
     window = MainWindow()
@@ -3442,6 +3468,7 @@ def main():
         test_example_svg_icon_insert_command_surface,
         test_example_3d_model_insert_command_surface,
         test_example_recommended_chart_command_surface,
+        test_example_loop_component_command_surface,
         test_example_3d_animation_command_surface,
         test_example_designer_ideas_command_surface,
         test_example_data_types_command_surface,

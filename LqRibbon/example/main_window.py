@@ -705,6 +705,28 @@ class MainWindow(RibbonMainWindow):
         self.recommended_chart_preview.setToolTip("Recommended chart selection state")
         charts_group.addWidget(self.recommended_chart_preview)
 
+        collaboration_group = self.insert_page.addGroup("Collaboration")
+        self.loop_component_action = collaboration_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogNewFolder),
+            "Loop Component",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.loop_component_action.setObjectName("loopComponentAction")
+        self.loop_component_action.setToolTip(
+            "Insert a live Loop component into the document"
+        )
+        self.loop_component_action.setStatusTip("Loop Component: ready to insert")
+        self.loop_component_preview = QLabel(
+            "Loop Component: none", collaboration_group
+        )
+        self.loop_component_preview.setObjectName("loopComponentPreview")
+        self.loop_component_preview.setMinimumWidth(210)
+        self.loop_component_preview.setFixedHeight(30)
+        self.loop_component_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.loop_component_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.loop_component_preview.setToolTip("Last inserted Loop component state")
+        collaboration_group.addWidget(self.loop_component_preview)
+
     def _create_format_page(self):
         svg_format_group = self.format_page.addGroup("SVG Format")
         self.svg_recolor_action = svg_format_group.addAction(
@@ -2311,6 +2333,7 @@ class MainWindow(RibbonMainWindow):
             self.data_types_action,
             self.pivot_recommendation_action,
             self.live_captions_action,
+            self.loop_component_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2372,6 +2395,7 @@ class MainWindow(RibbonMainWindow):
         self.pivot_recommendation_action.triggered.connect(
             self.open_pivot_recommendation
         )
+        self.loop_component_action.triggered.connect(self.insert_loop_component)
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
         self.contextual_group_color_action.triggered.connect(
@@ -2740,6 +2764,7 @@ class MainWindow(RibbonMainWindow):
             self.data_types_action,
             self.pivot_recommendation_action,
             self.live_captions_action,
+            self.loop_component_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -3249,6 +3274,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#recommendedChartPreview { color: #124078; background: #eef6ff; font-weight: 600; }"
         )
         self._message("Recommended Chart: clustered column")
+
+    def insert_loop_component(self):
+        self.loop_component_preview.setText("Loop Component: task list")
+        self.loop_component_preview.setStyleSheet(
+            "QLabel#loopComponentPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+        )
+        self._message("Loop Component: task list inserted")
 
     def convert_to_data_type(self):
         self.data_types_preview.setText("Data Types: Geography linked")

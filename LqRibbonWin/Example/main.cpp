@@ -415,6 +415,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *model3DPreview,
                      QAction *recommendedChartAction,
                      QLabel *recommendedChartPreview,
+                     QAction *loopComponentAction,
+                     QLabel *loopComponentPreview,
                      LqRibbon::RibbonPage *animationPage,
                      QAction *model3DAnimationAction,
                      QLabel *model3DAnimationPreview,
@@ -1102,6 +1104,46 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strRecommendedChartStatus.contains(
                          QStringLiteral("Recommended Chart")),
                  QStringLiteral("Recommended chart command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *loopComponentButton =
+        collapseTestActionButton(ribbonBar, loopComponentAction);
+    if (loopComponentAction) {
+        loopComponentAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strLoopComponentStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(loopComponentAction
+                     && loopComponentAction->objectName()
+                         == QStringLiteral("loopComponentAction")
+                     && !loopComponentAction->icon().isNull()
+                     && loopComponentAction->toolTip().contains(
+                         QStringLiteral("Loop component"))
+                     && loopComponentAction->statusTip()
+                         == QStringLiteral("Loop Component: ready to insert")
+                     && loopComponentPreview
+                     && loopComponentPreview->objectName()
+                         == QStringLiteral("loopComponentPreview")
+                     && loopComponentPreview->text()
+                         == QStringLiteral("Loop Component: task list")
+                     && loopComponentPreview->styleSheet().contains(
+                         QStringLiteral("#loopComponentPreview"))
+                     && loopComponentPreview->toolTip().contains(
+                         QStringLiteral("Last inserted Loop"))
+                     && ribbonBar->searchAction(QStringLiteral("Loop Component"))
+                         == loopComponentAction
+                     && loopComponentButton
+                     && loopComponentButton->defaultAction()
+                         == loopComponentAction
+                     && strLoopComponentStatus.contains(
+                         QStringLiteral("Loop Component")),
+                 QStringLiteral("Loop component command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6360,6 +6402,28 @@ int main(int argc, char *argv[])
     recommendedChartPreview->setToolTip(
         QObject::tr("Recommended chart selection state"));
     chartsGroup->addWidget(recommendedChartPreview);
+    LqRibbon::RibbonGroup *insertCollaborationGroup =
+        insertPage->addGroup(QObject::tr("Collaboration"));
+    QAction *loopComponentAction = insertCollaborationGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogNewFolder),
+        QObject::tr("Loop Component"),
+        Qt::ToolButtonTextUnderIcon);
+    loopComponentAction->setObjectName(QStringLiteral("loopComponentAction"));
+    loopComponentAction->setToolTip(
+        QObject::tr("Insert a live Loop component into the document"));
+    loopComponentAction->setStatusTip(
+        QObject::tr("Loop Component: ready to insert"));
+    QLabel *loopComponentPreview = new QLabel(insertCollaborationGroup);
+    loopComponentPreview->setObjectName(
+        QStringLiteral("loopComponentPreview"));
+    loopComponentPreview->setText(QObject::tr("Loop Component: none"));
+    loopComponentPreview->setMinimumWidth(210);
+    loopComponentPreview->setFixedHeight(30);
+    loopComponentPreview->setAlignment(Qt::AlignCenter);
+    loopComponentPreview->setFrameShape(QFrame::StyledPanel);
+    loopComponentPreview->setToolTip(
+        QObject::tr("Last inserted Loop component state"));
+    insertCollaborationGroup->addWidget(loopComponentPreview);
 
     LqRibbon::RibbonPage *formatPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Format"));
@@ -9495,6 +9559,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(model3DInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(recommendedChartAction);
+    mainWindow.ribbonBar()->registerSearchAction(loopComponentAction);
     mainWindow.ribbonBar()->registerSearchAction(model3DAnimationAction);
     mainWindow.ribbonBar()->registerSearchAction(designerIdeasAction);
     mainWindow.ribbonBar()->registerSearchAction(dataTypesAction);
@@ -9813,6 +9878,20 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr(
                                      "Recommended Chart: clustered column"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(loopComponentAction,
+                     &QAction::triggered,
+                     [&mainWindow, loopComponentPreview]() {
+                         loopComponentPreview->setText(
+                             QObject::tr("Loop Component: task list"));
+                         loopComponentPreview->setStyleSheet(
+                             QStringLiteral("QLabel#loopComponentPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Loop Component: task list inserted"),
                                  2500);
                          }
                      });
@@ -10496,6 +10575,8 @@ int main(int argc, char *argv[])
                                 model3DPreview,
                                 recommendedChartAction,
                                 recommendedChartPreview,
+                                loopComponentAction,
+                                loopComponentPreview,
                                 animationPage,
                                 model3DAnimationAction,
                                 model3DAnimationPreview,
