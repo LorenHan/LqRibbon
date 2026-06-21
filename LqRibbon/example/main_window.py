@@ -509,10 +509,20 @@ class MainWindow(RibbonMainWindow):
         ]
         for caption, icon in gallery_items:
             gallery_group.addItem(caption, self._icon(icon))
+        self.high_dpi_gallery_item = gallery_group.addItem(
+            "High DPI",
+            self._high_dpi_gallery_icon(),
+        )
+        self.high_dpi_gallery_item.setToolTip("Scalable high-DPI icon sample")
+        self.high_dpi_gallery_item.setData(
+            Qt.ItemDataRole.UserRole,
+            "highDpiScalableIcon",
+        )
 
         self.style_gallery = RibbonGallery(style_group)
+        self.style_gallery.setObjectName("styleGallery")
         self.style_gallery.setGalleryGroup(gallery_group)
-        self.style_gallery.setColumnCount(3)
+        self.style_gallery.setColumnCount(4)
         self.style_gallery.setRowCount(2)
         self.style_gallery.setCheckedIndex(1)
 
@@ -2602,6 +2612,28 @@ class MainWindow(RibbonMainWindow):
 
     def _icon(self, standard_pixmap):
         return self.style().standardIcon(standard_pixmap)
+
+    def _high_dpi_gallery_icon(self):
+        icon = QIcon()
+        for size, color in ((16, "#0078d4"), (32, "#107c10"), (64, "#5c2d91")):
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setPen(QPen(QColor("#ffffff"), max(1, size // 16)))
+            painter.setBrush(QColor(color))
+            margin = max(2, size // 8)
+            painter.drawRoundedRect(
+                QRect(margin, margin, size - margin * 2, size - margin * 2),
+                size // 6,
+                size // 6,
+            )
+            painter.setBrush(QColor("#ffffff"))
+            inset = max(4, size // 4)
+            painter.drawEllipse(QRect(inset, inset, size - inset * 2, size - inset * 2))
+            painter.end()
+            icon.addPixmap(pixmap)
+        return icon
 
     def _tell_me_lightbulb_icon(self):
         pixmap = QPixmap(32, 32)

@@ -146,6 +146,44 @@ QIcon createPresenceAvatarStripIcon()
     return QIcon(pixmap);
 }
 
+QIcon createHighDpiGalleryIcon()
+{
+    QIcon icon;
+    const struct IconLayer
+    {
+        int size;
+        const char *color;
+    } layers[] = {
+        {16, "#0078d4"},
+        {32, "#107c10"},
+        {64, "#5c2d91"},
+    };
+    for (const IconLayer &layer : layers) {
+        QPixmap pixmap(layer.size, layer.size);
+        pixmap.fill(Qt::transparent);
+        QPainter painter(&pixmap);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(QPen(Qt::white, qMax(1, layer.size / 16)));
+        painter.setBrush(QColor(QString::fromLatin1(layer.color)));
+        const int margin = qMax(2, layer.size / 8);
+        painter.drawRoundedRect(
+            QRect(margin,
+                  margin,
+                  layer.size - margin * 2,
+                  layer.size - margin * 2),
+            layer.size / 6,
+            layer.size / 6);
+        painter.setBrush(Qt::white);
+        const int inset = qMax(4, layer.size / 4);
+        painter.drawEllipse(QRect(inset,
+                                  inset,
+                                  layer.size - inset * 2,
+                                  layer.size - inset * 2));
+        icon.addPixmap(pixmap);
+    }
+    return icon;
+}
+
 QTabBar *collapseTestTabBar(LqRibbon::RibbonBar *ribbonBar)
 {
     return ribbonBar->findChild<QTabBar *>();
@@ -296,6 +334,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *focusModePreview,
                      QAction *darkCanvasAction,
                      QLabel *darkCanvasPreview,
+                     LqRibbon::RibbonGallery *styleGallery,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -1150,6 +1189,37 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
+    }
+
+    LqRibbon::RibbonGalleryItem *highDpiGalleryItem = nullptr;
+    if (styleGallery) {
+        for (int index = 0; index < styleGallery->itemCount(); ++index) {
+            LqRibbon::RibbonGalleryItem *item = styleGallery->item(index);
+            if (item && item->caption() == QStringLiteral("High DPI")) {
+                highDpiGalleryItem = item;
+                break;
+            }
+        }
+    }
+    const QPixmap highDpiPixmap =
+        highDpiGalleryItem
+            ? highDpiGalleryItem->icon().pixmap(QSize(64, 64))
+            : QPixmap();
+    if (!require(styleGallery
+                     && styleGallery->objectName()
+                         == QStringLiteral("styleGallery")
+                     && styleGallery->itemCount() >= 7
+                     && styleGallery->columnCount() == 4
+                     && highDpiGalleryItem
+                     && highDpiGalleryItem->toolTip()
+                         == QStringLiteral("Scalable high-DPI icon sample")
+                     && highDpiGalleryItem->data(Qt::UserRole).toString()
+                         == QStringLiteral("highDpiScalableIcon")
+                     && !highDpiGalleryItem->icon().isNull()
+                     && highDpiPixmap.width() >= 64
+                     && highDpiPixmap.height() >= 64,
+                 QStringLiteral("High-DPI scalable gallery icon is available"))) {
+        return 1;
     }
 
     const int tellMePageIndex = ribbonBar->indexOf(tellMePage);
@@ -3895,11 +3965,19 @@ int main(int argc, char *argv[])
     styleGalleryGroup->addItem(
         QObject::tr("Help"),
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxQuestion));
+    LqRibbon::RibbonGalleryItem *highDpiGalleryItem =
+        styleGalleryGroup->addItem(QObject::tr("High DPI"),
+                                   createHighDpiGalleryIcon());
+    highDpiGalleryItem->setToolTip(
+        QObject::tr("Scalable high-DPI icon sample"));
+    highDpiGalleryItem->setData(Qt::UserRole,
+                                QStringLiteral("highDpiScalableIcon"));
 
     LqRibbon::RibbonGallery *styleGallery =
         new LqRibbon::RibbonGallery(styleGroup);
+    styleGallery->setObjectName(QStringLiteral("styleGallery"));
     styleGallery->setGalleryGroup(styleGalleryGroup);
-    styleGallery->setColumnCount(3);
+    styleGallery->setColumnCount(4);
     styleGallery->setRowCount(2);
     styleGallery->setCheckedIndex(1);
 
@@ -6460,6 +6538,7 @@ int main(int argc, char *argv[])
                                 focusModePreview,
                                 darkCanvasAction,
                                 darkCanvasPreview,
+                                styleGallery,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,

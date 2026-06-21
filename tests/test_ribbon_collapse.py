@@ -688,6 +688,26 @@ def test_example_sync_status_action_is_available():
     window.close()
 
 
+def test_example_high_dpi_gallery_icon_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    item = window.high_dpi_gallery_item
+    pixmap = item.icon().pixmap(64, 64)
+
+    assert window.style_gallery.objectName() == "styleGallery"
+    assert window.style_gallery.itemCount() >= 7
+    assert window.style_gallery.columnCount() == 4
+    assert item.caption() == "High DPI"
+    assert item.toolTip() == "Scalable high-DPI icon sample"
+    assert item.data(Qt.ItemDataRole.UserRole) == "highDpiScalableIcon"
+    assert not item.icon().isNull()
+    assert pixmap.width() >= 64
+    assert pixmap.height() >= 64
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2072,6 +2092,7 @@ def main():
         test_example_view_switch_status_buttons_are_available,
         test_example_character_count_status_item_is_available,
         test_example_sync_status_action_is_available,
+        test_example_high_dpi_gallery_icon_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,
