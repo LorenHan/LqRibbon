@@ -358,6 +358,28 @@ def test_example_share_title_button_is_available():
     window.close()
 
 
+def test_example_comments_title_button_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    title_bar = ribbon._title_button_bar
+    comments_button = title_bar.widgetForAction(window.comments_title_action)
+
+    assert window.comments_title_action.objectName() == "commentsTitleAction"
+    assert not window.comments_title_action.icon().isNull()
+    assert "Comments" in window.comments_title_action.text()
+    assert "comments" in window.comments_title_action.toolTip()
+    assert window.comments_title_action in title_bar.actions()
+    assert isinstance(comments_button, QToolButton)
+    assert comments_button.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+
+    window.comments_title_action.trigger()
+    _app().processEvents()
+    assert "Comments" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_caption_search_defaults_to_centered_microsoft_box():
     window = MainWindow()
     window.show()
@@ -1342,6 +1364,7 @@ def main():
         test_example_feedback_title_button_is_available,
         test_example_account_title_button_is_available,
         test_example_share_title_button_is_available,
+        test_example_comments_title_button_is_available,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,

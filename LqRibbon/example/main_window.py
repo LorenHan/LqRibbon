@@ -1048,6 +1048,13 @@ class MainWindow(RibbonMainWindow):
         self.share_title_action.setObjectName("shareTitleAction")
         self.share_title_action.setToolTip("Share this document")
         self.share_title_action.setStatusTip("Share: invite people to this document")
+        self.comments_title_action = self.ribbonBar().addTitleButton(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogContentsView),
+            "Comments",
+        )
+        self.comments_title_action.setObjectName("commentsTitleAction")
+        self.comments_title_action.setToolTip("Open document comments")
+        self.comments_title_action.setStatusTip("Comments: show conversation pane")
         self.feedback_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_MessageBoxInformation),
             "Feedback",
@@ -1066,6 +1073,9 @@ class MainWindow(RibbonMainWindow):
         self.account_title_action.setStatusTip("Account: signed in as Local User")
         self.share_title_action.triggered.connect(
             lambda: self._message("Share: invite people to this document")
+        )
+        self.comments_title_action.triggered.connect(
+            lambda: self._message("Comments: show conversation pane")
         )
         self.feedback_title_action.triggered.connect(
             lambda: self._message("Feedback: send product feedback")

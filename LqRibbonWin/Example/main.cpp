@@ -212,6 +212,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *unpinRibbonAction,
                      QAction *displayOptionsTitleAction,
                      QAction *shareTitleAction,
+                     QAction *commentsTitleAction,
                      QAction *feedbackTitleAction,
                      QAction *accountTitleAction,
                      QAction *showTabsAndCommandsAction,
@@ -1076,6 +1077,37 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          == Qt::ToolButtonIconOnly
                      && strShareStatus.contains(QStringLiteral("Share")),
                  QStringLiteral("Share title button is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *commentsButton =
+        titleButtonBar
+            ? qobject_cast<QToolButton *>(
+                titleButtonBar->widgetForAction(commentsTitleAction))
+            : nullptr;
+    if (commentsTitleAction) {
+        commentsTitleAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strCommentsStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(commentsTitleAction
+                     && commentsTitleAction->objectName()
+                         == QStringLiteral("commentsTitleAction")
+                     && !commentsTitleAction->icon().isNull()
+                     && commentsTitleAction->toolTip().contains(
+                         QStringLiteral("comments"))
+                     && titleButtonBar
+                     && titleButtonBar->actions().contains(commentsTitleAction)
+                     && commentsButton
+                     && commentsButton->toolButtonStyle()
+                         == Qt::ToolButtonIconOnly
+                     && strCommentsStatus.contains(QStringLiteral("Comments")),
+                 QStringLiteral("Comments title button is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -4226,6 +4258,13 @@ int main(int argc, char *argv[])
     shareTitleAction->setToolTip(QObject::tr("Share this document"));
     shareTitleAction->setStatusTip(
         QObject::tr("Share: invite people to this document"));
+    QAction *commentsTitleAction = mainWindow.ribbonBar()->addTitleButton(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogContentsView),
+        QObject::tr("Comments"));
+    commentsTitleAction->setObjectName(QStringLiteral("commentsTitleAction"));
+    commentsTitleAction->setToolTip(QObject::tr("Open document comments"));
+    commentsTitleAction->setStatusTip(
+        QObject::tr("Comments: show conversation pane"));
     QAction *feedbackTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxInformation),
         QObject::tr("Feedback"));
@@ -4261,6 +4300,13 @@ int main(int argc, char *argv[])
         if (mainWindow.statusBar()) {
             mainWindow.statusBar()->showMessage(
                 QObject::tr("Share: invite people to this document"),
+                2500);
+        }
+    });
+    QObject::connect(commentsTitleAction, &QAction::triggered, [&mainWindow]() {
+        if (mainWindow.statusBar()) {
+            mainWindow.statusBar()->showMessage(
+                QObject::tr("Comments: show conversation pane"),
                 2500);
         }
     });
@@ -4386,6 +4432,7 @@ int main(int argc, char *argv[])
                                 unpinRibbonAction,
                                 displayOptionsTitleAction,
                                 shareTitleAction,
+                                commentsTitleAction,
                                 feedbackTitleAction,
                                 accountTitleAction,
                                 showTabsAndCommandsAction,
