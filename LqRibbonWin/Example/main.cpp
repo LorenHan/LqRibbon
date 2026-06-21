@@ -294,6 +294,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *immersiveReaderPreview,
                      QAction *focusModeAction,
                      QLabel *focusModePreview,
+                     QAction *darkCanvasAction,
+                     QLabel *darkCanvasPreview,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -1084,6 +1086,58 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && focusModePreview->text()
                          == QStringLiteral("Focus Mode: ribbon visible"),
                  QStringLiteral("Focus Mode exits and restores ribbon"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QWidget *canvasWidget = mainWindow.centralWidget();
+    QToolButton *darkCanvasButton =
+        collapseTestActionButton(ribbonBar, darkCanvasAction);
+    if (darkCanvasAction) {
+        darkCanvasAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strDarkCanvasStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(darkCanvasAction
+                     && darkCanvasAction->objectName()
+                         == QStringLiteral("darkCanvasAction")
+                     && darkCanvasAction->isCheckable()
+                     && darkCanvasAction->isChecked()
+                     && !darkCanvasAction->icon().isNull()
+                     && darkCanvasAction->toolTip().contains(
+                         QStringLiteral("light background"))
+                     && darkCanvasButton
+                     && darkCanvasPreview
+                     && darkCanvasPreview->objectName()
+                         == QStringLiteral("darkCanvasPreview")
+                     && darkCanvasPreview->text()
+                         == QStringLiteral("Canvas: dark")
+                     && darkCanvasPreview->styleSheet().contains(
+                         QStringLiteral("#darkCanvasPreview"))
+                     && canvasWidget
+                     && canvasWidget->styleSheet().contains(
+                         QStringLiteral("#1b1b1b"))
+                     && ribbonBar->searchAction(QStringLiteral("Dark Canvas"))
+                         == darkCanvasAction
+                     && strDarkCanvasStatus.contains(
+                         QStringLiteral("Dark Canvas")),
+                 QStringLiteral("Dark Canvas toggle surface is available"))) {
+        return 1;
+    }
+    if (darkCanvasAction) {
+        darkCanvasAction->trigger();
+        processCollapseTestEvents();
+    }
+    if (!require(!darkCanvasAction->isChecked()
+                     && darkCanvasPreview->text()
+                         == QStringLiteral("Canvas: light")
+                     && canvasWidget
+                     && canvasWidget->styleSheet().isEmpty(),
+                 QStringLiteral("Dark Canvas restores light canvas"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3923,6 +3977,28 @@ int main(int argc, char *argv[])
     focusModePreview->setFrameShape(QFrame::StyledPanel);
     focusModePreview->setToolTip(QObject::tr("Focus Mode visibility state"));
     immersiveGroup->addWidget(focusModePreview);
+    LqRibbon::RibbonGroup *canvasGroup =
+        viewPage->addGroup(QObject::tr("Canvas"));
+    QAction *darkCanvasAction = canvasGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DesktopIcon),
+        QObject::tr("Dark Canvas"),
+        Qt::ToolButtonTextUnderIcon);
+    darkCanvasAction->setObjectName(QStringLiteral("darkCanvasAction"));
+    darkCanvasAction->setCheckable(true);
+    darkCanvasAction->setToolTip(
+        QObject::tr("Switch the document canvas to a dark background"));
+    darkCanvasAction->setStatusTip(
+        QObject::tr("Dark Canvas: use a dark editing surface"));
+    QLabel *darkCanvasPreview = new QLabel(canvasGroup);
+    darkCanvasPreview->setObjectName(QStringLiteral("darkCanvasPreview"));
+    darkCanvasPreview->setText(QObject::tr("Canvas: light"));
+    darkCanvasPreview->setMinimumWidth(180);
+    darkCanvasPreview->setFixedHeight(30);
+    darkCanvasPreview->setAlignment(Qt::AlignCenter);
+    darkCanvasPreview->setFrameShape(QFrame::StyledPanel);
+    darkCanvasPreview->setToolTip(
+        QObject::tr("Current document canvas tone"));
+    canvasGroup->addWidget(darkCanvasPreview);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -4507,6 +4583,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), readAloudAction);
     customizeManager->addToCategory(QObject::tr("Actions"), immersiveReaderAction);
     customizeManager->addToCategory(QObject::tr("Actions"), focusModeAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), darkCanvasAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -5612,6 +5689,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(readAloudAction);
     mainWindow.ribbonBar()->registerSearchAction(immersiveReaderAction);
     mainWindow.ribbonBar()->registerSearchAction(focusModeAction);
+    mainWindow.ribbonBar()->registerSearchAction(darkCanvasAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -5969,6 +6047,47 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(darkCanvasAction,
+                     &QAction::toggled,
+                     [&mainWindow, darkCanvasAction, darkCanvasPreview](
+                         bool enabled) {
+                         QWidget *canvas = mainWindow.centralWidget();
+                         if (enabled) {
+                             if (canvas) {
+                                 canvas->setStyleSheet(
+                                     QStringLiteral("QWidget { background: #1b1b1b; color: #f3f2f1; } QLabel { background: #1b1b1b; color: #f3f2f1; }"));
+                             }
+                             darkCanvasPreview->setText(
+                                 QObject::tr("Canvas: dark"));
+                             darkCanvasPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#darkCanvasPreview { color: #f3f2f1; background: #1b1b1b; font-weight: 600; }"));
+                             darkCanvasAction->setToolTip(
+                                 QObject::tr(
+                                     "Return the document canvas to a light background"));
+                             if (mainWindow.statusBar()) {
+                                 mainWindow.statusBar()->showMessage(
+                                     QObject::tr(
+                                         "Dark Canvas: dark editing surface"),
+                                     2500);
+                             }
+                             return;
+                         }
+                         if (canvas) {
+                             canvas->setStyleSheet(QString());
+                         }
+                         darkCanvasPreview->setText(
+                             QObject::tr("Canvas: light"));
+                         darkCanvasPreview->setStyleSheet(QString());
+                         darkCanvasAction->setToolTip(
+                             QObject::tr(
+                                 "Switch the document canvas to a dark background"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Dark Canvas: light editing surface"),
+                                 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -6122,6 +6241,8 @@ int main(int argc, char *argv[])
                                 immersiveReaderPreview,
                                 focusModeAction,
                                 focusModePreview,
+                                darkCanvasAction,
+                                darkCanvasPreview,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,

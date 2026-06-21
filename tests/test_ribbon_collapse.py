@@ -1315,6 +1315,42 @@ def test_example_focus_mode_command_surface():
     window.close()
 
 
+def test_example_dark_canvas_toggle_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    ribbon.setCurrentPageIndex(ribbon.pageIndex(window.view_page))
+    _app().processEvents()
+
+    assert window.dark_canvas_action.objectName() == "darkCanvasAction"
+    assert window.dark_canvas_action.isCheckable()
+    assert not window.dark_canvas_action.isChecked()
+    assert not window.dark_canvas_action.icon().isNull()
+    assert "dark background" in window.dark_canvas_action.toolTip()
+    assert window.dark_canvas_preview.objectName() == "darkCanvasPreview"
+    assert window.dark_canvas_preview.text() == "Canvas: light"
+    assert window.dark_canvas_action in window.search_actions
+    assert ribbon.searchAction("Dark Canvas") is window.dark_canvas_action
+    assert window.centralWidget().styleSheet() == ""
+
+    window.dark_canvas_action.trigger()
+    _app().processEvents()
+    assert window.dark_canvas_action.isChecked()
+    assert window.dark_canvas_preview.text() == "Canvas: dark"
+    assert "#darkCanvasPreview" in window.dark_canvas_preview.styleSheet()
+    assert "#1b1b1b" in window.centralWidget().styleSheet()
+    assert "Dark Canvas" in window.statusBar().currentMessage()
+
+    window.dark_canvas_action.trigger()
+    _app().processEvents()
+    assert not window.dark_canvas_action.isChecked()
+    assert window.dark_canvas_preview.text() == "Canvas: light"
+    assert window.centralWidget().styleSheet() == ""
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1954,6 +1990,7 @@ def main():
         test_example_read_aloud_command_surface,
         test_example_immersive_reader_command_surface,
         test_example_focus_mode_command_surface,
+        test_example_dark_canvas_toggle_surface,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,

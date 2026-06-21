@@ -759,6 +759,28 @@ class MainWindow(RibbonMainWindow):
         self.focus_mode_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.focus_mode_preview.setToolTip("Focus Mode visibility state")
         immersive_group.addWidget(self.focus_mode_preview)
+        canvas_group = self.view_page.addGroup("Canvas")
+        self.dark_canvas_action = canvas_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DesktopIcon),
+            "Dark Canvas",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.dark_canvas_action.setObjectName("darkCanvasAction")
+        self.dark_canvas_action.setCheckable(True)
+        self.dark_canvas_action.setToolTip(
+            "Switch the document canvas to a dark background"
+        )
+        self.dark_canvas_action.setStatusTip(
+            "Dark Canvas: use a dark editing surface"
+        )
+        self.dark_canvas_preview = QLabel("Canvas: light", canvas_group)
+        self.dark_canvas_preview.setObjectName("darkCanvasPreview")
+        self.dark_canvas_preview.setMinimumWidth(180)
+        self.dark_canvas_preview.setFixedHeight(30)
+        self.dark_canvas_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.dark_canvas_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.dark_canvas_preview.setToolTip("Current document canvas tone")
+        canvas_group.addWidget(self.dark_canvas_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -1379,6 +1401,7 @@ class MainWindow(RibbonMainWindow):
             self.read_aloud_action,
             self.immersive_reader_action,
             self.focus_mode_action,
+            self.dark_canvas_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1419,6 +1442,7 @@ class MainWindow(RibbonMainWindow):
             self.toggle_immersive_reader
         )
         self.focus_mode_action.toggled.connect(self.toggle_focus_mode)
+        self.dark_canvas_action.toggled.connect(self.toggle_dark_canvas)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1692,6 +1716,7 @@ class MainWindow(RibbonMainWindow):
             self.read_aloud_action,
             self.immersive_reader_action,
             self.focus_mode_action,
+            self.dark_canvas_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -2098,6 +2123,32 @@ class MainWindow(RibbonMainWindow):
                 "Hide ribbon distractions for focused editing"
             )
             self._message("Focus Mode: ribbon visible")
+
+    def toggle_dark_canvas(self, enabled):
+        canvas = self.centralWidget()
+        if enabled:
+            if canvas is not None:
+                canvas.setStyleSheet(
+                    "QWidget { background: #1b1b1b; color: #f3f2f1; } "
+                    "QLabel { background: #1b1b1b; color: #f3f2f1; }"
+                )
+            self.dark_canvas_preview.setText("Canvas: dark")
+            self.dark_canvas_preview.setStyleSheet(
+                "QLabel#darkCanvasPreview { color: #f3f2f1; background: #1b1b1b; font-weight: 600; }"
+            )
+            self.dark_canvas_action.setToolTip(
+                "Return the document canvas to a light background"
+            )
+            self._message("Dark Canvas: dark editing surface")
+        else:
+            if canvas is not None:
+                canvas.setStyleSheet("")
+            self.dark_canvas_preview.setText("Canvas: light")
+            self.dark_canvas_preview.setStyleSheet("")
+            self.dark_canvas_action.setToolTip(
+                "Switch the document canvas to a dark background"
+            )
+            self._message("Dark Canvas: light editing surface")
 
     def toggle_dictate_microphone(self, enabled):
         if enabled:
