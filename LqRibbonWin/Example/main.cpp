@@ -212,6 +212,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *unpinRibbonAction,
                      QAction *displayOptionsTitleAction,
                      QAction *feedbackTitleAction,
+                     QAction *accountTitleAction,
                      QAction *showTabsAndCommandsAction,
                      QAction *showTabsOnlyAction,
                      QAction *alwaysShowRibbonAction,
@@ -1074,6 +1075,37 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          == Qt::ToolButtonIconOnly
                      && strFeedbackStatus.contains(QStringLiteral("Feedback")),
                  QStringLiteral("Feedback title button is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *accountButton =
+        titleButtonBar
+            ? qobject_cast<QToolButton *>(
+                titleButtonBar->widgetForAction(accountTitleAction))
+            : nullptr;
+    if (accountTitleAction) {
+        accountTitleAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strAccountStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(accountTitleAction
+                     && accountTitleAction->objectName()
+                         == QStringLiteral("accountTitleAction")
+                     && !accountTitleAction->icon().isNull()
+                     && accountTitleAction->toolTip().contains(
+                         QStringLiteral("profile"))
+                     && titleButtonBar
+                     && titleButtonBar->actions().contains(accountTitleAction)
+                     && accountButton
+                     && accountButton->toolButtonStyle()
+                         == Qt::ToolButtonIconOnly
+                     && strAccountStatus.contains(QStringLiteral("Account")),
+                 QStringLiteral("Account profile title button is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -4169,15 +4201,22 @@ int main(int argc, char *argv[])
     QAction *accountTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_DirHomeIcon),
         QObject::tr("Account"));
+    accountTitleAction->setObjectName(QStringLiteral("accountTitleAction"));
+    accountTitleAction->setToolTip(
+        QObject::tr("Open account and profile settings"));
+    accountTitleAction->setStatusTip(
+        QObject::tr("Account: signed in as Local User"));
     QObject::connect(helpTitleAction, &QAction::triggered, [&mainWindow]() {
         QMessageBox::information(&mainWindow,
                                  QObject::tr("LqRibbon"),
                                  QObject::tr("Help"));
     });
     QObject::connect(accountTitleAction, &QAction::triggered, [&mainWindow]() {
-        QMessageBox::information(&mainWindow,
-                                 QObject::tr("LqRibbon"),
-                                 QObject::tr("Account"));
+        if (mainWindow.statusBar()) {
+            mainWindow.statusBar()->showMessage(
+                QObject::tr("Account: signed in as Local User"),
+                2500);
+        }
     });
     QObject::connect(feedbackTitleAction, &QAction::triggered, [&mainWindow]() {
         if (mainWindow.statusBar()) {
@@ -4301,6 +4340,7 @@ int main(int argc, char *argv[])
                                 unpinRibbonAction,
                                 displayOptionsTitleAction,
                                 feedbackTitleAction,
+                                accountTitleAction,
                                 showTabsAndCommandsAction,
                                 showTabsOnlyAction,
                                 alwaysShowRibbonAction,

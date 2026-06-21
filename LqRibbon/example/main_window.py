@@ -1054,6 +1054,9 @@ class MainWindow(RibbonMainWindow):
         self.account_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_DirHomeIcon), "Account"
         )
+        self.account_title_action.setObjectName("accountTitleAction")
+        self.account_title_action.setToolTip("Open account and profile settings")
+        self.account_title_action.setStatusTip("Account: signed in as Local User")
         self.feedback_title_action.triggered.connect(
             lambda: self._message("Feedback: send product feedback")
         )
@@ -1061,7 +1064,7 @@ class MainWindow(RibbonMainWindow):
             lambda: QMessageBox.information(self, "LqRibbon", "Help")
         )
         self.account_title_action.triggered.connect(
-            lambda: QMessageBox.information(self, "LqRibbon", "Account")
+            lambda: self._message("Account: signed in as Local User")
         )
         self.display_show_tabs_commands_action.triggered.connect(
             self.show_tabs_and_commands

@@ -79,7 +79,7 @@ Default style remains `Office 2016 Blue`.
 | 048 | Tell Me help redirect row | Command discovery page | Complete |
 | 049 | Smart Lookup command surface | Review page | Complete |
 | 050 | Feedback button in title area | Title buttons | Complete |
-| 051 | Account/profile button in title area | Title buttons | Planned |
+| 051 | Account/profile button in title area | Title buttons | Complete |
 | 052 | Share button in title area | Title buttons | Planned |
 | 053 | Comments button in title area | Title buttons | Planned |
 | 054 | Presence avatar strip | Title buttons | Planned |
