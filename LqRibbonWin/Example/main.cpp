@@ -276,6 +276,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *smartLookupPreview,
                      QAction *sensitivityLabelAction,
                      QLabel *sensitivityLabelPreview,
+                     QAction *accessibilityCheckerAction,
+                     QLabel *accessibilityCheckerPreview,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -799,6 +801,41 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strSensitivityStatus.contains(
                          QStringLiteral("Sensitivity")),
                  QStringLiteral("Sensitivity label command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *accessibilityCheckerButton =
+        collapseTestActionButton(ribbonBar, accessibilityCheckerAction);
+    if (accessibilityCheckerAction) {
+        accessibilityCheckerAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strAccessibilityStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(accessibilityCheckerAction
+                     && accessibilityCheckerAction->objectName()
+                         == QStringLiteral("accessibilityCheckerAction")
+                     && !accessibilityCheckerAction->icon().isNull()
+                     && accessibilityCheckerAction->toolTip().contains(
+                         QStringLiteral("accessibility issues"))
+                     && accessibilityCheckerButton
+                     && accessibilityCheckerPreview
+                     && accessibilityCheckerPreview->objectName()
+                         == QStringLiteral("accessibilityCheckerPreview")
+                     && accessibilityCheckerPreview->text()
+                         == QStringLiteral("Accessibility: 2 issues found")
+                     && accessibilityCheckerPreview->styleSheet().contains(
+                         QStringLiteral("#accessibilityCheckerPreview"))
+                     && ribbonBar->searchAction(
+                            QStringLiteral("Check Accessibility"))
+                         == accessibilityCheckerAction
+                     && strAccessibilityStatus.contains(
+                         QStringLiteral("Accessibility")),
+                 QStringLiteral("Accessibility checker command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3420,6 +3457,30 @@ int main(int argc, char *argv[])
     sensitivityLabelPreview->setToolTip(
         QObject::tr("Current document sensitivity label"));
     protectionGroup->addWidget(sensitivityLabelPreview);
+    LqRibbon::RibbonGroup *accessibilityGroup =
+        reviewPage->addGroup(QObject::tr("Accessibility"));
+    QAction *accessibilityCheckerAction = accessibilityGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
+        QObject::tr("Check Accessibility"),
+        Qt::ToolButtonTextUnderIcon);
+    accessibilityCheckerAction->setObjectName(
+        QStringLiteral("accessibilityCheckerAction"));
+    accessibilityCheckerAction->setToolTip(
+        QObject::tr("Check accessibility issues in this document"));
+    accessibilityCheckerAction->setStatusTip(
+        QObject::tr("Accessibility: inspect document issues"));
+    QLabel *accessibilityCheckerPreview = new QLabel(accessibilityGroup);
+    accessibilityCheckerPreview->setObjectName(
+        QStringLiteral("accessibilityCheckerPreview"));
+    accessibilityCheckerPreview->setText(
+        QObject::tr("Accessibility: not checked"));
+    accessibilityCheckerPreview->setMinimumWidth(210);
+    accessibilityCheckerPreview->setFixedHeight(30);
+    accessibilityCheckerPreview->setAlignment(Qt::AlignCenter);
+    accessibilityCheckerPreview->setFrameShape(QFrame::StyledPanel);
+    accessibilityCheckerPreview->setToolTip(
+        QObject::tr("Accessibility checker result preview"));
+    accessibilityGroup->addWidget(accessibilityCheckerPreview);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -3992,6 +4053,8 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), controlModesAction);
     customizeManager->addToCategory(QObject::tr("Actions"), smartLookupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), sensitivityLabelAction);
+    customizeManager->addToCategory(QObject::tr("Actions"),
+                                    accessibilityCheckerAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -5057,6 +5120,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(officeMenuAction);
     mainWindow.ribbonBar()->registerSearchAction(smartLookupAction);
     mainWindow.ribbonBar()->registerSearchAction(sensitivityLabelAction);
+    mainWindow.ribbonBar()->registerSearchAction(accessibilityCheckerAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -5259,6 +5323,19 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(accessibilityCheckerAction,
+                     &QAction::triggered,
+                     [&mainWindow, accessibilityCheckerPreview]() {
+                         accessibilityCheckerPreview->setText(
+                             QObject::tr("Accessibility: 2 issues found"));
+                         accessibilityCheckerPreview->setStyleSheet(
+                             QStringLiteral("QLabel#accessibilityCheckerPreview { color: #b35c00; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Accessibility: 2 issues found"),
+                                 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -5394,6 +5471,8 @@ int main(int argc, char *argv[])
                                 smartLookupPreview,
                                 sensitivityLabelAction,
                                 sensitivityLabelPreview,
+                                accessibilityCheckerAction,
+                                accessibilityCheckerPreview,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,

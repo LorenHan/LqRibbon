@@ -95,7 +95,7 @@ Default style remains `Office 2016 Blue`.
 | 064 | Upload-before-share prompt | Backstage/share flow | Complete |
 | 065 | Sensitivity label command | Title or Review page | Complete |
 | 066 | Account privacy settings entry | Backstage account page | Complete |
-| 067 | Accessibility checker command | Review page | Planned |
+| 067 | Accessibility checker command | Review page | Complete |
 | 068 | Editor pane command | Review page | Planned |
 | 069 | Spelling and grammar card | Review page | Planned |
 | 070 | Dictate microphone command | Home page | Planned |

@@ -557,6 +557,35 @@ class MainWindow(RibbonMainWindow):
             "Current document sensitivity label"
         )
         protection_group.addWidget(self.sensitivity_label_preview)
+        accessibility_group = self.review_page.addGroup("Accessibility")
+        self.accessibility_checker_action = accessibility_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DialogApplyButton),
+            "Check Accessibility",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.accessibility_checker_action.setObjectName(
+            "accessibilityCheckerAction"
+        )
+        self.accessibility_checker_action.setToolTip(
+            "Check accessibility issues in this document"
+        )
+        self.accessibility_checker_action.setStatusTip(
+            "Accessibility: inspect document issues"
+        )
+        self.accessibility_checker_preview = QLabel(
+            "Accessibility: not checked", accessibility_group
+        )
+        self.accessibility_checker_preview.setObjectName(
+            "accessibilityCheckerPreview"
+        )
+        self.accessibility_checker_preview.setMinimumWidth(210)
+        self.accessibility_checker_preview.setFixedHeight(30)
+        self.accessibility_checker_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.accessibility_checker_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.accessibility_checker_preview.setToolTip(
+            "Accessibility checker result preview"
+        )
+        accessibility_group.addWidget(self.accessibility_checker_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -1168,6 +1197,7 @@ class MainWindow(RibbonMainWindow):
             self.control_modes_action,
             self.smart_lookup_action,
             self.sensitivity_label_action,
+            self.accessibility_checker_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1191,6 +1221,9 @@ class MainWindow(RibbonMainWindow):
         self.driver_action.triggered.connect(lambda: self._message("Driver Configuration"))
         self.smart_lookup_action.triggered.connect(self.open_smart_lookup)
         self.sensitivity_label_action.triggered.connect(self.apply_sensitivity_label)
+        self.accessibility_checker_action.triggered.connect(
+            self.run_accessibility_checker
+        )
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1456,6 +1489,7 @@ class MainWindow(RibbonMainWindow):
             self.office_menu_action,
             self.smart_lookup_action,
             self.sensitivity_label_action,
+            self.accessibility_checker_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -1776,6 +1810,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#sensitivityLabelPreview { color: #5c2d91; font-weight: 600; }"
         )
         self._message("Sensitivity: Confidential label applied")
+
+    def run_accessibility_checker(self):
+        self.accessibility_checker_preview.setText("Accessibility: 2 issues found")
+        self.accessibility_checker_preview.setStyleSheet(
+            "QLabel#accessibilityCheckerPreview { color: #b35c00; font-weight: 600; }"
+        )
+        self._message("Accessibility: 2 issues found")
 
     def open_tell_me_help_redirect(self):
         query = self.ribbonBar().searchText().strip() or "unmatched Tell Me phrase"

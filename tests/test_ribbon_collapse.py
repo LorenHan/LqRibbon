@@ -1088,6 +1088,37 @@ def test_example_sensitivity_label_command_surface():
     window.close()
 
 
+def test_example_accessibility_checker_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.accessibility_checker_action.objectName() == "accessibilityCheckerAction"
+    assert not window.accessibility_checker_action.icon().isNull()
+    assert "accessibility issues" in window.accessibility_checker_action.toolTip()
+    assert (
+        window.accessibility_checker_preview.objectName()
+        == "accessibilityCheckerPreview"
+    )
+    assert window.accessibility_checker_preview.text() == "Accessibility: not checked"
+    assert window.accessibility_checker_action in window.search_actions
+    assert (
+        ribbon.searchAction("Check Accessibility")
+        is window.accessibility_checker_action
+    )
+
+    window.accessibility_checker_action.trigger()
+    _app().processEvents()
+    assert window.accessibility_checker_preview.text() == "Accessibility: 2 issues found"
+    assert (
+        "#accessibilityCheckerPreview"
+        in window.accessibility_checker_preview.styleSheet()
+    )
+    assert "Accessibility" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1719,6 +1750,7 @@ def main():
         test_example_search_shows_related_file_result_section,
         test_example_smart_lookup_command_surface,
         test_example_sensitivity_label_command_surface,
+        test_example_accessibility_checker_command_surface,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,
