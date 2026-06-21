@@ -208,6 +208,25 @@ QIcon createAppIconColorSetIcon()
     return QIcon(pixmap);
 }
 
+QIcon createSvgInsertIcon()
+{
+    QPixmap pixmap(48, 48);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QPen(QColor(QStringLiteral("#2563eb")), 3));
+    painter.setBrush(QColor(QStringLiteral("#dbeafe")));
+    painter.drawRoundedRect(QRect(7, 5, 34, 38), 5, 5);
+    painter.setPen(QPen(QColor(QStringLiteral("#1e40af")), 2));
+    painter.drawText(QRect(7, 13, 34, 18),
+                     Qt::AlignCenter,
+                     QStringLiteral("SVG"));
+    painter.setBrush(QColor(QStringLiteral("#10b981")));
+    painter.setPen(QPen(Qt::white, 2));
+    painter.drawEllipse(QRect(27, 27, 14, 14));
+    return QIcon(pixmap);
+}
+
 QTabBar *collapseTestTabBar(LqRibbon::RibbonBar *ribbonBar)
 {
     return ribbonBar->findChild<QTabBar *>();
@@ -336,6 +355,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *compactSearchAction,
                      QAction *hiddenSearchAction,
                      QAction *focusSearchAction,
+                     LqRibbon::RibbonPage *insertPage,
+                     QAction *svgIconInsertAction,
+                     QLabel *svgIconInsertPreview,
                      QAction *smartLookupAction,
                      LqRibbon::RibbonPage *reviewPage,
                      QLabel *smartLookupPreview,
@@ -824,6 +846,54 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     searchPopupView->hide();
     ribbonBar->clearRecentSearchActions();
     processCollapseTestEvents();
+
+    const int insertPageIndex = ribbonBar->indexOf(insertPage);
+    if (insertPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(insertPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *svgIconInsertButton =
+        collapseTestActionButton(ribbonBar, svgIconInsertAction);
+    if (svgIconInsertAction) {
+        svgIconInsertAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strSvgInsertStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(insertPageIndex >= 0
+                     && insertPage
+                     && insertPage->title() == QStringLiteral("Insert")
+                     && svgIconInsertAction
+                     && svgIconInsertAction->objectName()
+                         == QStringLiteral("svgIconInsertAction")
+                     && !svgIconInsertAction->icon().isNull()
+                     && svgIconInsertAction->toolTip().contains(
+                         QStringLiteral("Insert a scalable SVG icon"))
+                     && svgIconInsertAction->statusTip()
+                         == QStringLiteral("SVG Icon: ready to insert")
+                     && svgIconInsertPreview
+                     && svgIconInsertPreview->objectName()
+                         == QStringLiteral("svgIconInsertPreview")
+                     && svgIconInsertPreview->text()
+                         == QStringLiteral("SVG Icons: 1 inserted")
+                     && svgIconInsertPreview->styleSheet().contains(
+                         QStringLiteral("#svgIconInsertPreview"))
+                     && svgIconInsertPreview->toolTip().contains(
+                         QStringLiteral("Last inserted SVG"))
+                     && ribbonBar->searchAction(QStringLiteral("SVG Icon"))
+                         == svgIconInsertAction
+                     && svgIconInsertButton
+                     && svgIconInsertButton->defaultAction()
+                         == svgIconInsertAction
+                     && strSvgInsertStatus.contains(
+                         QStringLiteral("SVG Icon")),
+                 QStringLiteral("SVG icon insert command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
 
     const int reviewPageIndex = ribbonBar->indexOf(reviewPage);
     if (reviewPageIndex >= 0) {
@@ -4065,6 +4135,30 @@ int main(int argc, char *argv[])
         galleryMenu);
     galleryActionGroup->addWidget(galleryToolBar);
 
+    LqRibbon::RibbonPage *insertPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Insert"));
+    LqRibbon::RibbonGroup *illustrationsGroup =
+        insertPage->addGroup(QObject::tr("Illustrations"));
+    QAction *svgIconInsertAction = illustrationsGroup->addAction(
+        createSvgInsertIcon(),
+        QObject::tr("SVG Icon"),
+        Qt::ToolButtonTextUnderIcon);
+    svgIconInsertAction->setObjectName(QStringLiteral("svgIconInsertAction"));
+    svgIconInsertAction->setToolTip(
+        QObject::tr("Insert a scalable SVG icon into the document"));
+    svgIconInsertAction->setStatusTip(
+        QObject::tr("SVG Icon: ready to insert"));
+    QLabel *svgIconInsertPreview = new QLabel(illustrationsGroup);
+    svgIconInsertPreview->setObjectName(QStringLiteral("svgIconInsertPreview"));
+    svgIconInsertPreview->setText(QObject::tr("SVG Icons: none inserted"));
+    svgIconInsertPreview->setMinimumWidth(190);
+    svgIconInsertPreview->setFixedHeight(30);
+    svgIconInsertPreview->setAlignment(Qt::AlignCenter);
+    svgIconInsertPreview->setFrameShape(QFrame::StyledPanel);
+    svgIconInsertPreview->setToolTip(
+        QObject::tr("Last inserted SVG icon state"));
+    illustrationsGroup->addWidget(svgIconInsertPreview);
+
     LqRibbon::RibbonPage *reviewPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Review"));
     LqRibbon::RibbonGroup *insightsGroup =
@@ -4840,6 +4934,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), driverPage);
     customizeManager->addToCategory(QObject::tr("Pages"), controlsPage);
     customizeManager->addToCategory(QObject::tr("Pages"), galleryPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), insertPage);
     customizeManager->addToCategory(QObject::tr("Pages"), reviewPage);
     customizeManager->addToCategory(QObject::tr("Pages"), viewPage);
     customizeManager->addToCategory(QObject::tr("Pages"), tellMePage);
@@ -4869,6 +4964,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), immersiveReaderAction);
     customizeManager->addToCategory(QObject::tr("Actions"), focusModeAction);
     customizeManager->addToCategory(QObject::tr("Actions"), darkCanvasAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), svgIconInsertAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -6043,6 +6139,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(immersiveReaderAction);
     mainWindow.ribbonBar()->registerSearchAction(focusModeAction);
     mainWindow.ribbonBar()->registerSearchAction(darkCanvasAction);
+    mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -6219,6 +6316,20 @@ int main(int argc, char *argv[])
                 2500);
         }
     });
+    QObject::connect(svgIconInsertAction,
+                     &QAction::triggered,
+                     [&mainWindow, svgIconInsertPreview]() {
+                         svgIconInsertPreview->setText(
+                             QObject::tr("SVG Icons: 1 inserted"));
+                         svgIconInsertPreview->setStyleSheet(
+                             QStringLiteral("QLabel#svgIconInsertPreview { color: #124078; background: #eef6ff; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "SVG Icon: inserted scalable artwork"),
+                                 2500);
+                         }
+                     });
     QObject::connect(smartLookupAction,
                      &QAction::triggered,
                      [&mainWindow, smartLookupPreview]() {
@@ -6574,6 +6685,9 @@ int main(int argc, char *argv[])
                                 compactSearchAction,
                                 hiddenSearchAction,
                                 focusSearchAction,
+                                insertPage,
+                                svgIconInsertAction,
+                                svgIconInsertPreview,
                                 smartLookupAction,
                                 reviewPage,
                                 smartLookupPreview,

@@ -289,6 +289,9 @@ class MainWindow(RibbonMainWindow):
         self.gallery_page = ribbon.addPage("Gallery")
         self._create_gallery_page()
 
+        self.insert_page = ribbon.addPage("Insert")
+        self._create_insert_page()
+
         self.review_page = ribbon.addPage("Review")
         self._create_review_page()
 
@@ -553,6 +556,28 @@ class MainWindow(RibbonMainWindow):
         more_menu = gallery_toolbar.addMenu(self._icon(QStyle.StandardPixmap.SP_ArrowDown), "More")
         more_menu.addActions(self.gallery_menu.actions())
         gallery_action_group.addWidget(gallery_toolbar)
+
+    def _create_insert_page(self):
+        illustrations_group = self.insert_page.addGroup("Illustrations")
+        self.svg_icon_insert_action = illustrations_group.addAction(
+            self._svg_insert_icon(),
+            "SVG Icon",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.svg_icon_insert_action.setObjectName("svgIconInsertAction")
+        self.svg_icon_insert_action.setToolTip(
+            "Insert a scalable SVG icon into the document"
+        )
+        self.svg_icon_insert_action.setStatusTip("SVG Icon: ready to insert")
+
+        self.svg_icon_insert_preview = QLabel("SVG Icons: none inserted", illustrations_group)
+        self.svg_icon_insert_preview.setObjectName("svgIconInsertPreview")
+        self.svg_icon_insert_preview.setMinimumWidth(190)
+        self.svg_icon_insert_preview.setFixedHeight(30)
+        self.svg_icon_insert_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.svg_icon_insert_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.svg_icon_insert_preview.setToolTip("Last inserted SVG icon state")
+        illustrations_group.addWidget(self.svg_icon_insert_preview)
 
     def _create_review_page(self):
         insights_group = self.review_page.addGroup("Insights")
@@ -1443,6 +1468,7 @@ class MainWindow(RibbonMainWindow):
             self.driver_page,
             self.controls_page,
             self.gallery_page,
+            self.insert_page,
             self.review_page,
             self.view_page,
             self.tell_me_page,
@@ -1470,6 +1496,7 @@ class MainWindow(RibbonMainWindow):
             self.immersive_reader_action,
             self.focus_mode_action,
             self.dark_canvas_action,
+            self.svg_icon_insert_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1511,6 +1538,7 @@ class MainWindow(RibbonMainWindow):
         )
         self.focus_mode_action.toggled.connect(self.toggle_focus_mode)
         self.dark_canvas_action.toggled.connect(self.toggle_dark_canvas)
+        self.svg_icon_insert_action.triggered.connect(self.insert_svg_icon)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1785,6 +1813,7 @@ class MainWindow(RibbonMainWindow):
             self.immersive_reader_action,
             self.focus_mode_action,
             self.dark_canvas_action,
+            self.svg_icon_insert_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -2217,6 +2246,13 @@ class MainWindow(RibbonMainWindow):
                 "Switch the document canvas to a dark background"
             )
             self._message("Dark Canvas: light editing surface")
+
+    def insert_svg_icon(self):
+        self.svg_icon_insert_preview.setText("SVG Icons: 1 inserted")
+        self.svg_icon_insert_preview.setStyleSheet(
+            "QLabel#svgIconInsertPreview { color: #124078; background: #eef6ff; font-weight: 600; }"
+        )
+        self._message("SVG Icon: inserted scalable artwork")
 
     def toggle_dictate_microphone(self, enabled):
         if enabled:
@@ -2660,6 +2696,22 @@ class MainWindow(RibbonMainWindow):
             painter.setPen(QPen(QColor("#ffffff"), 2))
             painter.setBrush(QColor(color))
             painter.drawRoundedRect(rect, 6, 6)
+        painter.end()
+        return QIcon(pixmap)
+
+    def _svg_insert_icon(self):
+        pixmap = QPixmap(48, 48)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(QColor("#2563eb"), 3))
+        painter.setBrush(QColor("#dbeafe"))
+        painter.drawRoundedRect(QRect(7, 5, 34, 38), 5, 5)
+        painter.setPen(QPen(QColor("#1e40af"), 2))
+        painter.drawText(QRect(7, 13, 34, 18), Qt.AlignmentFlag.AlignCenter, "SVG")
+        painter.setBrush(QColor("#10b981"))
+        painter.setPen(QPen(QColor("#ffffff"), 2))
+        painter.drawEllipse(QRect(27, 27, 14, 14))
         painter.end()
         return QIcon(pixmap)
 

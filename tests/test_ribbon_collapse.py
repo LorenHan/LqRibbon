@@ -726,6 +726,31 @@ def test_example_app_icon_color_set_is_available():
     window.close()
 
 
+def test_example_svg_icon_insert_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.insert_page.title() == "Insert"
+    assert window.svg_icon_insert_action.objectName() == "svgIconInsertAction"
+    assert not window.svg_icon_insert_action.icon().isNull()
+    assert "Insert a scalable SVG icon" in window.svg_icon_insert_action.toolTip()
+    assert window.svg_icon_insert_action.statusTip() == "SVG Icon: ready to insert"
+    assert window.svg_icon_insert_preview.objectName() == "svgIconInsertPreview"
+    assert window.svg_icon_insert_preview.text() == "SVG Icons: none inserted"
+    assert "Last inserted SVG" in window.svg_icon_insert_preview.toolTip()
+    assert window.svg_icon_insert_action in window.search_actions
+    assert ribbon.searchAction("SVG Icon") is window.svg_icon_insert_action
+
+    window.svg_icon_insert_action.trigger()
+    _app().processEvents()
+    assert window.svg_icon_insert_preview.text() == "SVG Icons: 1 inserted"
+    assert "#svgIconInsertPreview" in window.svg_icon_insert_preview.styleSheet()
+    assert "SVG Icon" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2112,6 +2137,7 @@ def main():
         test_example_sync_status_action_is_available,
         test_example_high_dpi_gallery_icon_is_available,
         test_example_app_icon_color_set_is_available,
+        test_example_svg_icon_insert_command_surface,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,
