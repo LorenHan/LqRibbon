@@ -292,6 +292,9 @@ class MainWindow(RibbonMainWindow):
         self.review_page = ribbon.addPage("Review")
         self._create_review_page()
 
+        self.view_page = ribbon.addPage("View")
+        self._create_view_page()
+
         self.tell_me_page = ribbon.addPage("Tell Me")
         self._create_command_discovery_page()
 
@@ -705,6 +708,34 @@ class MainWindow(RibbonMainWindow):
         self.read_aloud_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.read_aloud_preview.setToolTip("Speech playback status preview")
         language_group.addWidget(self.read_aloud_preview)
+
+    def _create_view_page(self):
+        immersive_group = self.view_page.addGroup("Immersive")
+        self.immersive_reader_action = immersive_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogContentsView),
+            "Immersive Reader",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.immersive_reader_action.setObjectName("immersiveReaderAction")
+        self.immersive_reader_action.setCheckable(True)
+        self.immersive_reader_action.setToolTip(
+            "Open Immersive Reader for focused reading"
+        )
+        self.immersive_reader_action.setStatusTip(
+            "Immersive Reader: enter focused reading view"
+        )
+        self.immersive_reader_preview = QLabel(
+            "Immersive Reader: off", immersive_group
+        )
+        self.immersive_reader_preview.setObjectName("immersiveReaderPreview")
+        self.immersive_reader_preview.setMinimumWidth(220)
+        self.immersive_reader_preview.setFixedHeight(30)
+        self.immersive_reader_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.immersive_reader_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.immersive_reader_preview.setToolTip(
+            "Immersive Reader layout state"
+        )
+        immersive_group.addWidget(self.immersive_reader_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -1300,6 +1331,7 @@ class MainWindow(RibbonMainWindow):
             self.controls_page,
             self.gallery_page,
             self.review_page,
+            self.view_page,
             self.tell_me_page,
             self.shell_page,
         ]:
@@ -1322,6 +1354,7 @@ class MainWindow(RibbonMainWindow):
             self.spelling_grammar_action,
             self.translator_action,
             self.read_aloud_action,
+            self.immersive_reader_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1331,6 +1364,7 @@ class MainWindow(RibbonMainWindow):
         ]:
             self.customize_manager.addToCategory("Actions", action)
         self.customize_manager.setPageId(self.review_page, "review")
+        self.customize_manager.setPageId(self.view_page, "view")
         self.customize_manager.setPageId(self.tell_me_page, "tellMe")
         self.customize_manager.setPageId(self.shell_page, "shell")
         self.customize_manager.setGroupId(self.runtime_group, "runtime")
@@ -1357,6 +1391,9 @@ class MainWindow(RibbonMainWindow):
         )
         self.translator_action.triggered.connect(self.open_translator)
         self.read_aloud_action.toggled.connect(self.toggle_read_aloud)
+        self.immersive_reader_action.toggled.connect(
+            self.toggle_immersive_reader
+        )
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1628,6 +1665,7 @@ class MainWindow(RibbonMainWindow):
             self.spelling_grammar_action,
             self.translator_action,
             self.read_aloud_action,
+            self.immersive_reader_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -1994,6 +2032,26 @@ class MainWindow(RibbonMainWindow):
                 "Read selected text aloud with speech playback"
             )
             self._message("Read Aloud: stopped")
+
+    def toggle_immersive_reader(self, enabled):
+        if enabled:
+            self.immersive_reader_preview.setText(
+                "Immersive Reader: line focus on"
+            )
+            self.immersive_reader_preview.setStyleSheet(
+                "QLabel#immersiveReaderPreview { color: #0f6cbd; font-weight: 600; }"
+            )
+            self.immersive_reader_action.setToolTip(
+                "Exit Immersive Reader focused reading"
+            )
+            self._message("Immersive Reader: line focus on")
+        else:
+            self.immersive_reader_preview.setText("Immersive Reader: off")
+            self.immersive_reader_preview.setStyleSheet("")
+            self.immersive_reader_action.setToolTip(
+                "Open Immersive Reader for focused reading"
+            )
+            self._message("Immersive Reader: off")
 
     def toggle_dictate_microphone(self, enabled):
         if enabled:

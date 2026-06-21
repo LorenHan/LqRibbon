@@ -289,6 +289,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *translatorPreview,
                      QAction *readAloudAction,
                      QLabel *readAloudPreview,
+                     LqRibbon::RibbonPage *viewPage,
+                     QAction *immersiveReaderAction,
+                     QLabel *immersiveReaderPreview,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -986,6 +989,50 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strReadAloudStatus.contains(
                          QStringLiteral("Read Aloud")),
                  QStringLiteral("Read Aloud command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const int viewPageIndex = ribbonBar->indexOf(viewPage);
+    if (viewPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(viewPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *immersiveReaderButton =
+        collapseTestActionButton(ribbonBar, immersiveReaderAction);
+    if (immersiveReaderAction) {
+        immersiveReaderAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strImmersiveReaderStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(viewPageIndex >= 0
+                     && immersiveReaderAction
+                     && immersiveReaderAction->objectName()
+                         == QStringLiteral("immersiveReaderAction")
+                     && immersiveReaderAction->isCheckable()
+                     && immersiveReaderAction->isChecked()
+                     && !immersiveReaderAction->icon().isNull()
+                     && immersiveReaderAction->toolTip().contains(
+                         QStringLiteral("Immersive Reader"))
+                     && immersiveReaderButton
+                     && immersiveReaderPreview
+                     && immersiveReaderPreview->objectName()
+                         == QStringLiteral("immersiveReaderPreview")
+                     && immersiveReaderPreview->text()
+                         == QStringLiteral(
+                             "Immersive Reader: line focus on")
+                     && immersiveReaderPreview->styleSheet().contains(
+                         QStringLiteral("#immersiveReaderPreview"))
+                     && ribbonBar->searchAction(
+                            QStringLiteral("Immersive Reader"))
+                         == immersiveReaderAction
+                     && strImmersiveReaderStatus.contains(
+                         QStringLiteral("Immersive Reader")),
+                 QStringLiteral("Immersive Reader command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3780,6 +3827,33 @@ int main(int argc, char *argv[])
         QObject::tr("Speech playback status preview"));
     languageGroup->addWidget(readAloudPreview);
 
+    LqRibbon::RibbonPage *viewPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("View"));
+    LqRibbon::RibbonGroup *immersiveGroup =
+        viewPage->addGroup(QObject::tr("Immersive"));
+    QAction *immersiveReaderAction = immersiveGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogContentsView),
+        QObject::tr("Immersive Reader"),
+        Qt::ToolButtonTextUnderIcon);
+    immersiveReaderAction->setObjectName(
+        QStringLiteral("immersiveReaderAction"));
+    immersiveReaderAction->setCheckable(true);
+    immersiveReaderAction->setToolTip(
+        QObject::tr("Open Immersive Reader for focused reading"));
+    immersiveReaderAction->setStatusTip(
+        QObject::tr("Immersive Reader: enter focused reading view"));
+    QLabel *immersiveReaderPreview = new QLabel(immersiveGroup);
+    immersiveReaderPreview->setObjectName(
+        QStringLiteral("immersiveReaderPreview"));
+    immersiveReaderPreview->setText(QObject::tr("Immersive Reader: off"));
+    immersiveReaderPreview->setMinimumWidth(220);
+    immersiveReaderPreview->setFixedHeight(30);
+    immersiveReaderPreview->setAlignment(Qt::AlignCenter);
+    immersiveReaderPreview->setFrameShape(QFrame::StyledPanel);
+    immersiveReaderPreview->setToolTip(
+        QObject::tr("Immersive Reader layout state"));
+    immersiveGroup->addWidget(immersiveReaderPreview);
+
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
     LqRibbon::RibbonGroup *commandDiscoveryGroup =
@@ -4336,6 +4410,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), controlsPage);
     customizeManager->addToCategory(QObject::tr("Pages"), galleryPage);
     customizeManager->addToCategory(QObject::tr("Pages"), reviewPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), viewPage);
     customizeManager->addToCategory(QObject::tr("Pages"), tellMePage);
     customizeManager->addToCategory(QObject::tr("Pages"), shellPage);
     customizeManager->addToCategory(QObject::tr("Actions"), fullScreenAction);
@@ -4360,6 +4435,7 @@ int main(int argc, char *argv[])
                                     spellingGrammarAction);
     customizeManager->addToCategory(QObject::tr("Actions"), translatorAction);
     customizeManager->addToCategory(QObject::tr("Actions"), readAloudAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), immersiveReaderAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -4382,6 +4458,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     importQuickAccessAction);
     customizeManager->setPageId(reviewPage, QStringLiteral("review"));
+    customizeManager->setPageId(viewPage, QStringLiteral("view"));
     customizeManager->setPageId(tellMePage, QStringLiteral("tellMe"));
     customizeManager->setPageId(shellPage, QStringLiteral("shell"));
     customizeManager->setGroupId(runtimeGroup, QStringLiteral("runtime"));
@@ -5462,6 +5539,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(spellingGrammarAction);
     mainWindow.ribbonBar()->registerSearchAction(translatorAction);
     mainWindow.ribbonBar()->registerSearchAction(readAloudAction);
+    mainWindow.ribbonBar()->registerSearchAction(immersiveReaderAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -5751,6 +5829,40 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(immersiveReaderAction,
+                     &QAction::toggled,
+                     [&mainWindow,
+                      immersiveReaderAction,
+                      immersiveReaderPreview](bool enabled) {
+                         if (enabled) {
+                             immersiveReaderPreview->setText(
+                                 QObject::tr(
+                                     "Immersive Reader: line focus on"));
+                             immersiveReaderPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#immersiveReaderPreview { color: #0f6cbd; font-weight: 600; }"));
+                             immersiveReaderAction->setToolTip(
+                                 QObject::tr(
+                                     "Exit Immersive Reader focused reading"));
+                             if (mainWindow.statusBar()) {
+                                 mainWindow.statusBar()->showMessage(
+                                     QObject::tr(
+                                         "Immersive Reader: line focus on"),
+                                     2500);
+                             }
+                             return;
+                         }
+                         immersiveReaderPreview->setText(
+                             QObject::tr("Immersive Reader: off"));
+                         immersiveReaderPreview->setStyleSheet(QString());
+                         immersiveReaderAction->setToolTip(
+                             QObject::tr(
+                                 "Open Immersive Reader for focused reading"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Immersive Reader: off"),
+                                 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -5899,6 +6011,9 @@ int main(int argc, char *argv[])
                                 translatorPreview,
                                 readAloudAction,
                                 readAloudPreview,
+                                viewPage,
+                                immersiveReaderAction,
+                                immersiveReaderPreview,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,

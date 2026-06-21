@@ -1244,6 +1244,41 @@ def test_example_read_aloud_command_surface():
     window.close()
 
 
+def test_example_immersive_reader_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    ribbon.setCurrentPageIndex(ribbon.pageIndex(window.view_page))
+    _app().processEvents()
+
+    assert ribbon.pageIndex(window.view_page) >= 0
+    assert window.immersive_reader_action.objectName() == "immersiveReaderAction"
+    assert window.immersive_reader_action.isCheckable()
+    assert not window.immersive_reader_action.isChecked()
+    assert not window.immersive_reader_action.icon().isNull()
+    assert "focused reading" in window.immersive_reader_action.toolTip()
+    assert window.immersive_reader_preview.objectName() == "immersiveReaderPreview"
+    assert window.immersive_reader_preview.text() == "Immersive Reader: off"
+    assert window.immersive_reader_action in window.search_actions
+    assert (
+        ribbon.searchAction("Immersive Reader")
+        is window.immersive_reader_action
+    )
+
+    window.immersive_reader_action.trigger()
+    _app().processEvents()
+    assert window.immersive_reader_action.isChecked()
+    assert (
+        window.immersive_reader_preview.text()
+        == "Immersive Reader: line focus on"
+    )
+    assert "#immersiveReaderPreview" in window.immersive_reader_preview.styleSheet()
+    assert "Immersive Reader" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1881,6 +1916,7 @@ def main():
         test_example_spelling_grammar_card_surface,
         test_example_translator_command_surface,
         test_example_read_aloud_command_surface,
+        test_example_immersive_reader_command_surface,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,
