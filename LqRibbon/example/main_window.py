@@ -1672,6 +1672,9 @@ class MainWindow(RibbonMainWindow):
             self._icon(QStyle.StandardPixmap.SP_TitleBarMenuButton),
             "Ribbon Display Options",
         )
+        self.display_options_title_action.setToolTip(
+            "Ribbon Display Options: choose how much ribbon to show"
+        )
         self.display_options_title_action.setMenu(self.display_options_menu)
         display_button = self.ribbonBar()._title_button_bar.widgetForAction(
             self.display_options_title_action
@@ -1692,7 +1695,7 @@ class MainWindow(RibbonMainWindow):
             "Share",
         )
         self.share_title_action.setObjectName("shareTitleAction")
-        self.share_title_action.setToolTip("Share this document")
+        self.share_title_action.setToolTip("Share: Share this document")
         self.share_title_action.setStatusTip(
             "Share: upload before sharing to invite people"
         )
@@ -1701,7 +1704,7 @@ class MainWindow(RibbonMainWindow):
             "Comments",
         )
         self.comments_title_action.setObjectName("commentsTitleAction")
-        self.comments_title_action.setToolTip("Open document comments")
+        self.comments_title_action.setToolTip("Comments: Open document comments")
         self.comments_title_action.setStatusTip("Comments: show conversation pane")
         self.presence_avatar_strip_action = self.ribbonBar().addTitleButton(
             self._avatar_strip_icon(),
@@ -1709,7 +1712,7 @@ class MainWindow(RibbonMainWindow):
         )
         self.presence_avatar_strip_action.setObjectName("presenceAvatarStripAction")
         self.presence_avatar_strip_action.setToolTip(
-            "Alice Chen, Bo Li, and Maya Patel are editing"
+            "Presence: Alice Chen, Bo Li, and Maya Patel are editing"
         )
         self.presence_avatar_strip_action.setStatusTip(
             "Presence: 3 collaborators editing"
@@ -1719,16 +1722,21 @@ class MainWindow(RibbonMainWindow):
             "Feedback",
         )
         self.feedback_title_action.setObjectName("feedbackTitleAction")
-        self.feedback_title_action.setToolTip("Send feedback about this document")
+        self.feedback_title_action.setToolTip(
+            "Feedback: Send feedback about this document"
+        )
         self.feedback_title_action.setStatusTip("Feedback: send product feedback")
         self.help_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_MessageBoxQuestion), "Help"
         )
+        self.help_title_action.setToolTip("Help: Open LqRibbon help")
         self.account_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_DirHomeIcon), "Account"
         )
         self.account_title_action.setObjectName("accountTitleAction")
-        self.account_title_action.setToolTip("Open account and profile settings")
+        self.account_title_action.setToolTip(
+            "Account: Open account and profile settings"
+        )
         self.account_title_action.setStatusTip("Account: signed in as Local User")
         self.auto_save_title_action.triggered.connect(
             self._update_auto_save_title_action
@@ -1757,6 +1765,7 @@ class MainWindow(RibbonMainWindow):
             self.help_title_action,
             self.account_title_action,
         ]
+        self.accessible_tooltip_actions = list(self.icon_only_title_actions)
         self._apply_icon_only_title_buttons()
         self.display_show_tabs_commands_action.triggered.connect(
             self.show_tabs_and_commands

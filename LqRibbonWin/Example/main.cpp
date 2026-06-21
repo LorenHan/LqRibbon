@@ -2087,6 +2087,24 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("Icon-only title commands are available"))) {
         return 1;
     }
+    bool allAccessibleTooltipNames = true;
+    for (QAction *action : iconOnlyTitleActions) {
+        QToolButton *button =
+            titleButtonBar
+                ? qobject_cast<QToolButton *>(
+                    titleButtonBar->widgetForAction(action))
+                : nullptr;
+        allAccessibleTooltipNames = allAccessibleTooltipNames
+            && action
+            && button
+            && action->toolTip().startsWith(action->text())
+            && action->toolTip().size() > action->text().size()
+            && button->toolTip() == action->toolTip();
+    }
+    if (!require(allAccessibleTooltipNames,
+                 QStringLiteral("Accessible tooltip names are available"))) {
+        return 1;
+    }
 
     if (!require(collaborationStatusText
                      && collaborationStatusText->objectName()
@@ -6396,6 +6414,8 @@ int main(int argc, char *argv[])
     QAction *displayOptionsTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_TitleBarMenuButton),
         QObject::tr("Ribbon Display Options"));
+    displayOptionsTitleAction->setToolTip(
+        QObject::tr("Ribbon Display Options: choose how much ribbon to show"));
     displayOptionsTitleAction->setMenu(displayOptionsMenu);
     if (QToolBar *titleButtonBar = mainWindow.ribbonBar()->findChild<QToolBar *>(
             QStringLiteral("lqRibbonTitleButtonBar"))) {
@@ -6436,14 +6456,15 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_DialogOpenButton),
         QObject::tr("Share"));
     shareTitleAction->setObjectName(QStringLiteral("shareTitleAction"));
-    shareTitleAction->setToolTip(QObject::tr("Share this document"));
+    shareTitleAction->setToolTip(QObject::tr("Share: Share this document"));
     shareTitleAction->setStatusTip(
         QObject::tr("Share: upload before sharing to invite people"));
     QAction *commentsTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogContentsView),
         QObject::tr("Comments"));
     commentsTitleAction->setObjectName(QStringLiteral("commentsTitleAction"));
-    commentsTitleAction->setToolTip(QObject::tr("Open document comments"));
+    commentsTitleAction->setToolTip(
+        QObject::tr("Comments: Open document comments"));
     commentsTitleAction->setStatusTip(
         QObject::tr("Comments: show conversation pane"));
     QAction *presenceAvatarStripAction =
@@ -6452,7 +6473,7 @@ int main(int argc, char *argv[])
     presenceAvatarStripAction->setObjectName(
         QStringLiteral("presenceAvatarStripAction"));
     presenceAvatarStripAction->setToolTip(
-        QObject::tr("Alice Chen, Bo Li, and Maya Patel are editing"));
+        QObject::tr("Presence: Alice Chen, Bo Li, and Maya Patel are editing"));
     presenceAvatarStripAction->setStatusTip(
         QObject::tr("Presence: 3 collaborators editing"));
     QObject::connect(presenceAvatarStripAction,
@@ -6470,18 +6491,19 @@ int main(int argc, char *argv[])
         QObject::tr("Feedback"));
     feedbackTitleAction->setObjectName(QStringLiteral("feedbackTitleAction"));
     feedbackTitleAction->setToolTip(
-        QObject::tr("Send feedback about this document"));
+        QObject::tr("Feedback: Send feedback about this document"));
     feedbackTitleAction->setStatusTip(
         QObject::tr("Feedback: send product feedback"));
     QAction *helpTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxQuestion),
         QObject::tr("Help"));
+    helpTitleAction->setToolTip(QObject::tr("Help: Open LqRibbon help"));
     QAction *accountTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_DirHomeIcon),
         QObject::tr("Account"));
     accountTitleAction->setObjectName(QStringLiteral("accountTitleAction"));
     accountTitleAction->setToolTip(
-        QObject::tr("Open account and profile settings"));
+        QObject::tr("Account: Open account and profile settings"));
     accountTitleAction->setStatusTip(
         QObject::tr("Account: signed in as Local User"));
     const QList<QAction *> iconOnlyTitleActions = {

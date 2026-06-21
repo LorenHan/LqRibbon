@@ -114,7 +114,7 @@ Default style remains `Office 2016 Blue`.
 | 083 | SVG recolor command | Format page | Complete |
 | 084 | Convert SVG to shape command | Format page | Complete |
 | 085 | Icon-only title commands | Title buttons | Complete |
-| 086 | Accessible tooltip names | Tooltip test path | Planned |
+| 086 | Accessible tooltip names | Tooltip test path | Complete |
 | 087 | Screen-reader names for commands | Accessibility test path | Planned |
 | 088 | High contrast style pass | Style preview page | Planned |
 | 089 | Reduced motion option | Options page | Planned |
