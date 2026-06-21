@@ -332,7 +332,51 @@ def test_example_account_title_button_is_available():
 
     window.account_title_action.trigger()
     _app().processEvents()
+    assert window.backstage.activePage() is window.backstage_account_page
     assert "Account" in window.statusBar().currentMessage()
+    window.close()
+
+
+def test_example_account_privacy_settings_entry_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.backstage_account_action.objectName() == "backstageAccountAction"
+    assert window.backstage_account_action.isCheckable()
+    assert window.backstage_account_page.objectName() == "backstageAccountPage"
+    assert window.account_signed_in_label.objectName() == "accountSignedInLabel"
+    assert "Local User" in window.account_signed_in_label.text()
+    assert window.account_privacy_summary.objectName() == "accountPrivacySummary"
+    assert "optional diagnostics off" in window.account_privacy_summary.text()
+    assert (
+        window.account_privacy_settings_action.objectName()
+        == "accountPrivacySettingsAction"
+    )
+    assert not window.account_privacy_settings_action.icon().isNull()
+    assert "privacy settings" in window.account_privacy_settings_action.toolTip()
+    assert isinstance(window.account_privacy_settings_button, QToolButton)
+    assert (
+        window.account_privacy_settings_button.defaultAction()
+        is window.account_privacy_settings_action
+    )
+    assert window.account_privacy_settings_action in window.search_actions
+    assert (
+        ribbon.searchAction("Privacy Settings")
+        is window.account_privacy_settings_action
+    )
+
+    window.backstage.setActivePage(window.backstage_account_page)
+    _app().processEvents()
+    assert window.backstage.activePage() is window.backstage_account_page
+    assert window.backstage_account_action.isChecked()
+
+    window.account_privacy_settings_action.trigger()
+    _app().processEvents()
+    assert "connected experiences reviewed" in window.account_privacy_summary.text()
+    assert "#accountPrivacySummary" in window.account_privacy_summary.styleSheet()
+    assert "Account Privacy" in window.statusBar().currentMessage()
     window.close()
 
 
@@ -1645,6 +1689,7 @@ def main():
         test_example_display_options_menu_controls_ribbon_modes,
         test_example_feedback_title_button_is_available,
         test_example_account_title_button_is_available,
+        test_example_account_privacy_settings_entry_is_available,
         test_example_share_title_button_is_available,
         test_example_upload_before_share_prompt_is_available,
         test_example_auto_save_title_toggle_is_available,

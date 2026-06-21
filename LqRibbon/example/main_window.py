@@ -986,6 +986,68 @@ class MainWindow(RibbonMainWindow):
             lambda: self._message("Open: frequent sites and groups")
         )
 
+        self.backstage_account_page = QWidget(self.backstage)
+        self.backstage_account_page.setObjectName("backstageAccountPage")
+        self.backstage_account_page.setWindowTitle("Account")
+        account_page_layout = QFormLayout(self.backstage_account_page)
+        self.account_signed_in_label = QLabel(
+            "Local User | local.user@example.com",
+            self.backstage_account_page,
+        )
+        self.account_signed_in_label.setObjectName("accountSignedInLabel")
+        self.account_privacy_summary = QLabel(
+            "Connected experiences: optional diagnostics off",
+            self.backstage_account_page,
+        )
+        self.account_privacy_summary.setObjectName("accountPrivacySummary")
+        self.account_privacy_summary.setWordWrap(True)
+        self.account_privacy_summary.setToolTip(
+            "Summary of privacy controls for connected Office experiences"
+        )
+        self.account_privacy_settings_action = QAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogInfoView),
+            "Privacy Settings",
+            self.backstage_account_page,
+        )
+        self.account_privacy_settings_action.setObjectName(
+            "accountPrivacySettingsAction"
+        )
+        self.account_privacy_settings_action.setToolTip(
+            "Open account privacy settings for connected experiences"
+        )
+        self.account_privacy_settings_action.setStatusTip(
+            "Account Privacy: manage connected experiences"
+        )
+        self.account_privacy_settings_button = QToolButton(self.backstage_account_page)
+        self.account_privacy_settings_button.setObjectName(
+            "accountPrivacySettingsButton"
+        )
+        self.account_privacy_settings_button.setDefaultAction(
+            self.account_privacy_settings_action
+        )
+        self.account_privacy_settings_button.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
+        account_page_layout.addRow("Signed in", self.account_signed_in_label)
+        account_page_layout.addRow("Privacy", self.account_privacy_summary)
+        account_page_layout.addRow("Settings", self.account_privacy_settings_button)
+        self.backstage_account_action = self.backstage.addPage(
+            self.backstage_account_page
+        )
+        self.backstage_account_action.setObjectName("backstageAccountAction")
+        self.backstage_account_action.setToolTip(
+            "Open account and privacy settings"
+        )
+        self.backstage_account_action.setStatusTip(
+            "Account: signed in as Local User"
+        )
+        self.backstage_account_action.triggered.connect(
+            lambda: self._message("Account: signed in as Local User")
+        )
+        self.account_privacy_settings_action.triggered.connect(
+            self.open_account_privacy_settings
+        )
+
         system_button = self.ribbonBar().systemButton()
         if system_button:
             system_button.setBackstage(self.backstage)
@@ -1106,6 +1168,7 @@ class MainWindow(RibbonMainWindow):
             self.control_modes_action,
             self.smart_lookup_action,
             self.sensitivity_label_action,
+            self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
@@ -1281,9 +1344,7 @@ class MainWindow(RibbonMainWindow):
         self.help_title_action.triggered.connect(
             lambda: QMessageBox.information(self, "LqRibbon", "Help")
         )
-        self.account_title_action.triggered.connect(
-            lambda: self._message("Account: signed in as Local User")
-        )
+        self.account_title_action.triggered.connect(self.open_account_backstage)
         self.display_show_tabs_commands_action.triggered.connect(
             self.show_tabs_and_commands
         )
@@ -1395,6 +1456,7 @@ class MainWindow(RibbonMainWindow):
             self.office_menu_action,
             self.smart_lookup_action,
             self.sensitivity_label_action,
+            self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
             self.show_customize_action,
@@ -1849,6 +1911,19 @@ class MainWindow(RibbonMainWindow):
         )
         self.backstage.setActivePage(self.backstage_open_page)
         self._message("Share: upload before sharing to invite people")
+
+    def open_account_backstage(self):
+        self.backstage.setActivePage(self.backstage_account_page)
+        self._message("Account: signed in as Local User")
+
+    def open_account_privacy_settings(self):
+        self.account_privacy_summary.setText(
+            "Privacy settings: connected experiences reviewed"
+        )
+        self.account_privacy_summary.setStyleSheet(
+            "QLabel#accountPrivacySummary { color: #0f6cbd; font-weight: 600; }"
+        )
+        self._message("Account Privacy: settings opened")
 
     def update_collapse_state_preview(self):
         ribbon = self.ribbonBar()

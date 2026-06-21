@@ -249,6 +249,12 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *presenceAvatarStripAction,
                      QAction *feedbackTitleAction,
                      QAction *accountTitleAction,
+                     QAction *backstageAccountAction,
+                     QWidget *backstageAccountPage,
+                     QLabel *accountSignedInLabel,
+                     QAction *accountPrivacySettingsAction,
+                     QToolButton *accountPrivacySettingsButton,
+                     QLabel *accountPrivacySummary,
                      QLabel *uploadBeforeSharePrompt,
                      QAction *showTabsAndCommandsAction,
                      QAction *showTabsOnlyAction,
@@ -1664,8 +1670,65 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && accountButton
                      && accountButton->toolButtonStyle()
                          == Qt::ToolButtonIconOnly
+                     && backstage
+                     && backstageAccountPage
+                     && backstage->activePage() == backstageAccountPage
                      && strAccountStatus.contains(QStringLiteral("Account")),
                  QStringLiteral("Account profile title button is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const bool backstageAccountChecked =
+        backstageAccountAction ? backstageAccountAction->isChecked() : false;
+    if (accountPrivacySettingsAction) {
+        accountPrivacySettingsAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strAccountPrivacyStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(backstage
+                     && backstageAccountAction
+                     && backstageAccountAction->objectName()
+                         == QStringLiteral("backstageAccountAction")
+                     && backstageAccountAction->isCheckable()
+                     && backstageAccountPage
+                     && backstageAccountPage->objectName()
+                         == QStringLiteral("backstageAccountPage")
+                     && backstage->activePage() == backstageAccountPage
+                     && backstageAccountChecked
+                     && accountSignedInLabel
+                     && accountSignedInLabel->objectName()
+                         == QStringLiteral("accountSignedInLabel")
+                     && accountSignedInLabel->text().contains(
+                         QStringLiteral("Local User"))
+                     && accountPrivacySettingsAction
+                     && accountPrivacySettingsAction->objectName()
+                         == QStringLiteral("accountPrivacySettingsAction")
+                     && !accountPrivacySettingsAction->icon().isNull()
+                     && accountPrivacySettingsAction->toolTip().contains(
+                         QStringLiteral("privacy settings"))
+                     && accountPrivacySettingsButton
+                     && accountPrivacySettingsButton->defaultAction()
+                         == accountPrivacySettingsAction
+                     && accountPrivacySettingsButton->toolButtonStyle()
+                         == Qt::ToolButtonTextBesideIcon
+                     && accountPrivacySummary
+                     && accountPrivacySummary->objectName()
+                         == QStringLiteral("accountPrivacySummary")
+                     && accountPrivacySummary->text().contains(
+                         QStringLiteral("connected experiences reviewed"))
+                     && accountPrivacySummary->styleSheet().contains(
+                         QStringLiteral("#accountPrivacySummary"))
+                     && ribbonBar->searchAction(
+                            QStringLiteral("Privacy Settings"))
+                         == accountPrivacySettingsAction
+                     && strAccountPrivacyStatus.contains(
+                         QStringLiteral("Account Privacy")),
+                 QStringLiteral("Account privacy settings entry is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3821,6 +3884,79 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QWidget *backstageAccountPage = new QWidget(backstage);
+    backstageAccountPage->setObjectName(QStringLiteral("backstageAccountPage"));
+    backstageAccountPage->setWindowTitle(QObject::tr("Account"));
+    QFormLayout *accountPageLayout = new QFormLayout(backstageAccountPage);
+    QLabel *accountSignedInLabel = new QLabel(
+        QObject::tr("Local User | local.user@example.com"),
+        backstageAccountPage);
+    accountSignedInLabel->setObjectName(QStringLiteral("accountSignedInLabel"));
+    QLabel *accountPrivacySummary = new QLabel(
+        QObject::tr("Connected experiences: optional diagnostics off"),
+        backstageAccountPage);
+    accountPrivacySummary->setObjectName(
+        QStringLiteral("accountPrivacySummary"));
+    accountPrivacySummary->setWordWrap(true);
+    accountPrivacySummary->setToolTip(
+        QObject::tr("Summary of privacy controls for connected Office experiences"));
+    QAction *accountPrivacySettingsAction = new QAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
+        QObject::tr("Privacy Settings"),
+        backstageAccountPage);
+    accountPrivacySettingsAction->setObjectName(
+        QStringLiteral("accountPrivacySettingsAction"));
+    accountPrivacySettingsAction->setToolTip(
+        QObject::tr("Open account privacy settings for connected experiences"));
+    accountPrivacySettingsAction->setStatusTip(
+        QObject::tr("Account Privacy: manage connected experiences"));
+    QToolButton *accountPrivacySettingsButton =
+        new QToolButton(backstageAccountPage);
+    accountPrivacySettingsButton->setObjectName(
+        QStringLiteral("accountPrivacySettingsButton"));
+    accountPrivacySettingsButton->setDefaultAction(
+        accountPrivacySettingsAction);
+    accountPrivacySettingsButton->setToolButtonStyle(
+        Qt::ToolButtonTextBesideIcon);
+    accountPageLayout->addRow(QObject::tr("Signed in"),
+                              accountSignedInLabel);
+    accountPageLayout->addRow(QObject::tr("Privacy"),
+                              accountPrivacySummary);
+    accountPageLayout->addRow(QObject::tr("Settings"),
+                              accountPrivacySettingsButton);
+    QAction *backstageAccountAction = backstage->addPage(backstageAccountPage);
+    backstageAccountAction->setObjectName(
+        QStringLiteral("backstageAccountAction"));
+    backstageAccountAction->setToolTip(
+        QObject::tr("Open account and privacy settings"));
+    backstageAccountAction->setStatusTip(
+        QObject::tr("Account: signed in as Local User"));
+    QObject::connect(backstageAccountAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Account: signed in as Local User"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(accountPrivacySettingsAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [accountPrivacySummary, &mainWindow]() {
+                         accountPrivacySummary->setText(
+                             QObject::tr(
+                                 "Privacy settings: connected experiences reviewed"));
+                         accountPrivacySummary->setStyleSheet(
+                             QStringLiteral("QLabel#accountPrivacySummary { color: #0f6cbd; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Account Privacy: settings opened"),
+                                 2500);
+                         }
+                     });
     if (mainWindow.ribbonBar()->systemButton()) {
         mainWindow.ribbonBar()->systemButton()->setBackstage(backstage);
         mainWindow.ribbonBar()->systemButton()->setSystemMenu(systemMenu);
@@ -3856,6 +3992,8 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), controlModesAction);
     customizeManager->addToCategory(QObject::tr("Actions"), smartLookupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), sensitivityLabelAction);
+    customizeManager->addToCategory(QObject::tr("Actions"),
+                                    accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     showQuickAccessBarAction);
@@ -4919,6 +5057,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(officeMenuAction);
     mainWindow.ribbonBar()->registerSearchAction(smartLookupAction);
     mainWindow.ribbonBar()->registerSearchAction(sensitivityLabelAction);
+    mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
     mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
@@ -5044,7 +5183,12 @@ int main(int argc, char *argv[])
                                  QObject::tr("LqRibbon"),
                                  QObject::tr("Help"));
     });
-    QObject::connect(accountTitleAction, &QAction::triggered, [&mainWindow]() {
+    QObject::connect(accountTitleAction,
+                     &QAction::triggered,
+                     [&mainWindow, backstage, backstageAccountPage]() {
+        if (backstage && backstageAccountPage) {
+            backstage->setActivePage(backstageAccountPage);
+        }
         if (mainWindow.statusBar()) {
             mainWindow.statusBar()->showMessage(
                 QObject::tr("Account: signed in as Local User"),
@@ -5223,6 +5367,12 @@ int main(int argc, char *argv[])
                                 presenceAvatarStripAction,
                                 feedbackTitleAction,
                                 accountTitleAction,
+                                backstageAccountAction,
+                                backstageAccountPage,
+                                accountSignedInLabel,
+                                accountPrivacySettingsAction,
+                                accountPrivacySettingsButton,
+                                accountPrivacySummary,
                                 uploadBeforeSharePrompt,
                                 showTabsAndCommandsAction,
                                 showTabsOnlyAction,
