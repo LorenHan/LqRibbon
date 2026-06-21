@@ -399,6 +399,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *exportQuickAccessAction,
                      QAction *importQuickAccessAction,
                      QAction *officePopupAction,
+                     QAction *officeMenuAction,
+                     LqRibbon::OfficePopupMenu *officeMenu,
                      QAction *centerSearchAction,
                      QAction *compactSearchAction,
                      QAction *hiddenSearchAction,
@@ -2278,6 +2280,31 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
+    }
+
+    QPlainTextEdit *officeMenuEditor =
+        officeMenu ? officeMenu->findChild<QPlainTextEdit *>(
+                         QStringLiteral("officePopupMenuEditor"))
+                   : nullptr;
+    if (!require(officeMenuAction
+                     && officeMenuAction->objectName()
+                         == QStringLiteral("officeMenuAction")
+                     && !officeMenuAction->icon().isNull()
+                     && officeMenuAction->toolTip().contains(
+                         QStringLiteral("resizable Office popup menu"))
+                     && officeMenuAction->statusTip()
+                         == QStringLiteral("Office popup menu: grip visible")
+                     && officeMenu
+                     && officeMenu->objectName()
+                         == QStringLiteral("officePopupMenu")
+                     && officeMenu->isGripVisible()
+                     && officeMenu->toolTip().contains(
+                         QStringLiteral("with grip"))
+                     && officeMenuEditor
+                     && officeMenuEditor->toPlainText().contains(
+                         QStringLiteral("OfficePopupMenu widget host")),
+                 QStringLiteral("Office popup menu grip is available"))) {
+        return 1;
     }
 
     QToolButton *dictateMicrophoneButton =
@@ -6415,6 +6442,11 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_DirOpenIcon),
         QObject::tr("Popup Menu"),
         Qt::ToolButtonTextBesideIcon);
+    officeMenuAction->setObjectName(QStringLiteral("officeMenuAction"));
+    officeMenuAction->setToolTip(
+        QObject::tr("Open a resizable Office popup menu"));
+    officeMenuAction->setStatusTip(
+        QObject::tr("Office popup menu: grip visible"));
     LqRibbon::PopupColorButton *colorButton =
         new LqRibbon::PopupColorButton(popupGroup);
     colorButton->setText(QObject::tr("Color"));
@@ -6867,8 +6899,12 @@ int main(int argc, char *argv[])
 
     LqRibbon::OfficePopupMenu *officeMenu =
         LqRibbon::OfficePopupMenu::createPopupMenu(&mainWindow);
+    officeMenu->setObjectName(QStringLiteral("officePopupMenu"));
+    officeMenu->setToolTip(
+        QObject::tr("Resizable Office popup menu with grip"));
     officeMenu->setGripVisible(true);
     QPlainTextEdit *popupEditor = new QPlainTextEdit(officeMenu);
+    popupEditor->setObjectName(QStringLiteral("officePopupMenuEditor"));
     popupEditor->setPlainText(QObject::tr("OfficePopupMenu widget host"));
     popupEditor->setFixedSize(260, 120);
     officeMenu->addWidget(popupEditor);
@@ -9255,6 +9291,8 @@ int main(int argc, char *argv[])
                                 exportQuickAccessAction,
                                 importQuickAccessAction,
                                 officePopupAction,
+                                officeMenuAction,
+                                officeMenu,
                                 centerSearchAction,
                                 compactSearchAction,
                                 hiddenSearchAction,

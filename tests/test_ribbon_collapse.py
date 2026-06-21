@@ -22,7 +22,14 @@ sys.path.insert(
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QLabel, QMenu, QStackedWidget, QToolButton
+from PySide6.QtWidgets import (
+    QApplication,
+    QLabel,
+    QMenu,
+    QPlainTextEdit,
+    QStackedWidget,
+    QToolButton,
+)
 
 from LqRibbon import RibbonMainWindow
 from main_window import (
@@ -1551,6 +1558,28 @@ def test_example_office_popup_notification_is_available():
     window.close()
 
 
+def test_example_office_popup_menu_grip_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    action = window.office_menu_action
+    menu = window.office_menu
+    editor = menu.findChild(QPlainTextEdit, "officePopupMenuEditor")
+
+    assert action.objectName() == "officeMenuAction"
+    assert not action.icon().isNull()
+    assert "resizable Office popup menu" in action.toolTip()
+    assert action.statusTip() == "Office popup menu: grip visible"
+    assert menu.objectName() == "officePopupMenu"
+    assert menu.isGripVisible()
+    assert "with grip" in menu.toolTip()
+    assert editor is not None
+    assert "OfficePopupMenu widget host" in editor.toPlainText()
+    window.close()
+
+
 def test_example_backstage_open_page_shows_frequent_sites_and_groups():
     _app()
     window = MainWindow()
@@ -2995,6 +3024,7 @@ def main():
         test_example_recent_file_pinning_is_available,
         test_example_system_menu_export_popup_is_available,
         test_example_office_popup_notification_is_available,
+        test_example_office_popup_menu_grip_is_available,
         test_example_backstage_open_page_shows_frequent_sites_and_groups,
         test_example_backstage_export_page_is_available,
         test_example_backstage_close_behavior_is_available,

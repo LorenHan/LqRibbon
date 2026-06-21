@@ -141,7 +141,7 @@ Default style remains `Office 2016 Blue`.
 | 110 | System menu recent files | System menu | Complete |
 | 111 | System menu page popup | System menu | Complete |
 | 112 | Office popup notification | Popup page | Complete |
-| 113 | Resizable Office popup menu grip | Popup page | Planned |
+| 113 | Resizable Office popup menu grip | Popup page | Complete |
 | 114 | Popup color button | Popup page | Planned |
 | 115 | In-ribbon gallery | Gallery page | Planned |
 | 116 | Popup gallery menu | Gallery page | Planned |

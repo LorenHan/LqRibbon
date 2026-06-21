@@ -1460,6 +1460,9 @@ class MainWindow(RibbonMainWindow):
             "Popup Menu",
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
+        self.office_menu_action.setObjectName("officeMenuAction")
+        self.office_menu_action.setToolTip("Open a resizable Office popup menu")
+        self.office_menu_action.setStatusTip("Office popup menu: grip visible")
         self.color_button = PopupColorButton(popup_group)
         self.color_button.setText("Color")
         self.color_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
@@ -1830,8 +1833,11 @@ class MainWindow(RibbonMainWindow):
             system_button.setSystemMenu(self.system_menu)
 
         self.office_menu = OfficePopupMenu.createPopupMenu(self)
+        self.office_menu.setObjectName("officePopupMenu")
+        self.office_menu.setToolTip("Resizable Office popup menu with grip")
         self.office_menu.setGripVisible(True)
         popup_editor = QPlainTextEdit(self.office_menu)
+        popup_editor.setObjectName("officePopupMenuEditor")
         popup_editor.setPlainText("OfficePopupMenu widget host")
         popup_editor.setFixedSize(260, 120)
         self.office_menu.addWidget(popup_editor)
