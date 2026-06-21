@@ -2131,6 +2131,21 @@ class MainWindow(RibbonMainWindow):
         self.quick_access_status_preview.setObjectName("quickAccessStatusPreview")
         self.quick_access_status_preview.setMinimumWidth(180)
         status_bar.addWidget(self.quick_access_status_preview)
+        status_bar.addWidget(QLabel("|", status_bar))
+        self.copilot_command_center_preview = QLabel(
+            "Copilot Center: hidden", status_bar
+        )
+        self.copilot_command_center_preview.setObjectName(
+            "copilotCommandCenterPreview"
+        )
+        self.copilot_command_center_preview.setMinimumWidth(160)
+        self.copilot_command_center_preview.setToolTip(
+            "Copilot command center visibility state"
+        )
+        self.copilot_command_center_preview.setProperty(
+            "commandCenterVisible", False
+        )
+        status_bar.addWidget(self.copilot_command_center_preview)
 
         switch_group = RibbonStatusBarSwitchGroup(status_bar)
         switch_group.setObjectName("statusViewSwitchGroup")
@@ -2483,6 +2498,20 @@ class MainWindow(RibbonMainWindow):
             "Copilot: Open AI assistance for this document"
         )
         self.copilot_title_action.setStatusTip("Copilot: ready to help")
+        self.copilot_command_center_action = self.ribbonBar().addTitleButton(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogInfoView),
+            "Copilot Center",
+        )
+        self.copilot_command_center_action.setObjectName(
+            "copilotCommandCenterAction"
+        )
+        self.copilot_command_center_action.setCheckable(True)
+        self.copilot_command_center_action.setToolTip(
+            "Copilot Center: show or hide the prompt panel"
+        )
+        self.copilot_command_center_action.setStatusTip(
+            "Copilot Command Center: hidden"
+        )
         self.feedback_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_MessageBoxInformation),
             "Feedback",
@@ -2517,6 +2546,9 @@ class MainWindow(RibbonMainWindow):
         self.copilot_title_action.triggered.connect(
             lambda: self._message("Copilot: ready to help")
         )
+        self.copilot_command_center_action.toggled.connect(
+            self.toggle_copilot_command_center
+        )
         self.feedback_title_action.triggered.connect(
             lambda: self._message("Feedback: send product feedback")
         )
@@ -2531,6 +2563,7 @@ class MainWindow(RibbonMainWindow):
             self.comments_title_action,
             self.presence_avatar_strip_action,
             self.copilot_title_action,
+            self.copilot_command_center_action,
             self.feedback_title_action,
             self.help_title_action,
             self.account_title_action,
@@ -3201,6 +3234,26 @@ class MainWindow(RibbonMainWindow):
             "QLabel#pivotRecommendationPreview { color: #5c2d91; background: #f3e8ff; font-weight: 600; }"
         )
         self._message("Recommended Pivot: sales by region")
+
+    def toggle_copilot_command_center(self, visible):
+        if visible:
+            self.copilot_command_center_preview.setText("Copilot Center: visible")
+            self.copilot_command_center_preview.setStyleSheet(
+                "QLabel#copilotCommandCenterPreview { color: #ffffff; background: #7719aa; font-weight: 600; }"
+            )
+            self.copilot_command_center_action.setStatusTip(
+                "Copilot Command Center: visible"
+            )
+        else:
+            self.copilot_command_center_preview.setText("Copilot Center: hidden")
+            self.copilot_command_center_preview.setStyleSheet("")
+            self.copilot_command_center_action.setStatusTip(
+                "Copilot Command Center: hidden"
+            )
+        self.copilot_command_center_preview.setProperty(
+            "commandCenterVisible", bool(visible)
+        )
+        self._message(self.copilot_command_center_action.statusTip())
 
     def toggle_live_captions(self, enabled):
         if enabled:

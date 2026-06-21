@@ -377,6 +377,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *commentsTitleAction,
                      QAction *presenceAvatarStripAction,
                      QAction *copilotTitleAction,
+                     QAction *copilotCommandCenterAction,
                      QAction *feedbackTitleAction,
                      QAction *helpTitleAction,
                      QAction *accountTitleAction,
@@ -488,6 +489,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QFrame *coauthoringIndicatorDot,
                      QLabel *coauthoringIndicatorLabel,
                      QLabel *characterCountStatusLabel,
+                     QLabel *copilotCommandCenterPreview,
                      QAction *syncStatusAction,
                      LqRibbon::RibbonSliderPane *zoomSlider,
                      QLabel *zoomStatusLabel,
@@ -3113,6 +3115,53 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         mainWindow.statusBar()->clearMessage();
     }
 
+    QToolButton *copilotCommandCenterButton =
+        titleButtonBar
+            ? qobject_cast<QToolButton *>(
+                titleButtonBar->widgetForAction(copilotCommandCenterAction))
+            : nullptr;
+    if (copilotCommandCenterAction) {
+        copilotCommandCenterAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strCopilotCenterStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(copilotCommandCenterAction
+                     && copilotCommandCenterAction->objectName()
+                         == QStringLiteral("copilotCommandCenterAction")
+                     && copilotCommandCenterAction->isCheckable()
+                     && copilotCommandCenterAction->isChecked()
+                     && !copilotCommandCenterAction->icon().isNull()
+                     && copilotCommandCenterAction->toolTip().contains(
+                         QStringLiteral("prompt panel"))
+                     && copilotCommandCenterAction->statusTip()
+                         == QStringLiteral("Copilot Command Center: visible")
+                     && copilotCommandCenterPreview
+                     && copilotCommandCenterPreview->objectName()
+                         == QStringLiteral("copilotCommandCenterPreview")
+                     && copilotCommandCenterPreview->text()
+                         == QStringLiteral("Copilot Center: visible")
+                     && copilotCommandCenterPreview
+                            ->property("commandCenterVisible")
+                            .toBool()
+                     && copilotCommandCenterPreview->styleSheet().contains(
+                         QStringLiteral("#copilotCommandCenterPreview"))
+                     && titleButtonBar
+                     && titleButtonBar->actions().contains(
+                         copilotCommandCenterAction)
+                     && copilotCommandCenterButton
+                     && copilotCommandCenterButton->toolButtonStyle()
+                         == Qt::ToolButtonIconOnly
+                     && strCopilotCenterStatus.contains(
+                         QStringLiteral("Copilot Command Center: visible")),
+                 QStringLiteral("Copilot command center visibility is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
     const QList<QAction *> iconOnlyTitleActions = {
         displayOptionsTitleAction,
         autoSaveTitleAction,
@@ -3120,6 +3169,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         commentsTitleAction,
         presenceAvatarStripAction,
         copilotTitleAction,
+        copilotCommandCenterAction,
         feedbackTitleAction,
         helpTitleAction,
         accountTitleAction,
@@ -9154,6 +9204,17 @@ int main(int argc, char *argv[])
     quickAccessStatusPreview->setMinimumWidth(180);
     ribbonStatusBar->addSeparator();
     ribbonStatusBar->addWidget(quickAccessStatusPreview);
+    QLabel *copilotCommandCenterPreview =
+        new QLabel(QObject::tr("Copilot Center: hidden"), ribbonStatusBar);
+    copilotCommandCenterPreview->setObjectName(
+        QStringLiteral("copilotCommandCenterPreview"));
+    copilotCommandCenterPreview->setMinimumWidth(160);
+    copilotCommandCenterPreview->setToolTip(
+        QObject::tr("Copilot command center visibility state"));
+    copilotCommandCenterPreview->setProperty(
+        "commandCenterVisible", false);
+    ribbonStatusBar->addSeparator();
+    ribbonStatusBar->addWidget(copilotCommandCenterPreview);
 
     LqRibbon::RibbonStatusBarSwitchGroup *switchGroup =
         new LqRibbon::RibbonStatusBarSwitchGroup(ribbonStatusBar);
@@ -9496,6 +9557,18 @@ int main(int argc, char *argv[])
     copilotTitleAction->setToolTip(
         QObject::tr("Copilot: Open AI assistance for this document"));
     copilotTitleAction->setStatusTip(QObject::tr("Copilot: ready to help"));
+    QAction *copilotCommandCenterAction =
+        mainWindow.ribbonBar()->addTitleButton(
+            mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
+            QObject::tr("Copilot Center"));
+    copilotCommandCenterAction->setObjectName(
+        QStringLiteral("copilotCommandCenterAction"));
+    copilotCommandCenterAction->setCheckable(true);
+    copilotCommandCenterAction->setToolTip(
+        QObject::tr(
+            "Copilot Center: show or hide the prompt panel"));
+    copilotCommandCenterAction->setStatusTip(
+        QObject::tr("Copilot Command Center: hidden"));
     QAction *feedbackTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxInformation),
         QObject::tr("Feedback"));
@@ -9523,6 +9596,7 @@ int main(int argc, char *argv[])
         commentsTitleAction,
         presenceAvatarStripAction,
         copilotTitleAction,
+        copilotCommandCenterAction,
         feedbackTitleAction,
         helpTitleAction,
         accountTitleAction,
@@ -9600,6 +9674,36 @@ int main(int argc, char *argv[])
                 2500);
         }
     });
+    QObject::connect(copilotCommandCenterAction,
+                     &QAction::toggled,
+                     [&mainWindow,
+                      copilotCommandCenterAction,
+                      copilotCommandCenterPreview](bool visible) {
+                         if (visible) {
+                             copilotCommandCenterPreview->setText(
+                                 QObject::tr("Copilot Center: visible"));
+                             copilotCommandCenterPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#copilotCommandCenterPreview { color: #ffffff; background: #7719aa; font-weight: 600; }"));
+                             copilotCommandCenterAction->setStatusTip(
+                                 QObject::tr(
+                                     "Copilot Command Center: visible"));
+                         } else {
+                             copilotCommandCenterPreview->setText(
+                                 QObject::tr("Copilot Center: hidden"));
+                             copilotCommandCenterPreview->setStyleSheet(
+                                 QString());
+                             copilotCommandCenterAction->setStatusTip(
+                                 QObject::tr(
+                                     "Copilot Command Center: hidden"));
+                         }
+                         copilotCommandCenterPreview->setProperty(
+                             "commandCenterVisible", visible);
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 copilotCommandCenterAction->statusTip(),
+                                 2500);
+                         }
+                     });
     QObject::connect(feedbackTitleAction, &QAction::triggered, [&mainWindow]() {
         if (mainWindow.statusBar()) {
             mainWindow.statusBar()->showMessage(
@@ -10291,6 +10395,7 @@ int main(int argc, char *argv[])
                                 commentsTitleAction,
                                 presenceAvatarStripAction,
                                 copilotTitleAction,
+                                copilotCommandCenterAction,
                                 feedbackTitleAction,
                                 helpTitleAction,
                                 accountTitleAction,
@@ -10402,6 +10507,7 @@ int main(int argc, char *argv[])
                                 coauthoringIndicatorDot,
                                 coauthoringIndicatorLabel,
                                 characterCountStatusLabel,
+                                copilotCommandCenterPreview,
                                 syncAction,
                                 zoomSlider,
                                 zoomStatusLabel,

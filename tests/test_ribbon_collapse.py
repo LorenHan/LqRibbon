@@ -612,6 +612,39 @@ def test_example_copilot_title_button_is_available():
     window.close()
 
 
+def test_example_copilot_command_center_visibility_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    title_bar = window.ribbonBar()._title_button_bar
+    action = window.copilot_command_center_action
+    button = title_bar.widgetForAction(action)
+
+    assert action.objectName() == "copilotCommandCenterAction"
+    assert action.isCheckable()
+    assert not action.isChecked()
+    assert not action.icon().isNull()
+    assert "prompt panel" in action.toolTip()
+    assert action.statusTip() == "Copilot Command Center: hidden"
+    assert window.copilot_command_center_preview.objectName() == "copilotCommandCenterPreview"
+    assert window.copilot_command_center_preview.text() == "Copilot Center: hidden"
+    assert not window.copilot_command_center_preview.property("commandCenterVisible")
+    assert action in title_bar.actions()
+    assert isinstance(button, QToolButton)
+    assert button.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+
+    action.trigger()
+    _app().processEvents()
+    assert action.isChecked()
+    assert action.statusTip() == "Copilot Command Center: visible"
+    assert window.copilot_command_center_preview.text() == "Copilot Center: visible"
+    assert window.copilot_command_center_preview.property("commandCenterVisible")
+    assert "#copilotCommandCenterPreview" in window.copilot_command_center_preview.styleSheet()
+    assert "Copilot Command Center: visible" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_icon_only_title_commands_are_available():
     window = MainWindow()
     window.show()
@@ -625,6 +658,7 @@ def test_example_icon_only_title_commands_are_available():
         window.comments_title_action,
         window.presence_avatar_strip_action,
         window.copilot_title_action,
+        window.copilot_command_center_action,
         window.feedback_title_action,
         window.help_title_action,
         window.account_title_action,
@@ -3368,6 +3402,7 @@ def main():
         test_example_comments_title_button_is_available,
         test_example_presence_avatar_strip_is_available,
         test_example_copilot_title_button_is_available,
+        test_example_copilot_command_center_visibility_is_available,
         test_example_icon_only_title_commands_are_available,
         test_example_accessible_tooltip_names_are_available,
         test_example_screen_reader_names_are_available,
