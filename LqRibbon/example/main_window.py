@@ -532,6 +532,31 @@ class MainWindow(RibbonMainWindow):
             "Preview of the Smart Lookup command surface"
         )
         insights_group.addWidget(self.smart_lookup_preview)
+        protection_group = self.review_page.addGroup("Protection")
+        self.sensitivity_label_action = protection_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_MessageBoxWarning),
+            "Sensitivity",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.sensitivity_label_action.setObjectName("sensitivityLabelAction")
+        self.sensitivity_label_action.setToolTip(
+            "Apply a sensitivity label to this document"
+        )
+        self.sensitivity_label_action.setStatusTip(
+            "Sensitivity: apply Confidential label"
+        )
+        self.sensitivity_label_preview = QLabel(
+            "Sensitivity: Public", protection_group
+        )
+        self.sensitivity_label_preview.setObjectName("sensitivityLabelPreview")
+        self.sensitivity_label_preview.setMinimumWidth(180)
+        self.sensitivity_label_preview.setFixedHeight(30)
+        self.sensitivity_label_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sensitivity_label_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.sensitivity_label_preview.setToolTip(
+            "Current document sensitivity label"
+        )
+        protection_group.addWidget(self.sensitivity_label_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -1080,6 +1105,7 @@ class MainWindow(RibbonMainWindow):
             self.focus_search_action,
             self.control_modes_action,
             self.smart_lookup_action,
+            self.sensitivity_label_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
@@ -1101,6 +1127,7 @@ class MainWindow(RibbonMainWindow):
         self.basic_action.triggered.connect(lambda: self._message("Basic Operation"))
         self.driver_action.triggered.connect(lambda: self._message("Driver Configuration"))
         self.smart_lookup_action.triggered.connect(self.open_smart_lookup)
+        self.sensitivity_label_action.triggered.connect(self.apply_sensitivity_label)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1367,6 +1394,7 @@ class MainWindow(RibbonMainWindow):
             self.office_popup_action,
             self.office_menu_action,
             self.smart_lookup_action,
+            self.sensitivity_label_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
             self.show_customize_action,
@@ -1679,6 +1707,13 @@ class MainWindow(RibbonMainWindow):
     def open_smart_lookup(self):
         self.smart_lookup_preview.setText("Insights ready for selected text")
         self._message("Smart Lookup: insights for selected text")
+
+    def apply_sensitivity_label(self):
+        self.sensitivity_label_preview.setText("Sensitivity: Confidential")
+        self.sensitivity_label_preview.setStyleSheet(
+            "QLabel#sensitivityLabelPreview { color: #5c2d91; font-weight: 600; }"
+        )
+        self._message("Sensitivity: Confidential label applied")
 
     def open_tell_me_help_redirect(self):
         query = self.ribbonBar().searchText().strip() or "unmatched Tell Me phrase"

@@ -1022,6 +1022,28 @@ def test_example_smart_lookup_command_surface():
     window.close()
 
 
+def test_example_sensitivity_label_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.sensitivity_label_action.objectName() == "sensitivityLabelAction"
+    assert not window.sensitivity_label_action.icon().isNull()
+    assert "sensitivity label" in window.sensitivity_label_action.toolTip()
+    assert window.sensitivity_label_preview.objectName() == "sensitivityLabelPreview"
+    assert window.sensitivity_label_preview.text() == "Sensitivity: Public"
+    assert window.sensitivity_label_action in window.search_actions
+    assert ribbon.searchAction("Sensitivity") is window.sensitivity_label_action
+
+    window.sensitivity_label_action.trigger()
+    _app().processEvents()
+    assert window.sensitivity_label_preview.text() == "Sensitivity: Confidential"
+    assert "#sensitivityLabelPreview" in window.sensitivity_label_preview.styleSheet()
+    assert "Sensitivity" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1651,6 +1673,7 @@ def main():
         test_example_search_shows_help_result_section,
         test_example_search_shows_related_file_result_section,
         test_example_smart_lookup_command_surface,
+        test_example_sensitivity_label_command_surface,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,

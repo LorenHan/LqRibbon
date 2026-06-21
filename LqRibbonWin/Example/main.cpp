@@ -268,6 +268,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *smartLookupAction,
                      LqRibbon::RibbonPage *reviewPage,
                      QLabel *smartLookupPreview,
+                     QAction *sensitivityLabelAction,
+                     QLabel *sensitivityLabelPreview,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -757,6 +759,40 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strSmartLookupStatus.contains(
                          QStringLiteral("Smart Lookup")),
                  QStringLiteral("Smart Lookup command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *sensitivityLabelButton =
+        collapseTestActionButton(ribbonBar, sensitivityLabelAction);
+    if (sensitivityLabelAction) {
+        sensitivityLabelAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strSensitivityStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(sensitivityLabelAction
+                     && sensitivityLabelAction->objectName()
+                         == QStringLiteral("sensitivityLabelAction")
+                     && !sensitivityLabelAction->icon().isNull()
+                     && sensitivityLabelAction->toolTip().contains(
+                         QStringLiteral("sensitivity label"))
+                     && sensitivityLabelButton
+                     && sensitivityLabelPreview
+                     && sensitivityLabelPreview->objectName()
+                         == QStringLiteral("sensitivityLabelPreview")
+                     && sensitivityLabelPreview->text()
+                         == QStringLiteral("Sensitivity: Confidential")
+                     && sensitivityLabelPreview->styleSheet().contains(
+                         QStringLiteral("#sensitivityLabelPreview"))
+                     && ribbonBar->searchAction(QStringLiteral("Sensitivity"))
+                         == sensitivityLabelAction
+                     && strSensitivityStatus.contains(
+                         QStringLiteral("Sensitivity")),
+                 QStringLiteral("Sensitivity label command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3298,6 +3334,29 @@ int main(int argc, char *argv[])
     smartLookupPreview->setToolTip(
         QObject::tr("Preview of the Smart Lookup command surface"));
     insightsGroup->addWidget(smartLookupPreview);
+    LqRibbon::RibbonGroup *protectionGroup =
+        reviewPage->addGroup(QObject::tr("Protection"));
+    QAction *sensitivityLabelAction = protectionGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MessageBoxWarning),
+        QObject::tr("Sensitivity"),
+        Qt::ToolButtonTextUnderIcon);
+    sensitivityLabelAction->setObjectName(
+        QStringLiteral("sensitivityLabelAction"));
+    sensitivityLabelAction->setToolTip(
+        QObject::tr("Apply a sensitivity label to this document"));
+    sensitivityLabelAction->setStatusTip(
+        QObject::tr("Sensitivity: apply Confidential label"));
+    QLabel *sensitivityLabelPreview = new QLabel(protectionGroup);
+    sensitivityLabelPreview->setObjectName(
+        QStringLiteral("sensitivityLabelPreview"));
+    sensitivityLabelPreview->setText(QObject::tr("Sensitivity: Public"));
+    sensitivityLabelPreview->setMinimumWidth(180);
+    sensitivityLabelPreview->setFixedHeight(30);
+    sensitivityLabelPreview->setAlignment(Qt::AlignCenter);
+    sensitivityLabelPreview->setFrameShape(QFrame::StyledPanel);
+    sensitivityLabelPreview->setToolTip(
+        QObject::tr("Current document sensitivity label"));
+    protectionGroup->addWidget(sensitivityLabelPreview);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -3796,6 +3855,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), focusSearchAction);
     customizeManager->addToCategory(QObject::tr("Actions"), controlModesAction);
     customizeManager->addToCategory(QObject::tr("Actions"), smartLookupAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), sensitivityLabelAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     showQuickAccessBarAction);
@@ -4858,6 +4918,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(officePopupAction);
     mainWindow.ribbonBar()->registerSearchAction(officeMenuAction);
     mainWindow.ribbonBar()->registerSearchAction(smartLookupAction);
+    mainWindow.ribbonBar()->registerSearchAction(sensitivityLabelAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
     mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
@@ -5040,6 +5101,20 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(sensitivityLabelAction,
+                     &QAction::triggered,
+                     [&mainWindow, sensitivityLabelPreview]() {
+                         sensitivityLabelPreview->setText(
+                             QObject::tr("Sensitivity: Confidential"));
+                         sensitivityLabelPreview->setStyleSheet(
+                             QStringLiteral("QLabel#sensitivityLabelPreview { color: #5c2d91; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Sensitivity: Confidential label applied"),
+                                 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -5167,6 +5242,8 @@ int main(int argc, char *argv[])
                                 smartLookupAction,
                                 reviewPage,
                                 smartLookupPreview,
+                                sensitivityLabelAction,
+                                sensitivityLabelPreview,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,
