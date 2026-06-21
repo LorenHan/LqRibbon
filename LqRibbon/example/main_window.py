@@ -899,12 +899,31 @@ class MainWindow(RibbonMainWindow):
         self.system_menu = RibbonSystemMenu(self.ribbonBar())
         self.system_menu.addPopupBarAction("New")
         self.system_menu.addPopupBarAction("Open")
-        recent_files = self.system_menu.addPageRecentFile("Recent Files")
-        recent_files.updateRecentFileActions(["axis-profile.lqr", "drive-layout.lqr"])
+        self.recent_file_default_order = ["drive-layout.lqr", "axis-profile.lqr"]
+        self.recent_file_pinned_order = ["axis-profile.lqr", "drive-layout.lqr"]
+        self.recent_files = self.system_menu.addPageRecentFile("Recent Files")
+        self.recent_files.updateRecentFileActions(self.recent_file_default_order)
         export_action = QAction(
             self._icon(QStyle.StandardPixmap.SP_DialogSaveButton), "Export", self.system_menu
         )
         self.system_menu.addPageSystemPopup("Export", export_action, True)
+        self.pin_recent_file_action = QAction(
+            self._icon(QStyle.StandardPixmap.SP_DialogApplyButton),
+            "Pin Recent File",
+            self.system_menu,
+        )
+        self.pin_recent_file_action.setObjectName("pinRecentFileAction")
+        self.pin_recent_file_action.setCheckable(True)
+        self.pin_recent_file_action.setToolTip(
+            "Pin axis-profile.lqr to the top of Recent Files"
+        )
+        self.pin_recent_file_action.setStatusTip(
+            "Pin or unpin axis-profile.lqr in Recent Files"
+        )
+        self.pin_recent_file_action.toggled.connect(self._set_recent_file_pinned)
+        self.system_menu.addPageSystemPopup(
+            "Pin Recent", self.pin_recent_file_action, True
+        )
 
         system_button = self.ribbonBar().systemButton()
         if system_button:
@@ -1726,6 +1745,28 @@ class MainWindow(RibbonMainWindow):
     def always_show_ribbon(self):
         self.ribbonBar().setSimplifiedMode(False)
         self.pin_ribbon()
+
+    def _set_recent_file_pinned(self, pinned):
+        self.recent_files.updateRecentFileActions(
+            self.recent_file_pinned_order if pinned else self.recent_file_default_order
+        )
+        self.pin_recent_file_action.setText(
+            "Unpin Recent File" if pinned else "Pin Recent File"
+        )
+        self.pin_recent_file_action.setToolTip(
+            (
+                "Unpin axis-profile.lqr from Recent Files"
+                if pinned
+                else "Pin axis-profile.lqr to the top of Recent Files"
+            )
+        )
+        self._message(
+            (
+                "Pinned recent file: axis-profile.lqr"
+                if pinned
+                else "Unpinned recent file: axis-profile.lqr"
+            )
+        )
 
     def update_collapse_state_preview(self):
         ribbon = self.ribbonBar()

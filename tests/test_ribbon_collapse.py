@@ -560,6 +560,36 @@ def test_example_cloud_location_picker_is_available():
     window.close()
 
 
+def test_example_recent_file_pinning_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    action = window.pin_recent_file_action
+    recent_files = window.recent_files
+
+    assert action.objectName() == "pinRecentFileAction"
+    assert action.isCheckable()
+    assert not action.isChecked()
+    assert action.text() == "Pin Recent File"
+    assert recent_files.files == ["drive-layout.lqr", "axis-profile.lqr"]
+
+    action.trigger()
+    _app().processEvents()
+    assert action.isChecked()
+    assert action.text() == "Unpin Recent File"
+    assert recent_files.files == ["axis-profile.lqr", "drive-layout.lqr"]
+    assert "Pinned recent file" in window.statusBar().currentMessage()
+
+    action.trigger()
+    _app().processEvents()
+    assert not action.isChecked()
+    assert action.text() == "Pin Recent File"
+    assert recent_files.files == ["drive-layout.lqr", "axis-profile.lqr"]
+    assert "Unpinned recent file" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_caption_search_defaults_to_centered_microsoft_box():
     window = MainWindow()
     window.show()
@@ -1553,6 +1583,7 @@ def main():
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,
+        test_example_recent_file_pinning_is_available,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,

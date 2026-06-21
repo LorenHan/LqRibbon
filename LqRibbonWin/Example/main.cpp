@@ -279,6 +279,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonBackstageView *backstage,
                      QAction *saveCopyAction,
                      QComboBox *cloudLocationCombo,
+                     LqRibbon::RibbonPageSystemRecentFileList *recentFiles,
+                     QAction *pinRecentFileAction,
                      QAction *versionHistoryAction,
                      QWidget *versionHistoryPage,
                      QLabel *versionHistoryCurrentLabel,
@@ -1426,6 +1428,74 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strCloudLocationStatus.contains(
                          QStringLiteral("SharePoint Team Site")),
                  QStringLiteral("Cloud location picker is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const auto recentFileTexts =
+        [](LqRibbon::RibbonPageSystemRecentFileList *list) {
+            QStringList texts;
+            if (!list) {
+                return texts;
+            }
+            const QObjectList children = list->children();
+            for (QObject *child : children) {
+                QAction *action = qobject_cast<QAction *>(child);
+                if (action) {
+                    texts.append(action->text());
+                }
+            }
+            return texts;
+        };
+    const QStringList recentBefore = recentFileTexts(recentFiles);
+    if (pinRecentFileAction) {
+        pinRecentFileAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QStringList recentPinned = recentFileTexts(recentFiles);
+    const QString strRecentPinnedStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(recentFiles
+                     && pinRecentFileAction
+                     && pinRecentFileAction->objectName()
+                         == QStringLiteral("pinRecentFileAction")
+                     && pinRecentFileAction->isCheckable()
+                     && pinRecentFileAction->isChecked()
+                     && pinRecentFileAction->text()
+                         == QStringLiteral("Unpin Recent File")
+                     && recentBefore.value(0)
+                         == QStringLiteral("drive-layout.lqr")
+                     && recentPinned.value(0)
+                         == QStringLiteral("axis-profile.lqr")
+                     && recentPinned.value(1)
+                         == QStringLiteral("drive-layout.lqr")
+                     && strRecentPinnedStatus.contains(
+                         QStringLiteral("Pinned recent file")),
+                 QStringLiteral("Recent file pinning pins file to top"))) {
+        return 1;
+    }
+    if (pinRecentFileAction) {
+        pinRecentFileAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QStringList recentRestored = recentFileTexts(recentFiles);
+    const QString strRecentRestoredStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(pinRecentFileAction
+                     && !pinRecentFileAction->isChecked()
+                     && pinRecentFileAction->text()
+                         == QStringLiteral("Pin Recent File")
+                     && recentRestored.value(0)
+                         == QStringLiteral("drive-layout.lqr")
+                     && recentRestored.value(1)
+                         == QStringLiteral("axis-profile.lqr")
+                     && strRecentRestoredStatus.contains(
+                         QStringLiteral("Unpinned recent file")),
+                 QStringLiteral("Recent file pinning restores default order"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3526,13 +3596,60 @@ int main(int argc, char *argv[])
     systemMenu->addPopupBarAction(QObject::tr("Open"));
     LqRibbon::RibbonPageSystemRecentFileList *recentFiles =
         systemMenu->addPageRecentFile(QObject::tr("Recent Files"));
-    recentFiles->updateRecentFileActions(QStringList()
-                                         << QObject::tr("axis-profile.lqr")
-                                         << QObject::tr("drive-layout.lqr"));
+    const QStringList defaultRecentFiles =
+        QStringList() << QObject::tr("drive-layout.lqr")
+                      << QObject::tr("axis-profile.lqr");
+    const QString pinnedRecentFile = QObject::tr("axis-profile.lqr");
+    recentFiles->updateRecentFileActions(defaultRecentFiles);
     QAction *exportAction = new QAction(
         mainWindow.style()->standardIcon(QStyle::SP_DialogSaveButton),
         QObject::tr("Export"), systemMenu);
     systemMenu->addPageSystemPopup(QObject::tr("Export"), exportAction, true);
+    QAction *pinRecentFileAction = new QAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
+        QObject::tr("Pin Recent File"),
+        systemMenu);
+    pinRecentFileAction->setObjectName(QStringLiteral("pinRecentFileAction"));
+    pinRecentFileAction->setCheckable(true);
+    pinRecentFileAction->setToolTip(
+        QObject::tr("Pin axis-profile.lqr to the top of Recent Files"));
+    pinRecentFileAction->setStatusTip(
+        QObject::tr("Pin or unpin axis-profile.lqr in Recent Files"));
+    QObject::connect(pinRecentFileAction,
+                     &QAction::toggled,
+                     &mainWindow,
+                     [recentFiles,
+                      defaultRecentFiles,
+                      pinnedRecentFile,
+                      pinRecentFileAction,
+                      &mainWindow](bool pinned) {
+                         QStringList files = defaultRecentFiles;
+                         if (pinned) {
+                             files.removeAll(pinnedRecentFile);
+                             files.prepend(pinnedRecentFile);
+                         }
+                         recentFiles->updateRecentFileActions(files);
+                         pinRecentFileAction->setText(
+                             pinned ? QObject::tr("Unpin Recent File")
+                                    : QObject::tr("Pin Recent File"));
+                         pinRecentFileAction->setToolTip(
+                             pinned
+                                 ? QObject::tr(
+                                       "Unpin axis-profile.lqr from Recent Files")
+                                 : QObject::tr(
+                                       "Pin axis-profile.lqr to the top of Recent Files"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 pinned
+                                     ? QObject::tr(
+                                           "Pinned recent file: axis-profile.lqr")
+                                     : QObject::tr(
+                                           "Unpinned recent file: axis-profile.lqr"),
+                                 2500);
+                         }
+                     });
+    systemMenu->addPageSystemPopup(
+        QObject::tr("Pin Recent"), pinRecentFileAction, true);
     if (mainWindow.ribbonBar()->systemButton()) {
         mainWindow.ribbonBar()->systemButton()->setBackstage(backstage);
         mainWindow.ribbonBar()->systemButton()->setSystemMenu(systemMenu);
@@ -4936,6 +5053,8 @@ int main(int argc, char *argv[])
                                 backstage,
                                 saveCopyAction,
                                 cloudLocationCombo,
+                                recentFiles,
+                                pinRecentFileAction,
                                 versionHistoryAction,
                                 versionHistoryPage,
                                 versionHistoryCurrentLabel,
