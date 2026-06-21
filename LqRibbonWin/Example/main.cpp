@@ -490,6 +490,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *renameCustomPreview,
                      QAction *addCommandAction,
                      QLabel *customCommandPreview,
+                     QAction *removeCommandAction,
+                     QLabel *removedCommandPreview,
                      QAction *renamePageAction,
                      QAction *moveGalleryAction,
                      QAction *toggleGroupAction,
@@ -3702,6 +3704,45 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("Add command to custom group appends action"))) {
         return 1;
     }
+    if (!require(removeCommandAction
+                     && removeCommandAction->objectName()
+                         == QStringLiteral("removeCustomCommandAction")
+                     && !removeCommandAction->icon().isNull()
+                     && removeCommandAction->toolTip().contains(
+                         QStringLiteral("last command"))
+                     && removeCommandAction->statusTip()
+                         == QStringLiteral("Custom command: not removed")
+                     && removedCommandPreview
+                     && removedCommandPreview->objectName()
+                         == QStringLiteral("removedCommandPreview")
+                     && removedCommandPreview->text()
+                         == QStringLiteral("Removed command: none")
+                     && ribbonBar->searchAction(
+                            QStringLiteral("Remove Command"))
+                         == removeCommandAction,
+                 QStringLiteral("Remove command from custom group defaults empty"))) {
+        return 1;
+    }
+    removeCommandAction->trigger();
+    processCollapseTestEvents();
+    const QList<QAction *> afterRemoveActions =
+        customizeManager->actionsGroup(customGroup);
+    const QString strRemoveCommandStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(afterRemoveActions.count() == customGroupActions.count() - 1
+                     && !afterRemoveActions.contains(addedCustomCommand)
+                     && removedCommandPreview->text()
+                         == QStringLiteral("Removed command: Custom Command 1")
+                     && removedCommandPreview->styleSheet().contains(
+                         QStringLiteral("#removedCommandPreview"))
+                     && removeCommandAction->statusTip()
+                         == QStringLiteral("Removed command: Custom Command 1")
+                     && strRemoveCommandStatus.contains(
+                         QStringLiteral("Removed command")),
+                 QStringLiteral("Remove command from custom group removes action"))) {
+        return 1;
+    }
 
     return 0;
 }
@@ -5727,6 +5768,27 @@ int main(int argc, char *argv[])
     customCommandPreview->setToolTip(
         QObject::tr("Last command added to a custom group"));
     runtimeGroup->addWidget(customCommandPreview);
+    QAction *removeCommandAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogCancelButton),
+        QObject::tr("Remove Command"),
+        Qt::ToolButtonTextBesideIcon);
+    removeCommandAction->setObjectName(
+        QStringLiteral("removeCustomCommandAction"));
+    removeCommandAction->setToolTip(
+        QObject::tr("Remove the last command from the custom group"));
+    removeCommandAction->setStatusTip(
+        QObject::tr("Custom command: not removed"));
+    QLabel *removedCommandPreview = new QLabel(runtimeGroup);
+    removedCommandPreview->setObjectName(
+        QStringLiteral("removedCommandPreview"));
+    removedCommandPreview->setText(QObject::tr("Removed command: none"));
+    removedCommandPreview->setMinimumWidth(190);
+    removedCommandPreview->setFixedHeight(30);
+    removedCommandPreview->setAlignment(Qt::AlignCenter);
+    removedCommandPreview->setFrameShape(QFrame::StyledPanel);
+    removedCommandPreview->setToolTip(
+        QObject::tr("Last command removed from a custom group"));
+    runtimeGroup->addWidget(removedCommandPreview);
     QAction *renamePageAction = runtimeGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
         QObject::tr("Rename Driver"),
@@ -6168,6 +6230,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), addGroupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), renameCustomAction);
     customizeManager->addToCategory(QObject::tr("Actions"), addCommandAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), removeCommandAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     dictateMicrophoneAction);
@@ -7173,6 +7236,44 @@ int main(int argc, char *argv[])
                                  addCommandAction->statusTip(), 2500);
                          }
                      });
+    QObject::connect(removeCommandAction, &QAction::triggered,
+                     [&mainWindow,
+                      addGroupAction,
+                      removeCommandAction,
+                      customizeManager,
+                      removedCommandPreview,
+                      &lastCustomGroup]() {
+                         if (!lastCustomGroup) {
+                             addGroupAction->trigger();
+                         }
+                         const QList<QAction *> actions =
+                             customizeManager->actionsGroup(lastCustomGroup);
+                         if (actions.isEmpty()) {
+                             removeCommandAction->setStatusTip(
+                                 QObject::tr(
+                                     "Custom command: nothing to remove"));
+                             if (mainWindow.statusBar()) {
+                                 mainWindow.statusBar()->showMessage(
+                                     removeCommandAction->statusTip(), 2500);
+                             }
+                             return;
+                         }
+                         const QString removedText = actions.last()->text();
+                         customizeManager->removeActionAt(
+                             lastCustomGroup, actions.count() - 1);
+                         removedCommandPreview->setText(
+                             QObject::tr("Removed command: %1")
+                                 .arg(removedText));
+                         removedCommandPreview->setStyleSheet(
+                             QStringLiteral("QLabel#removedCommandPreview { color: #842029; background: #f8d7da; font-weight: 600; }"));
+                         removeCommandAction->setStatusTip(
+                             QObject::tr("Removed command: %1")
+                                 .arg(removedText));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 removeCommandAction->statusTip(), 2500);
+                         }
+                     });
     QObject::connect(renamePageAction, &QAction::triggered,
                      [driverPage]() {
                          driverPage->setTitle(
@@ -7512,6 +7613,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(addGroupAction);
     mainWindow.ribbonBar()->registerSearchAction(renameCustomAction);
     mainWindow.ribbonBar()->registerSearchAction(addCommandAction);
+    mainWindow.ribbonBar()->registerSearchAction(removeCommandAction);
     mainWindow.ribbonBar()->registerSearchAction(renamePageAction);
     mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
     mainWindow.ribbonBar()->registerSearchAction(toggleGroupAction);
@@ -8388,6 +8490,8 @@ int main(int argc, char *argv[])
                                 renameCustomPreview,
                                 addCommandAction,
                                 customCommandPreview,
+                                removeCommandAction,
+                                removedCommandPreview,
                                 renamePageAction,
                                 moveGalleryAction,
                                 toggleGroupAction,

@@ -1169,6 +1169,41 @@ def test_example_add_command_to_custom_group_is_available():
     window.close()
 
 
+def test_example_remove_command_from_custom_group_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    window.add_page_action.trigger()
+    window.add_group_action.trigger()
+    window.add_command_action.trigger()
+    _app().processEvents()
+    custom_group = window.last_custom_group
+    actions_before_remove = window.customize_manager.actionsGroup(custom_group)
+    command_to_remove = actions_before_remove[-1]
+
+    assert window.remove_command_action.objectName() == "removeCustomCommandAction"
+    assert not window.remove_command_action.icon().isNull()
+    assert "last command" in window.remove_command_action.toolTip()
+    assert window.remove_command_action.statusTip() == "Custom command: not removed"
+    assert window.removed_command_preview.objectName() == "removedCommandPreview"
+    assert window.removed_command_preview.text() == "Removed command: none"
+    assert window.remove_command_action in window.search_actions
+    assert ribbon.searchAction("Remove Command") is window.remove_command_action
+
+    window.remove_command_action.trigger()
+    _app().processEvents()
+    actions_after_remove = window.customize_manager.actionsGroup(custom_group)
+    assert len(actions_after_remove) == len(actions_before_remove) - 1
+    assert command_to_remove not in actions_after_remove
+    assert window.removed_command_preview.text() == "Removed command: Custom Command 1"
+    assert "#removedCommandPreview" in window.removed_command_preview.styleSheet()
+    assert window.remove_command_action.statusTip() == "Removed command: Custom Command 1"
+    assert "Removed command" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2634,6 +2669,7 @@ def main():
         test_example_custom_group_creation_is_available,
         test_example_rename_custom_tab_and_group_is_available,
         test_example_add_command_to_custom_group_is_available,
+        test_example_remove_command_from_custom_group_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

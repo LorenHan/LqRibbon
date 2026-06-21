@@ -1290,6 +1290,23 @@ class MainWindow(RibbonMainWindow):
         self.custom_command_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.custom_command_preview.setToolTip("Last command added to a custom group")
         self.runtime_group.addWidget(self.custom_command_preview)
+        self.remove_command_action = self._add_group_action(
+            self.runtime_group,
+            QStyle.StandardPixmap.SP_DialogCancelButton,
+            "Remove Command",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.remove_command_action.setObjectName("removeCustomCommandAction")
+        self.remove_command_action.setToolTip("Remove the last command from the custom group")
+        self.remove_command_action.setStatusTip("Custom command: not removed")
+        self.removed_command_preview = QLabel("Removed command: none", self.runtime_group)
+        self.removed_command_preview.setObjectName("removedCommandPreview")
+        self.removed_command_preview.setMinimumWidth(190)
+        self.removed_command_preview.setFixedHeight(30)
+        self.removed_command_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.removed_command_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.removed_command_preview.setToolTip("Last command removed from a custom group")
+        self.runtime_group.addWidget(self.removed_command_preview)
         self.rename_page_action = self._add_group_action(
             self.runtime_group,
             QStyle.StandardPixmap.SP_FileDialogInfoView,
@@ -1810,6 +1827,7 @@ class MainWindow(RibbonMainWindow):
             self.add_group_action,
             self.rename_custom_action,
             self.add_command_action,
+            self.remove_command_action,
             self.connect_action,
             self.dictate_microphone_action,
             self.office_popup_action,
@@ -1915,6 +1933,7 @@ class MainWindow(RibbonMainWindow):
         self.add_group_action.triggered.connect(self.add_custom_group)
         self.rename_custom_action.triggered.connect(self.rename_custom_tab_and_group)
         self.add_command_action.triggered.connect(self.add_command_to_custom_group)
+        self.remove_command_action.triggered.connect(self.remove_command_from_custom_group)
         self.rename_page_action.triggered.connect(self.rename_driver_page)
         self.move_gallery_action.triggered.connect(self.move_gallery_page)
         self.toggle_group_action.triggered.connect(self.toggle_specialist_group)
@@ -2176,6 +2195,7 @@ class MainWindow(RibbonMainWindow):
             self.add_group_action,
             self.rename_custom_action,
             self.add_command_action,
+            self.remove_command_action,
             self.rename_page_action,
             self.move_gallery_action,
             self.toggle_group_action,
@@ -3185,6 +3205,23 @@ class MainWindow(RibbonMainWindow):
         )
         self.add_command_action.setStatusTip(f"Custom command: {action.text()}")
         self._message(self.add_command_action.statusTip())
+
+    def remove_command_from_custom_group(self):
+        if self.last_custom_group is None:
+            self.add_custom_group()
+        actions = self.customize_manager.actionsGroup(self.last_custom_group)
+        if not actions:
+            self.remove_command_action.setStatusTip("Custom command: nothing to remove")
+            self._message(self.remove_command_action.statusTip())
+            return
+        removed_text = actions[-1].text()
+        self.customize_manager.removeActionAt(self.last_custom_group, len(actions) - 1)
+        self.removed_command_preview.setText(f"Removed command: {removed_text}")
+        self.removed_command_preview.setStyleSheet(
+            "QLabel#removedCommandPreview { color: #842029; background: #f8d7da; font-weight: 600; }"
+        )
+        self.remove_command_action.setStatusTip(f"Removed command: {removed_text}")
+        self._message(self.remove_command_action.statusTip())
 
     def rename_driver_page(self):
         self.driver_page.setTitle("Drive" if self.driver_page.title() == "Driver" else "Driver")

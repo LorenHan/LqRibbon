@@ -1749,6 +1749,11 @@ class LqRibbonCustomizeManager:
     def actionsGroup(self, group):
         return list(group.actions()) if group else []
 
+    def removeActionAt(self, group, index):
+        actions = self.actionsGroup(group)
+        if group and 0 <= index < len(actions):
+            group.removeAction(actions[index])
+
     def saveStateToDevice(self, device):
         page_titles = [str(page.title) for page in self.ribbon_bar.pages()]
         state = ("<ribbon pages=\"" + "|".join(page_titles) + "\"/>").encode("utf-8")

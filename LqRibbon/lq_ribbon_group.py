@@ -425,6 +425,17 @@ class LqRibbonGroup(QGroupBox):
     def controlByAction(self, action):
         return self._action_widgets.get(action)
 
+    def removeAction(self, action):
+        widget = self._action_widgets.pop(action, None)
+        if widget is not None:
+            self.main_layout.removeWidget(widget)
+            self.grid_layout.removeWidget(widget)
+            if widget in self.buttons:
+                self.buttons.remove(widget)
+            widget.deleteLater()
+        if action in self.actions:
+            self.actions.remove(action)
+
     def controlByWidget(self, widget):
         return widget if widget in self._controls else None
 
