@@ -208,6 +208,7 @@ class MainWindow(RibbonMainWindow):
         self.runtime_page_counter = 1
         self.saved_ribbon_state = b""
         self.search_actions = []
+        self.high_contrast_style_pass = False
         self.create_ribbon()
         self.install_default_content()
 
@@ -369,6 +370,19 @@ class MainWindow(RibbonMainWindow):
         self._update_style_preview(RibbonStyle.Office2016Blue)
         style_group.addWidget(self.style_preview_widget)
         style_group.addWidget(self.state_timing_preview)
+        self.high_contrast_style_action = style_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_MessageBoxWarning),
+            "High Contrast",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.high_contrast_style_action.setObjectName("highContrastStyleAction")
+        self.high_contrast_style_action.setCheckable(True)
+        self.high_contrast_style_action.setToolTip(
+            "High Contrast: preview maximum contrast colors"
+        )
+        self.high_contrast_style_action.setStatusTip(
+            "High Contrast: preview off"
+        )
         style_combo.highlighted.connect(self._preview_selected_ribbon_style)
         style_combo.currentIndexChanged.connect(self._apply_selected_ribbon_style)
 
@@ -411,7 +425,19 @@ class MainWindow(RibbonMainWindow):
         style = LqStyle.coerce_style(style)
         palette = LqStyle.palette(style)
         self.style_preview_widget.setProperty("previewStyle", int(style))
-        self.style_preview_widget.setToolTip(LqStyle.ribbon_style_name(style))
+        high_contrast = bool(self.high_contrast_style_pass)
+        self.style_preview_widget.setProperty("highContrast", high_contrast)
+        tooltip = LqStyle.ribbon_style_name(style)
+        if high_contrast:
+            tooltip = f"{tooltip} - High Contrast preview"
+        self.style_preview_widget.setToolTip(tooltip)
+        colors = {
+            "accent": "#ffff00",
+            "ribbon_bg": "#000000",
+            "field_bg": "#000000",
+            "text": "#ffffff",
+            "control_border": "#ffffff",
+        } if high_contrast else palette
         for object_name, palette_key in [
             ("lqRibbonStylePreviewAccent", "accent"),
             ("lqRibbonStylePreviewRibbon", "ribbon_bg"),
@@ -421,9 +447,9 @@ class MainWindow(RibbonMainWindow):
             swatch = self.style_preview_widget.findChild(QFrame, object_name)
             if swatch is None:
                 continue
-            color = palette[palette_key]
+            color = colors[palette_key]
             swatch.setProperty("previewColor", color)
-            border = palette["control_border"]
+            border = colors["control_border"]
             swatch.setStyleSheet(
                 f"QFrame {{ background: {color}; border: 1px solid {border}; }}"
             )
@@ -1527,6 +1553,7 @@ class MainWindow(RibbonMainWindow):
             self.customize_manager.addToCategory("Pages", page)
         for action in [
             self.full_screen_action,
+            self.high_contrast_style_action,
             self.connect_action,
             self.dictate_microphone_action,
             self.office_popup_action,
@@ -1565,6 +1592,9 @@ class MainWindow(RibbonMainWindow):
 
     def _connect_actions(self):
         self.full_screen_action.triggered.connect(self.toggle_full_screen)
+        self.high_contrast_style_action.toggled.connect(
+            self.toggle_high_contrast_style_preview
+        )
         self.mdi_action.triggered.connect(lambda: self.show_mdi_content(tabbed=False))
         self.tab_action.triggered.connect(lambda: self.show_mdi_content(tabbed=True))
         self.settings_action.triggered.connect(lambda: self._message("Settings"))
@@ -1850,6 +1880,7 @@ class MainWindow(RibbonMainWindow):
 
         self.search_actions = [
             self.full_screen_action,
+            self.high_contrast_style_action,
             self.mdi_action,
             self.tab_action,
             self.settings_action,
@@ -2644,6 +2675,14 @@ class MainWindow(RibbonMainWindow):
     def focus_search_preview(self):
         self.ribbonBar().searchLineEdit().setFocus()
         self.ribbonBar().setSearchText("ba")
+
+    def toggle_high_contrast_style_preview(self, enabled):
+        self.high_contrast_style_pass = bool(enabled)
+        self.high_contrast_style_action.setStatusTip(
+            "High Contrast: preview on" if enabled else "High Contrast: preview off"
+        )
+        self._update_style_preview(self.ribbonStyle())
+        self._message(self.high_contrast_style_action.statusTip())
 
     def _apply_icon_only_title_buttons(self):
         title_bar = self.ribbonBar()._title_button_bar

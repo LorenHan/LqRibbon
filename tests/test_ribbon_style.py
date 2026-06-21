@@ -183,6 +183,38 @@ def test_example_state_timing_preview_tracks_style():
     window.close()
 
 
+def test_example_high_contrast_style_preview_pass():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    preview = window.style_preview_widget
+    accent = preview.findChild(QFrame, "lqRibbonStylePreviewAccent")
+
+    assert window.ribbonStyle() == RibbonStyle.Office2016Blue
+    assert window.high_contrast_style_action.objectName() == "highContrastStyleAction"
+    assert window.high_contrast_style_action.isCheckable()
+    assert not window.high_contrast_style_action.isChecked()
+    assert preview.property("highContrast") is False
+
+    window.high_contrast_style_action.trigger()
+    _app().processEvents()
+    assert window.ribbonStyle() == RibbonStyle.Office2016Blue
+    assert preview.property("highContrast") is True
+    assert accent.property("previewColor") == "#ffff00"
+    assert "High Contrast" in preview.toolTip()
+    assert "preview on" in window.high_contrast_style_action.statusTip()
+    assert "High Contrast" in window.statusBar().currentMessage()
+
+    window.high_contrast_style_action.trigger()
+    _app().processEvents()
+    assert preview.property("highContrast") is False
+    assert accent.property("previewColor") == LqStyle.palette(
+        RibbonStyle.Office2016Blue
+    )["accent"]
+    assert "preview off" in window.high_contrast_style_action.statusTip()
+    window.close()
+
+
 def test_example_style_choice_persists_to_settings():
     with tempfile.TemporaryDirectory() as directory:
         path = os.path.join(directory, "style.ini")
@@ -223,6 +255,7 @@ def main():
         test_example_system_combo_follows_palette,
         test_example_style_preview_tracks_combo,
         test_example_state_timing_preview_tracks_style,
+        test_example_high_contrast_style_preview_pass,
         test_example_style_choice_persists_to_settings,
     ]
     for test in tests:

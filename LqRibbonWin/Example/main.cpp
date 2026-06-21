@@ -3585,6 +3585,7 @@ void updateRibbonStylePreview(QWidget *preview,
     const RibbonStylePreviewPalette palette =
         ribbonStylePreviewPalette(style);
     preview->setProperty("previewStyle", static_cast<int>(style));
+    preview->setProperty("highContrast", false);
     preview->setToolTip(LqRibbon::RibbonBar::ribbonStyleName(style));
     setRibbonStylePreviewColor(preview,
                                QStringLiteral("lqRibbonStylePreviewAccent"),
@@ -3602,6 +3603,37 @@ void updateRibbonStylePreview(QWidget *preview,
                                QStringLiteral("lqRibbonStylePreviewText"),
                                palette.text,
                                palette.border);
+}
+
+void applyRibbonStylePreview(QWidget *preview,
+                             LqRibbon::RibbonBar::RibbonStyle style,
+                             bool highContrast)
+{
+    updateRibbonStylePreview(preview, style);
+    if (!preview || !highContrast) {
+        return;
+    }
+
+    preview->setProperty("highContrast", true);
+    preview->setToolTip(
+        QObject::tr("%1 - High Contrast preview")
+            .arg(LqRibbon::RibbonBar::ribbonStyleName(style)));
+    setRibbonStylePreviewColor(preview,
+                               QStringLiteral("lqRibbonStylePreviewAccent"),
+                               QStringLiteral("#ffff00"),
+                               QStringLiteral("#ffffff"));
+    setRibbonStylePreviewColor(preview,
+                               QStringLiteral("lqRibbonStylePreviewRibbon"),
+                               QStringLiteral("#000000"),
+                               QStringLiteral("#ffffff"));
+    setRibbonStylePreviewColor(preview,
+                               QStringLiteral("lqRibbonStylePreviewField"),
+                               QStringLiteral("#000000"),
+                               QStringLiteral("#ffffff"));
+    setRibbonStylePreviewColor(preview,
+                               QStringLiteral("lqRibbonStylePreviewText"),
+                               QStringLiteral("#ffffff"),
+                               QStringLiteral("#ffffff"));
 }
 
 void updateFluentStateTimingPreview(FluentStateTimingPreview *preview,
@@ -3633,7 +3665,8 @@ void waitForStylePreviewTimer(int durationMs)
 int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                   QComboBox *styleCombo,
                   QWidget *stylePreview,
-                  FluentStateTimingPreview *stateTimingPreview)
+                  FluentStateTimingPreview *stateTimingPreview,
+                  QAction *highContrastStyleAction)
 {
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     auto require = [](bool condition, const QString &name) {
@@ -3666,6 +3699,43 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
     if (!require(stateTimingPreview->hoverDurationMs() == 0
                      && stateTimingPreview->pressedHoldMs() == 0,
                  QStringLiteral("legacy themes use immediate state timing"))) {
+        return 1;
+    }
+    QFrame *stylePreviewAccent = stylePreview->findChild<QFrame *>(
+        QStringLiteral("lqRibbonStylePreviewAccent"));
+    if (!require(highContrastStyleAction
+                     && highContrastStyleAction->objectName()
+                         == QStringLiteral("highContrastStyleAction")
+                     && highContrastStyleAction->isCheckable()
+                     && !highContrastStyleAction->isChecked()
+                     && !stylePreview->property("highContrast").toBool(),
+                 QStringLiteral("high contrast preview defaults off"))) {
+        return 1;
+    }
+    highContrastStyleAction->trigger();
+    QCoreApplication::processEvents();
+    if (!require(ribbonBar->ribbonStyle()
+                     == LqRibbon::RibbonBar::Office2016Blue
+                     && stylePreview->property("highContrast").toBool()
+                     && stylePreviewAccent
+                     && stylePreviewAccent->property("previewColor").toString()
+                         == QStringLiteral("#ffff00")
+                     && stylePreview->toolTip().contains(
+                         QStringLiteral("High Contrast"))
+                     && highContrastStyleAction->statusTip().contains(
+                         QStringLiteral("preview on")),
+                 QStringLiteral("high contrast style preview pass is available"))) {
+        return 1;
+    }
+    highContrastStyleAction->trigger();
+    QCoreApplication::processEvents();
+    if (!require(!stylePreview->property("highContrast").toBool()
+                     && stylePreviewAccent
+                     && stylePreviewAccent->property("previewColor").toString()
+                         == QStringLiteral("#2b579a")
+                     && highContrastStyleAction->statusTip().contains(
+                         QStringLiteral("preview off")),
+                 QStringLiteral("high contrast style preview restores normal"))) {
         return 1;
     }
 
@@ -4102,12 +4172,29 @@ int main(int argc, char *argv[])
     stylePreviewRowLayout->addWidget(stylePreview);
     stylePreviewRowLayout->addWidget(stateTimingPreview);
     styleSwitchGroup->addWidget(stylePreviewRow);
+    bool highContrastStylePass = false;
+    QAction *highContrastStyleAction = styleSwitchGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MessageBoxWarning),
+        QObject::tr("High Contrast"),
+        Qt::ToolButtonTextBesideIcon);
+    highContrastStyleAction->setObjectName(
+        QStringLiteral("highContrastStyleAction"));
+    highContrastStyleAction->setCheckable(true);
+    highContrastStyleAction->setToolTip(
+        QObject::tr("High Contrast: preview maximum contrast colors"));
+    highContrastStyleAction->setStatusTip(
+        QObject::tr("High Contrast: preview off"));
     QObject::connect(styleCombo,
                      QOverload<int>::of(&QComboBox::highlighted),
-                     [styleCombo, stylePreview, stateTimingPreview](int index) {
+                     [styleCombo,
+                      stylePreview,
+                      stateTimingPreview,
+                      &highContrastStylePass](int index) {
                          const LqRibbon::RibbonBar::RibbonStyle style =
                              ribbonStyleFromComboIndex(styleCombo, index);
-                         updateRibbonStylePreview(stylePreview, style);
+                         applyRibbonStylePreview(stylePreview,
+                                                 style,
+                                                 highContrastStylePass);
                          updateFluentStateTimingPreview(stateTimingPreview,
                                                         style);
                      });
@@ -4118,10 +4205,13 @@ int main(int argc, char *argv[])
                       stylePreview,
                       stateTimingPreview,
                       &settings,
+                      &highContrastStylePass,
                      persistStyleChoice](int index) {
                          const LqRibbon::RibbonBar::RibbonStyle style =
                              ribbonStyleFromComboIndex(styleCombo, index);
-                         updateRibbonStylePreview(stylePreview, style);
+                         applyRibbonStylePreview(stylePreview,
+                                                 style,
+                                                 highContrastStylePass);
                          updateFluentStateTimingPreview(stateTimingPreview,
                                                         style);
                          mainWindow.setRibbonStyle(style);
@@ -4129,6 +4219,29 @@ int main(int argc, char *argv[])
                              saveRibbonStyleChoice(
                                  settings,
                                  ribbonStyleChoiceFromComboIndex(styleCombo, index));
+                         }
+                     });
+    QObject::connect(highContrastStyleAction,
+                     &QAction::toggled,
+                     [&mainWindow,
+                      highContrastStyleAction,
+                      styleCombo,
+                      stylePreview,
+                      &highContrastStylePass](bool enabled) {
+                         highContrastStylePass = enabled;
+                         highContrastStyleAction->setStatusTip(
+                             enabled
+                                 ? QObject::tr("High Contrast: preview on")
+                                 : QObject::tr("High Contrast: preview off"));
+                         applyRibbonStylePreview(
+                             stylePreview,
+                             ribbonStyleFromComboIndex(styleCombo,
+                                                       styleCombo->currentIndex()),
+                             highContrastStylePass);
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 highContrastStyleAction->statusTip(),
+                                 2500);
                          }
                      });
     LqRibbon::RibbonGroup *voiceGroup =
@@ -5194,6 +5307,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), tellMePage);
     customizeManager->addToCategory(QObject::tr("Pages"), shellPage);
     customizeManager->addToCategory(QObject::tr("Actions"), fullScreenAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), highContrastStyleAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     dictateMicrophoneAction);
@@ -6354,6 +6468,7 @@ int main(int argc, char *argv[])
         << QObject::tr("Alarm history export.csv")
         << QObject::tr("Control loop sample.lqribbon"));
     mainWindow.ribbonBar()->registerSearchAction(fullScreenAction);
+    mainWindow.ribbonBar()->registerSearchAction(highContrastStyleAction);
     mainWindow.ribbonBar()->registerSearchAction(mdiAction);
     mainWindow.ribbonBar()->registerSearchAction(tabAction);
     mainWindow.ribbonBar()->registerSearchAction(settingsAction);
@@ -7084,7 +7199,8 @@ int main(int argc, char *argv[])
         return runStyleTests(mainWindow,
                              styleCombo,
                              stylePreview,
-                             stateTimingPreview);
+                             stateTimingPreview,
+                             highContrastStyleAction);
     }
 
     if (!strPreviewPath.isEmpty()) {
