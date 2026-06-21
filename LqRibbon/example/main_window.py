@@ -1685,6 +1685,40 @@ class MainWindow(RibbonMainWindow):
             lambda: self._message("Open: frequent sites and groups")
         )
 
+        self.backstage_export_page = QWidget(self.backstage)
+        self.backstage_export_page.setObjectName("backstageExportPage")
+        self.backstage_export_page.setWindowTitle("Export")
+        export_page_layout = QFormLayout(self.backstage_export_page)
+        self.export_formats_label = QLabel(
+            "Formats: PDF, XPS, OpenDocument",
+            self.backstage_export_page,
+        )
+        self.export_formats_label.setObjectName("exportFormatsList")
+        self.export_formats_label.setToolTip(
+            "Document formats available from the Backstage Export page"
+        )
+        self.export_destination_label = QLabel(
+            "Destination: Local file or cloud location",
+            self.backstage_export_page,
+        )
+        self.export_destination_label.setObjectName("exportDestinationLabel")
+        self.export_destination_label.setToolTip(
+            "Export can save locally or to a connected Office cloud location"
+        )
+        export_page_layout.addRow("Formats", self.export_formats_label)
+        export_page_layout.addRow("Destination", self.export_destination_label)
+        self.backstage_export_action = self.backstage.addPage(
+            self.backstage_export_page
+        )
+        self.backstage_export_action.setObjectName("backstageExportAction")
+        self.backstage_export_action.setToolTip("Export document formats")
+        self.backstage_export_action.setStatusTip(
+            "Export: PDF, XPS, and OpenDocument"
+        )
+        self.backstage_export_action.triggered.connect(
+            lambda: self._message("Export: PDF, XPS, and OpenDocument")
+        )
+
         self.backstage_account_page = QWidget(self.backstage)
         self.backstage_account_page.setObjectName("backstageAccountPage")
         self.backstage_account_page.setWindowTitle("Account")

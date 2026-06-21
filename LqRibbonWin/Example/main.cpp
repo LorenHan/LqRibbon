@@ -479,6 +479,10 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *frequentSitesLabel,
                      QLabel *frequentGroupsLabel,
                      QLabel *pinnedFoldersLabel,
+                     QAction *backstageExportAction,
+                     QWidget *backstageExportPage,
+                     QLabel *exportFormatsLabel,
+                     QLabel *exportDestinationLabel,
                      QAction *versionHistoryAction,
                      QWidget *versionHistoryPage,
                      QLabel *versionHistoryCurrentLabel,
@@ -2963,6 +2967,54 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
     if (backstage) {
         backstage->hide();
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    if (backstageExportAction) {
+        backstageExportAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strBackstageExportStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(backstage
+                     && backstageExportAction
+                     && backstageExportAction->objectName()
+                         == QStringLiteral("backstageExportAction")
+                     && backstageExportAction->isCheckable()
+                     && backstageExportAction->toolTip().contains(
+                         QStringLiteral("document formats"))
+                     && backstageExportPage
+                     && backstageExportPage->objectName()
+                         == QStringLiteral("backstageExportPage")
+                     && backstageExportPage->windowTitle()
+                         == QStringLiteral("Export")
+                     && backstage->activePage() == backstageExportPage
+                     && backstageExportAction->isChecked()
+                     && exportFormatsLabel
+                     && exportFormatsLabel->objectName()
+                         == QStringLiteral("exportFormatsList")
+                     && exportFormatsLabel->text().contains(
+                         QStringLiteral("PDF"))
+                     && exportFormatsLabel->text().contains(
+                         QStringLiteral("XPS"))
+                     && exportFormatsLabel->text().contains(
+                         QStringLiteral("OpenDocument"))
+                     && exportFormatsLabel->toolTip().contains(
+                         QStringLiteral("Backstage Export"))
+                     && exportDestinationLabel
+                     && exportDestinationLabel->objectName()
+                         == QStringLiteral("exportDestinationLabel")
+                     && exportDestinationLabel->text().contains(
+                         QStringLiteral("Local file"))
+                     && exportDestinationLabel->text().contains(
+                         QStringLiteral("cloud location"))
+                     && strBackstageExportStatus.contains(
+                         QStringLiteral("Export:")),
+                 QStringLiteral("Backstage export page is available"))) {
+        return 1;
     }
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
@@ -6516,6 +6568,43 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QWidget *backstageExportPage = new QWidget(backstage);
+    backstageExportPage->setObjectName(QStringLiteral("backstageExportPage"));
+    backstageExportPage->setWindowTitle(QObject::tr("Export"));
+    QFormLayout *exportPageLayout = new QFormLayout(backstageExportPage);
+    QLabel *exportFormatsLabel = new QLabel(
+        QObject::tr("Formats: PDF, XPS, OpenDocument"),
+        backstageExportPage);
+    exportFormatsLabel->setObjectName(QStringLiteral("exportFormatsList"));
+    exportFormatsLabel->setToolTip(
+        QObject::tr("Document formats available from the Backstage Export page"));
+    QLabel *exportDestinationLabel = new QLabel(
+        QObject::tr("Destination: Local file or cloud location"),
+        backstageExportPage);
+    exportDestinationLabel->setObjectName(
+        QStringLiteral("exportDestinationLabel"));
+    exportDestinationLabel->setToolTip(
+        QObject::tr("Export can save locally or to a connected Office cloud location"));
+    exportPageLayout->addRow(QObject::tr("Formats"), exportFormatsLabel);
+    exportPageLayout->addRow(QObject::tr("Destination"), exportDestinationLabel);
+    QAction *backstageExportAction = backstage->addPage(backstageExportPage);
+    backstageExportAction->setObjectName(
+        QStringLiteral("backstageExportAction"));
+    backstageExportAction->setToolTip(
+        QObject::tr("Export document formats"));
+    backstageExportAction->setStatusTip(
+        QObject::tr("Export: PDF, XPS, and OpenDocument"));
+    QObject::connect(backstageExportAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Export: PDF, XPS, and OpenDocument"),
+                                 2500);
+                         }
+                     });
     QWidget *backstageAccountPage = new QWidget(backstage);
     backstageAccountPage->setObjectName(QStringLiteral("backstageAccountPage"));
     backstageAccountPage->setWindowTitle(QObject::tr("Account"));
@@ -9067,6 +9156,10 @@ int main(int argc, char *argv[])
                                 frequentSitesLabel,
                                 frequentGroupsLabel,
                                 pinnedFoldersLabel,
+                                backstageExportAction,
+                                backstageExportPage,
+                                exportFormatsLabel,
+                                exportDestinationLabel,
                                 versionHistoryAction,
                                 versionHistoryPage,
                                 versionHistoryCurrentLabel,

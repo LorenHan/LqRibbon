@@ -1528,6 +1528,37 @@ def test_example_backstage_open_page_shows_frequent_sites_and_groups():
     window.close()
 
 
+def test_example_backstage_export_page_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    action = window.backstage_export_action
+    page = window.backstage_export_page
+
+    assert action.objectName() == "backstageExportAction"
+    assert action.isCheckable()
+    assert "document formats" in action.toolTip()
+    assert page.objectName() == "backstageExportPage"
+    assert page.windowTitle() == "Export"
+    assert window.export_formats_label.objectName() == "exportFormatsList"
+    assert "PDF" in window.export_formats_label.text()
+    assert "XPS" in window.export_formats_label.text()
+    assert "OpenDocument" in window.export_formats_label.text()
+    assert "Backstage Export" in window.export_formats_label.toolTip()
+    assert window.export_destination_label.objectName() == "exportDestinationLabel"
+    assert "Local file" in window.export_destination_label.text()
+    assert "cloud location" in window.export_destination_label.text()
+
+    action.trigger()
+    _app().processEvents()
+    assert window.backstage.activePage() is page
+    assert action.isChecked()
+    assert "Export:" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_caption_search_defaults_to_centered_microsoft_box():
     window = MainWindow()
     window.show()
@@ -2874,6 +2905,7 @@ def main():
         test_example_cloud_location_picker_is_available,
         test_example_recent_file_pinning_is_available,
         test_example_backstage_open_page_shows_frequent_sites_and_groups,
+        test_example_backstage_export_page_is_available,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,
