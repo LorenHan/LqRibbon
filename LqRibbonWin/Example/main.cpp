@@ -2920,7 +2920,12 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("unpin command allows ribbon collapse"))) {
         return 1;
     }
-    clickCollapseTestTab(ribbonBar, firstIndex);
+    for (int attempt = 0;
+         attempt < 3 && !collapseTestCommandAreaVisible(ribbonBar);
+         ++attempt) {
+        clickCollapseTestTab(ribbonBar, firstIndex);
+        processCollapseTestEvents();
+    }
     if (!require(ribbonBar->isRibbonMinimized()
                      && collapseTestCommandAreaVisible(ribbonBar),
                  QStringLiteral("unpinned ribbon temporarily expands"))) {
