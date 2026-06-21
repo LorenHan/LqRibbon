@@ -380,6 +380,32 @@ def test_example_comments_title_button_is_available():
     window.close()
 
 
+def test_example_presence_avatar_strip_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    title_bar = window.ribbonBar()._title_button_bar
+    action = window.presence_avatar_strip_action
+    button = title_bar.widgetForAction(action)
+
+    assert action.objectName() == "presenceAvatarStripAction"
+    assert "Presence" in action.text()
+    assert "Alice Chen" in action.toolTip()
+    assert "Bo Li" in action.toolTip()
+    assert "Maya Patel" in action.toolTip()
+    assert "editing" in action.toolTip()
+    assert not action.icon().isNull()
+    assert action in title_bar.actions()
+    assert isinstance(button, QToolButton)
+    assert button.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+
+    action.trigger()
+    _app().processEvents()
+    assert "Presence" in window.statusBar().currentMessage()
+    assert "3 collaborators" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_caption_search_defaults_to_centered_microsoft_box():
     window = MainWindow()
     window.show()
@@ -1365,6 +1391,7 @@ def main():
         test_example_account_title_button_is_available,
         test_example_share_title_button_is_available,
         test_example_comments_title_button_is_available,
+        test_example_presence_avatar_strip_is_available,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,

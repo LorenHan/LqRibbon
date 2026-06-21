@@ -1055,6 +1055,17 @@ class MainWindow(RibbonMainWindow):
         self.comments_title_action.setObjectName("commentsTitleAction")
         self.comments_title_action.setToolTip("Open document comments")
         self.comments_title_action.setStatusTip("Comments: show conversation pane")
+        self.presence_avatar_strip_action = self.ribbonBar().addTitleButton(
+            self._avatar_strip_icon(),
+            "Presence",
+        )
+        self.presence_avatar_strip_action.setObjectName("presenceAvatarStripAction")
+        self.presence_avatar_strip_action.setToolTip(
+            "Alice Chen, Bo Li, and Maya Patel are editing"
+        )
+        self.presence_avatar_strip_action.setStatusTip(
+            "Presence: 3 collaborators editing"
+        )
         self.feedback_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_MessageBoxInformation),
             "Feedback",
@@ -1076,6 +1087,9 @@ class MainWindow(RibbonMainWindow):
         )
         self.comments_title_action.triggered.connect(
             lambda: self._message("Comments: show conversation pane")
+        )
+        self.presence_avatar_strip_action.triggered.connect(
+            lambda: self._message("Presence: 3 collaborators editing")
         )
         self.feedback_title_action.triggered.connect(
             lambda: self._message("Feedback: send product feedback")
@@ -1844,6 +1858,28 @@ class MainWindow(RibbonMainWindow):
         painter.setBrush(QColor("#8a6d00"))
         painter.drawRoundedRect(QRect(11, 19, 10, 6), 2, 2)
         painter.drawLine(12, 27, 20, 27)
+        painter.end()
+        return QIcon(pixmap)
+
+    def _avatar_strip_icon(self):
+        pixmap = QPixmap(48, 32)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        font = painter.font()
+        font.setBold(True)
+        font.setPointSize(8)
+        painter.setFont(font)
+        for x, initials, color in (
+            (2, "AC", "#2f7ed8"),
+            (14, "BL", "#17865c"),
+            (26, "MP", "#b55416"),
+        ):
+            painter.setPen(QPen(QColor("#ffffff"), 1))
+            painter.setBrush(QColor(color))
+            avatar_rect = QRect(x, 5, 22, 22)
+            painter.drawEllipse(avatar_rect)
+            painter.drawText(avatar_rect, Qt.AlignmentFlag.AlignCenter, initials)
         painter.end()
         return QIcon(pixmap)
 

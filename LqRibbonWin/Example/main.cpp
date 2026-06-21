@@ -114,6 +114,38 @@ QIcon createTellMeLightbulbIcon()
     return QIcon(pixmap);
 }
 
+QIcon createPresenceAvatarStripIcon()
+{
+    QPixmap pixmap(48, 32);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QFont font = painter.font();
+    font.setBold(true);
+    font.setPointSize(8);
+    painter.setFont(font);
+    const struct Avatar
+    {
+        int x;
+        const char *initials;
+        const char *color;
+    } avatars[] = {
+        {2, "AC", "#2f7ed8"},
+        {14, "BL", "#17865c"},
+        {26, "MP", "#b55416"},
+    };
+    for (const Avatar &avatar : avatars) {
+        const QRect avatarRect(avatar.x, 5, 22, 22);
+        painter.setPen(QPen(Qt::white, 1));
+        painter.setBrush(QColor(QString::fromLatin1(avatar.color)));
+        painter.drawEllipse(avatarRect);
+        painter.drawText(avatarRect,
+                         Qt::AlignCenter,
+                         QString::fromLatin1(avatar.initials));
+    }
+    return QIcon(pixmap);
+}
+
 QTabBar *collapseTestTabBar(LqRibbon::RibbonBar *ribbonBar)
 {
     return ribbonBar->findChild<QTabBar *>();
@@ -213,6 +245,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *displayOptionsTitleAction,
                      QAction *shareTitleAction,
                      QAction *commentsTitleAction,
+                     QAction *presenceAvatarStripAction,
                      QAction *feedbackTitleAction,
                      QAction *accountTitleAction,
                      QAction *showTabsAndCommandsAction,
@@ -1108,6 +1141,48 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          == Qt::ToolButtonIconOnly
                      && strCommentsStatus.contains(QStringLiteral("Comments")),
                  QStringLiteral("Comments title button is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *presenceButton =
+        titleButtonBar
+            ? qobject_cast<QToolButton *>(
+                titleButtonBar->widgetForAction(presenceAvatarStripAction))
+            : nullptr;
+    if (presenceAvatarStripAction) {
+        presenceAvatarStripAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strPresenceStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(presenceAvatarStripAction
+                     && presenceAvatarStripAction->objectName()
+                         == QStringLiteral("presenceAvatarStripAction")
+                     && presenceAvatarStripAction->text().contains(
+                         QStringLiteral("Presence"))
+                     && presenceAvatarStripAction->toolTip().contains(
+                         QStringLiteral("Alice Chen"))
+                     && presenceAvatarStripAction->toolTip().contains(
+                         QStringLiteral("Bo Li"))
+                     && presenceAvatarStripAction->toolTip().contains(
+                         QStringLiteral("Maya Patel"))
+                     && presenceAvatarStripAction->toolTip().contains(
+                         QStringLiteral("editing"))
+                     && !presenceAvatarStripAction->icon().isNull()
+                     && titleButtonBar
+                     && titleButtonBar->actions().contains(
+                         presenceAvatarStripAction)
+                     && presenceButton
+                     && presenceButton->toolButtonStyle()
+                         == Qt::ToolButtonIconOnly
+                     && strPresenceStatus.contains(QStringLiteral("Presence"))
+                     && strPresenceStatus.contains(
+                         QStringLiteral("3 collaborators")),
+                 QStringLiteral("Presence avatar strip is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -4265,6 +4340,25 @@ int main(int argc, char *argv[])
     commentsTitleAction->setToolTip(QObject::tr("Open document comments"));
     commentsTitleAction->setStatusTip(
         QObject::tr("Comments: show conversation pane"));
+    QAction *presenceAvatarStripAction =
+        mainWindow.ribbonBar()->addTitleButton(createPresenceAvatarStripIcon(),
+                                               QObject::tr("Presence"));
+    presenceAvatarStripAction->setObjectName(
+        QStringLiteral("presenceAvatarStripAction"));
+    presenceAvatarStripAction->setToolTip(
+        QObject::tr("Alice Chen, Bo Li, and Maya Patel are editing"));
+    presenceAvatarStripAction->setStatusTip(
+        QObject::tr("Presence: 3 collaborators editing"));
+    QObject::connect(presenceAvatarStripAction,
+                     &QAction::triggered,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Presence: 3 collaborators editing"),
+                                 2500);
+                         }
+                     });
     QAction *feedbackTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxInformation),
         QObject::tr("Feedback"));
@@ -4433,6 +4527,7 @@ int main(int argc, char *argv[])
                                 displayOptionsTitleAction,
                                 shareTitleAction,
                                 commentsTitleAction,
+                                presenceAvatarStripAction,
                                 feedbackTitleAction,
                                 accountTitleAction,
                                 showTabsAndCommandsAction,
