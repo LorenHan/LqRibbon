@@ -211,6 +211,7 @@ class MainWindow(RibbonMainWindow):
         self.custom_command_counter = 1
         self.last_custom_group = None
         self.saved_ribbon_state = b""
+        self.exported_ribbon_customization_state = b""
         self.search_actions = []
         self.high_contrast_style_pass = False
         self.touch_spacing_enabled = False
@@ -1341,6 +1342,23 @@ class MainWindow(RibbonMainWindow):
         self.reset_all_customizations_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.reset_all_customizations_preview.setToolTip("Ribbon customization reset state")
         self.runtime_group.addWidget(self.reset_all_customizations_preview)
+        self.export_customization_action = self._add_group_action(
+            self.runtime_group,
+            QStyle.StandardPixmap.SP_DialogSaveButton,
+            "Export Ribbon",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.export_customization_action.setObjectName("exportRibbonCustomizationAction")
+        self.export_customization_action.setToolTip("Export ribbon customization state")
+        self.export_customization_action.setStatusTip("Ribbon export: not created")
+        self.export_customization_preview = QLabel("Ribbon export: none", self.runtime_group)
+        self.export_customization_preview.setObjectName("exportRibbonCustomizationPreview")
+        self.export_customization_preview.setMinimumWidth(190)
+        self.export_customization_preview.setFixedHeight(30)
+        self.export_customization_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.export_customization_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.export_customization_preview.setToolTip("Last exported ribbon customization size")
+        self.runtime_group.addWidget(self.export_customization_preview)
         self.rename_page_action = self._add_group_action(
             self.runtime_group,
             QStyle.StandardPixmap.SP_FileDialogInfoView,
@@ -1864,6 +1882,7 @@ class MainWindow(RibbonMainWindow):
             self.remove_command_action,
             self.reset_selected_tab_action,
             self.reset_all_customizations_action,
+            self.export_customization_action,
             self.connect_action,
             self.dictate_microphone_action,
             self.office_popup_action,
@@ -1972,6 +1991,7 @@ class MainWindow(RibbonMainWindow):
         self.remove_command_action.triggered.connect(self.remove_command_from_custom_group)
         self.reset_selected_tab_action.triggered.connect(self.reset_selected_custom_tab)
         self.reset_all_customizations_action.triggered.connect(self.reset_all_ribbon_customizations)
+        self.export_customization_action.triggered.connect(self.export_ribbon_customization)
         self.rename_page_action.triggered.connect(self.rename_driver_page)
         self.move_gallery_action.triggered.connect(self.move_gallery_page)
         self.toggle_group_action.triggered.connect(self.toggle_specialist_group)
@@ -2236,6 +2256,7 @@ class MainWindow(RibbonMainWindow):
             self.remove_command_action,
             self.reset_selected_tab_action,
             self.reset_all_customizations_action,
+            self.export_customization_action,
             self.rename_page_action,
             self.move_gallery_action,
             self.toggle_group_action,
@@ -3313,6 +3334,18 @@ class MainWindow(RibbonMainWindow):
             f"Ribbon customizations reset: {len(runtime_pages)} page(s)"
         )
         self._message(self.reset_all_customizations_action.statusTip())
+
+    def export_ribbon_customization(self):
+        buffer = io.BytesIO()
+        self.customize_manager.saveStateToDevice(buffer)
+        self.exported_ribbon_customization_state = buffer.getvalue()
+        size = len(self.exported_ribbon_customization_state)
+        self.export_customization_preview.setText(f"Ribbon export: {size} bytes")
+        self.export_customization_preview.setStyleSheet(
+            "QLabel#exportRibbonCustomizationPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+        )
+        self.export_customization_action.setStatusTip(f"Ribbon export: {size} bytes")
+        self._message(self.export_customization_action.statusTip())
 
     def rename_driver_page(self):
         self.driver_page.setTitle("Drive" if self.driver_page.title() == "Driver" else "Driver")

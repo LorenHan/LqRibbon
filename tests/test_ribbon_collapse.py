@@ -1287,6 +1287,39 @@ def test_example_reset_all_customizations_is_available():
     window.close()
 
 
+def test_example_export_ribbon_customization_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    window.add_page_action.trigger()
+    _app().processEvents()
+    assert b"Runtime 1" not in window.exported_ribbon_customization_state
+
+    assert window.export_customization_action.objectName() == "exportRibbonCustomizationAction"
+    assert not window.export_customization_action.icon().isNull()
+    assert "ribbon customization state" in window.export_customization_action.toolTip()
+    assert window.export_customization_action.statusTip() == "Ribbon export: not created"
+    assert window.export_customization_preview.objectName() == "exportRibbonCustomizationPreview"
+    assert window.export_customization_preview.text() == "Ribbon export: none"
+    assert window.export_customization_action in window.search_actions
+    assert ribbon.searchAction("Export Ribbon") is window.export_customization_action
+
+    window.export_customization_action.trigger()
+    _app().processEvents()
+    exported = window.exported_ribbon_customization_state
+    assert exported
+    assert b"Runtime 1" in exported
+    assert window.export_customization_preview.text() == f"Ribbon export: {len(exported)} bytes"
+    assert "#exportRibbonCustomizationPreview" in window.export_customization_preview.styleSheet()
+    assert window.export_customization_action.statusTip() == (
+        f"Ribbon export: {len(exported)} bytes"
+    )
+    assert "Ribbon export" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2755,6 +2788,7 @@ def main():
         test_example_remove_command_from_custom_group_is_available,
         test_example_reset_selected_custom_tab_is_available,
         test_example_reset_all_customizations_is_available,
+        test_example_export_ribbon_customization_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,
