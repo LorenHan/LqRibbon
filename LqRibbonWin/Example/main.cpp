@@ -447,6 +447,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *focusModePreview,
                      QAction *darkCanvasAction,
                      QLabel *darkCanvasPreview,
+                     LqRibbon::RibbonPage *drawPage,
+                     QAction *drawModeAction,
+                     QLabel *drawModePreview,
                      LqRibbon::RibbonGallery *styleGallery,
                      QMenu *galleryMenu,
                      QAction *tellMeLightbulbAction,
@@ -1697,6 +1700,50 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && canvasWidget
                      && canvasWidget->styleSheet().isEmpty(),
                  QStringLiteral("Dark Canvas restores light canvas"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const int drawPageIndex = ribbonBar->indexOf(drawPage);
+    if (drawPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(drawPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *drawModeButton =
+        collapseTestActionButton(ribbonBar, drawModeAction);
+    if (drawModeAction) {
+        drawModeAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strDrawModeStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(drawPageIndex >= 0
+                     && drawModeAction
+                     && drawModeAction->objectName()
+                         == QStringLiteral("drawModeAction")
+                     && drawModeAction->isCheckable()
+                     && drawModeAction->isChecked()
+                     && !drawModeAction->icon().isNull()
+                     && drawModeAction->toolTip().contains(
+                         QStringLiteral("ink drawing"))
+                     && drawModeAction->statusTip()
+                         == QStringLiteral("Draw Mode: ink enabled")
+                     && drawModeButton
+                     && drawModePreview
+                     && drawModePreview->objectName()
+                         == QStringLiteral("drawModePreview")
+                     && drawModePreview->text()
+                         == QStringLiteral("Draw: ink enabled")
+                     && drawModePreview->styleSheet().contains(
+                         QStringLiteral("#drawModePreview"))
+                     && ribbonBar->searchAction(QStringLiteral("Draw Mode"))
+                         == drawModeAction
+                     && strDrawModeStatus.contains(
+                         QStringLiteral("Draw Mode")),
+                 QStringLiteral("Draw tab is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6120,6 +6167,29 @@ int main(int argc, char *argv[])
         QObject::tr("Current document canvas tone"));
     canvasGroup->addWidget(darkCanvasPreview);
 
+    LqRibbon::RibbonPage *drawPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Draw"));
+    LqRibbon::RibbonGroup *inkGroup =
+        drawPage->addGroup(QObject::tr("Ink"));
+    QAction *drawModeAction = inkGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
+        QObject::tr("Draw Mode"),
+        Qt::ToolButtonTextUnderIcon);
+    drawModeAction->setObjectName(QStringLiteral("drawModeAction"));
+    drawModeAction->setCheckable(true);
+    drawModeAction->setToolTip(
+        QObject::tr("Enable ink drawing on the canvas"));
+    drawModeAction->setStatusTip(QObject::tr("Draw Mode: ink disabled"));
+    QLabel *drawModePreview = new QLabel(inkGroup);
+    drawModePreview->setObjectName(QStringLiteral("drawModePreview"));
+    drawModePreview->setText(QObject::tr("Draw: off"));
+    drawModePreview->setMinimumWidth(170);
+    drawModePreview->setFixedHeight(30);
+    drawModePreview->setAlignment(Qt::AlignCenter);
+    drawModePreview->setFrameShape(QFrame::StyledPanel);
+    drawModePreview->setToolTip(QObject::tr("Current drawing mode state"));
+    inkGroup->addWidget(drawModePreview);
+
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
     LqRibbon::RibbonGroup *commandDiscoveryGroup =
@@ -8649,6 +8719,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(immersiveReaderAction);
     mainWindow.ribbonBar()->registerSearchAction(focusModeAction);
     mainWindow.ribbonBar()->registerSearchAction(darkCanvasAction);
+    mainWindow.ribbonBar()->registerSearchAction(drawModeAction);
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
@@ -9227,6 +9298,28 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(drawModeAction,
+                     &QAction::toggled,
+                     [&mainWindow, drawModeAction, drawModePreview](
+                         bool enabled) {
+                         if (enabled) {
+                             drawModePreview->setText(
+                                 QObject::tr("Draw: ink enabled"));
+                             drawModePreview->setStyleSheet(
+                                 QStringLiteral("QLabel#drawModePreview { color: #ffffff; background: #0f6cbd; font-weight: 600; }"));
+                             drawModeAction->setStatusTip(
+                                 QObject::tr("Draw Mode: ink enabled"));
+                         } else {
+                             drawModePreview->setText(QObject::tr("Draw: off"));
+                             drawModePreview->setStyleSheet(QString());
+                             drawModeAction->setStatusTip(
+                                 QObject::tr("Draw Mode: ink disabled"));
+                         }
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 drawModeAction->statusTip(), 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -9458,6 +9551,9 @@ int main(int argc, char *argv[])
                                 focusModePreview,
                                 darkCanvasAction,
                                 darkCanvasPreview,
+                                drawPage,
+                                drawModeAction,
+                                drawModePreview,
                                 styleGallery,
                                 galleryMenu,
                                 tellMeLightbulbAction,

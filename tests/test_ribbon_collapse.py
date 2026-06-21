@@ -2398,6 +2398,35 @@ def test_example_dark_canvas_toggle_surface():
     window.close()
 
 
+def test_example_draw_tab_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert ribbon.pageIndex(window.draw_page) >= 0
+    assert window.draw_page.title() == "Draw"
+    assert window.draw_mode_action.objectName() == "drawModeAction"
+    assert window.draw_mode_action.isCheckable()
+    assert not window.draw_mode_action.icon().isNull()
+    assert "ink drawing" in window.draw_mode_action.toolTip()
+    assert window.draw_mode_action.statusTip() == "Draw Mode: ink disabled"
+    assert window.draw_mode_preview.objectName() == "drawModePreview"
+    assert window.draw_mode_preview.text() == "Draw: off"
+    assert window.draw_mode_action in window.search_actions
+    assert ribbon.searchAction("Draw Mode") is window.draw_mode_action
+
+    window.draw_mode_action.trigger()
+    _app().processEvents()
+    assert window.draw_mode_action.isChecked()
+    assert window.draw_mode_action.statusTip() == "Draw Mode: ink enabled"
+    assert window.draw_mode_preview.text() == "Draw: ink enabled"
+    assert "#drawModePreview" in window.draw_mode_preview.styleSheet()
+    assert "Draw Mode" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -3138,6 +3167,7 @@ def main():
         test_example_immersive_reader_command_surface,
         test_example_focus_mode_command_surface,
         test_example_dark_canvas_toggle_surface,
+        test_example_draw_tab_is_available,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,

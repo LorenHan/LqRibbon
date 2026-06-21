@@ -314,6 +314,9 @@ class MainWindow(RibbonMainWindow):
         self.view_page = ribbon.addPage("View")
         self._create_view_page()
 
+        self.draw_page = ribbon.addPage("Draw")
+        self._create_draw_page()
+
         self.tell_me_page = ribbon.addPage("Tell Me")
         self._create_command_discovery_page()
 
@@ -1051,6 +1054,27 @@ class MainWindow(RibbonMainWindow):
         self.dark_canvas_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.dark_canvas_preview.setToolTip("Current document canvas tone")
         canvas_group.addWidget(self.dark_canvas_preview)
+
+    def _create_draw_page(self):
+        ink_group = self.draw_page.addGroup("Ink")
+        self.draw_mode_action = ink_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DialogApplyButton),
+            "Draw Mode",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.draw_mode_action.setObjectName("drawModeAction")
+        self.draw_mode_action.setCheckable(True)
+        self.draw_mode_action.setToolTip("Enable ink drawing on the canvas")
+        self.draw_mode_action.setStatusTip("Draw Mode: ink disabled")
+        self.draw_mode_preview = QLabel("Draw: off", ink_group)
+        self.draw_mode_preview.setObjectName("drawModePreview")
+        self.draw_mode_preview.setMinimumWidth(170)
+        self.draw_mode_preview.setFixedHeight(30)
+        self.draw_mode_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.draw_mode_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.draw_mode_preview.setToolTip("Current drawing mode state")
+        ink_group.addWidget(self.draw_mode_preview)
+        self.draw_mode_action.toggled.connect(self.update_draw_mode)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -2029,6 +2053,7 @@ class MainWindow(RibbonMainWindow):
             self.immersive_reader_action,
             self.focus_mode_action,
             self.dark_canvas_action,
+            self.draw_mode_action,
             self.svg_icon_insert_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
@@ -2411,6 +2436,7 @@ class MainWindow(RibbonMainWindow):
             self.immersive_reader_action,
             self.focus_mode_action,
             self.dark_canvas_action,
+            self.draw_mode_action,
             self.svg_icon_insert_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
@@ -2852,6 +2878,20 @@ class MainWindow(RibbonMainWindow):
                 "Switch the document canvas to a dark background"
             )
             self._message("Dark Canvas: light editing surface")
+
+    def update_draw_mode(self, enabled):
+        if enabled:
+            self.draw_mode_preview.setText("Draw: ink enabled")
+            self.draw_mode_preview.setStyleSheet(
+                "QLabel#drawModePreview { color: #ffffff; background: #0f6cbd; font-weight: 600; }"
+            )
+            self.draw_mode_action.setStatusTip("Draw Mode: ink enabled")
+            self._message("Draw Mode: ink enabled")
+        else:
+            self.draw_mode_preview.setText("Draw: off")
+            self.draw_mode_preview.setStyleSheet("")
+            self.draw_mode_action.setStatusTip("Draw Mode: ink disabled")
+            self._message("Draw Mode: ink disabled")
 
     def insert_svg_icon(self):
         self.svg_icon_insert_preview.setText("SVG Icons: 1 inserted")
