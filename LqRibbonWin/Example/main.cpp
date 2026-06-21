@@ -451,6 +451,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *drawModeAction,
                      QLabel *drawModePreview,
                      LqRibbon::RibbonGallery *penGallery,
+                     QAction *rulerToggleAction,
+                     QLabel *rulerPreview,
                      LqRibbon::RibbonGallery *styleGallery,
                      QMenu *galleryMenu,
                      QAction *tellMeLightbulbAction,
@@ -1771,6 +1773,44 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          == QStringLiteral("Highlighter"),
                  QStringLiteral("Pen gallery is available"))) {
         return 1;
+    }
+
+    QToolButton *rulerButton =
+        collapseTestActionButton(ribbonBar, rulerToggleAction);
+    if (rulerToggleAction) {
+        rulerToggleAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strRulerStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(rulerToggleAction
+                     && rulerToggleAction->objectName()
+                         == QStringLiteral("rulerToggleAction")
+                     && rulerToggleAction->isCheckable()
+                     && rulerToggleAction->isChecked()
+                     && !rulerToggleAction->icon().isNull()
+                     && rulerToggleAction->toolTip().contains(
+                         QStringLiteral("ruler overlay"))
+                     && rulerToggleAction->statusTip()
+                         == QStringLiteral("Ruler: visible")
+                     && rulerButton
+                     && rulerPreview
+                     && rulerPreview->objectName()
+                         == QStringLiteral("rulerPreview")
+                     && rulerPreview->text()
+                         == QStringLiteral("Ruler: visible")
+                     && rulerPreview->styleSheet().contains(
+                         QStringLiteral("#rulerPreview"))
+                     && ribbonBar->searchAction(QStringLiteral("Ruler"))
+                         == rulerToggleAction
+                     && strRulerStatus.contains(
+                         QStringLiteral("Ruler: visible")),
+                 QStringLiteral("Ruler toggle is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
     }
 
     LqRibbon::RibbonGalleryItem *highDpiGalleryItem = nullptr;
@@ -6238,6 +6278,26 @@ int main(int argc, char *argv[])
     LqRibbon::RibbonGalleryControl *penGalleryControl =
         new LqRibbon::RibbonGalleryControl(penGroup, penGallery);
     penGroup->addWidget(penGalleryControl);
+    LqRibbon::RibbonGroup *drawToolsGroup =
+        drawPage->addGroup(QObject::tr("Tools"));
+    QAction *rulerToggleAction = drawToolsGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_ArrowRight),
+        QObject::tr("Ruler"),
+        Qt::ToolButtonTextUnderIcon);
+    rulerToggleAction->setObjectName(QStringLiteral("rulerToggleAction"));
+    rulerToggleAction->setCheckable(true);
+    rulerToggleAction->setToolTip(
+        QObject::tr("Show a drawing ruler overlay"));
+    rulerToggleAction->setStatusTip(QObject::tr("Ruler: hidden"));
+    QLabel *rulerPreview = new QLabel(drawToolsGroup);
+    rulerPreview->setObjectName(QStringLiteral("rulerPreview"));
+    rulerPreview->setText(QObject::tr("Ruler: hidden"));
+    rulerPreview->setMinimumWidth(150);
+    rulerPreview->setFixedHeight(30);
+    rulerPreview->setAlignment(Qt::AlignCenter);
+    rulerPreview->setFrameShape(QFrame::StyledPanel);
+    rulerPreview->setToolTip(QObject::tr("Drawing ruler overlay state"));
+    drawToolsGroup->addWidget(rulerPreview);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -8769,6 +8829,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(focusModeAction);
     mainWindow.ribbonBar()->registerSearchAction(darkCanvasAction);
     mainWindow.ribbonBar()->registerSearchAction(drawModeAction);
+    mainWindow.ribbonBar()->registerSearchAction(rulerToggleAction);
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
@@ -9369,6 +9430,29 @@ int main(int argc, char *argv[])
                                  drawModeAction->statusTip(), 2500);
                          }
                      });
+    QObject::connect(rulerToggleAction,
+                     &QAction::toggled,
+                     [&mainWindow, rulerToggleAction, rulerPreview](
+                         bool enabled) {
+                         if (enabled) {
+                             rulerPreview->setText(
+                                 QObject::tr("Ruler: visible"));
+                             rulerPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#rulerPreview { color: #5c2d91; background: #f3e8ff; font-weight: 600; }"));
+                             rulerToggleAction->setStatusTip(
+                                 QObject::tr("Ruler: visible"));
+                         } else {
+                             rulerPreview->setText(
+                                 QObject::tr("Ruler: hidden"));
+                             rulerPreview->setStyleSheet(QString());
+                             rulerToggleAction->setStatusTip(
+                                 QObject::tr("Ruler: hidden"));
+                         }
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 rulerToggleAction->statusTip(), 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -9604,6 +9688,8 @@ int main(int argc, char *argv[])
                                 drawModeAction,
                                 drawModePreview,
                                 penGallery,
+                                rulerToggleAction,
+                                rulerPreview,
                                 styleGallery,
                                 galleryMenu,
                                 tellMeLightbulbAction,

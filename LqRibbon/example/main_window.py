@@ -1094,6 +1094,26 @@ class MainWindow(RibbonMainWindow):
         self.pen_gallery.setCheckedIndex(0)
         pen_group.addWidget(RibbonGalleryControl(pen_group, self.pen_gallery))
 
+        tools_group = self.draw_page.addGroup("Tools")
+        self.ruler_toggle_action = tools_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_ArrowRight),
+            "Ruler",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.ruler_toggle_action.setObjectName("rulerToggleAction")
+        self.ruler_toggle_action.setCheckable(True)
+        self.ruler_toggle_action.setToolTip("Show a drawing ruler overlay")
+        self.ruler_toggle_action.setStatusTip("Ruler: hidden")
+        self.ruler_preview = QLabel("Ruler: hidden", tools_group)
+        self.ruler_preview.setObjectName("rulerPreview")
+        self.ruler_preview.setMinimumWidth(150)
+        self.ruler_preview.setFixedHeight(30)
+        self.ruler_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.ruler_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.ruler_preview.setToolTip("Drawing ruler overlay state")
+        tools_group.addWidget(self.ruler_preview)
+        self.ruler_toggle_action.toggled.connect(self.toggle_ruler_overlay)
+
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
         self.tell_me_lightbulb_action = discovery_group.addAction(
@@ -2072,6 +2092,7 @@ class MainWindow(RibbonMainWindow):
             self.focus_mode_action,
             self.dark_canvas_action,
             self.draw_mode_action,
+            self.ruler_toggle_action,
             self.svg_icon_insert_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
@@ -2455,6 +2476,7 @@ class MainWindow(RibbonMainWindow):
             self.focus_mode_action,
             self.dark_canvas_action,
             self.draw_mode_action,
+            self.ruler_toggle_action,
             self.svg_icon_insert_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
@@ -2910,6 +2932,20 @@ class MainWindow(RibbonMainWindow):
             self.draw_mode_preview.setStyleSheet("")
             self.draw_mode_action.setStatusTip("Draw Mode: ink disabled")
             self._message("Draw Mode: ink disabled")
+
+    def toggle_ruler_overlay(self, enabled):
+        if enabled:
+            self.ruler_preview.setText("Ruler: visible")
+            self.ruler_preview.setStyleSheet(
+                "QLabel#rulerPreview { color: #5c2d91; background: #f3e8ff; font-weight: 600; }"
+            )
+            self.ruler_toggle_action.setStatusTip("Ruler: visible")
+            self._message("Ruler: visible")
+        else:
+            self.ruler_preview.setText("Ruler: hidden")
+            self.ruler_preview.setStyleSheet("")
+            self.ruler_toggle_action.setStatusTip("Ruler: hidden")
+            self._message("Ruler: hidden")
 
     def insert_svg_icon(self):
         self.svg_icon_insert_preview.setText("SVG Icons: 1 inserted")

@@ -2447,6 +2447,33 @@ def test_example_pen_gallery_is_available():
     window.close()
 
 
+def test_example_ruler_toggle_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.ruler_toggle_action.objectName() == "rulerToggleAction"
+    assert window.ruler_toggle_action.isCheckable()
+    assert not window.ruler_toggle_action.isChecked()
+    assert "ruler overlay" in window.ruler_toggle_action.toolTip()
+    assert window.ruler_toggle_action.statusTip() == "Ruler: hidden"
+    assert window.ruler_preview.objectName() == "rulerPreview"
+    assert window.ruler_preview.text() == "Ruler: hidden"
+    assert window.ruler_toggle_action in window.search_actions
+    assert ribbon.searchAction("Ruler") is window.ruler_toggle_action
+
+    window.ruler_toggle_action.trigger()
+    _app().processEvents()
+    assert window.ruler_toggle_action.isChecked()
+    assert window.ruler_toggle_action.statusTip() == "Ruler: visible"
+    assert window.ruler_preview.text() == "Ruler: visible"
+    assert "#rulerPreview" in window.ruler_preview.styleSheet()
+    assert "Ruler: visible" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -3189,6 +3216,7 @@ def main():
         test_example_dark_canvas_toggle_surface,
         test_example_draw_tab_is_available,
         test_example_pen_gallery_is_available,
+        test_example_ruler_toggle_is_available,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,
