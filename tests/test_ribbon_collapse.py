@@ -1465,6 +1465,7 @@ def test_example_cloud_location_picker_is_available():
 
 
 def test_example_recent_file_pinning_is_available():
+    _app()
     window = MainWindow()
     window.show()
     _app().processEvents()
@@ -1476,6 +1477,9 @@ def test_example_recent_file_pinning_is_available():
     assert action.isCheckable()
     assert not action.isChecked()
     assert action.text() == "Pin Recent File"
+    assert recent_files.objectName() == "systemRecentFilesList"
+    assert "recent files list" in recent_files.toolTip()
+    assert recent_files.caption == "Recent Files"
     assert recent_files.files == ["drive-layout.lqr", "axis-profile.lqr"]
 
     action.trigger()

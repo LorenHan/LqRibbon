@@ -2870,6 +2870,10 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
                                : QString();
     if (!require(recentFiles
+                     && recentFiles->objectName()
+                         == QStringLiteral("systemRecentFilesList")
+                     && recentFiles->toolTip().contains(
+                         QStringLiteral("recent files list"))
                      && pinRecentFileAction
                      && pinRecentFileAction->objectName()
                          == QStringLiteral("pinRecentFileAction")
@@ -6550,6 +6554,9 @@ int main(int argc, char *argv[])
     systemMenu->addPopupBarAction(QObject::tr("Open"));
     LqRibbon::RibbonPageSystemRecentFileList *recentFiles =
         systemMenu->addPageRecentFile(QObject::tr("Recent Files"));
+    recentFiles->setObjectName(QStringLiteral("systemRecentFilesList"));
+    recentFiles->setToolTip(
+        QObject::tr("System menu recent files list with pinning support"));
     const QStringList defaultRecentFiles =
         QStringList() << QObject::tr("drive-layout.lqr")
                       << QObject::tr("axis-profile.lqr");

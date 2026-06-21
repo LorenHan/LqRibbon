@@ -1638,6 +1638,10 @@ class MainWindow(RibbonMainWindow):
         self.recent_file_default_order = ["drive-layout.lqr", "axis-profile.lqr"]
         self.recent_file_pinned_order = ["axis-profile.lqr", "drive-layout.lqr"]
         self.recent_files = self.system_menu.addPageRecentFile("Recent Files")
+        self.recent_files.setObjectName("systemRecentFilesList")
+        self.recent_files.setToolTip(
+            "System menu recent files list with pinning support"
+        )
         self.recent_files.updateRecentFileActions(self.recent_file_default_order)
         export_action = QAction(
             self._icon(QStyle.StandardPixmap.SP_DialogSaveButton), "Export", self.system_menu
