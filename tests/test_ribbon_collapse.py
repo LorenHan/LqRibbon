@@ -544,6 +544,34 @@ def test_example_presence_avatar_strip_is_available():
     window.close()
 
 
+def test_example_icon_only_title_commands_are_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    title_bar = window.ribbonBar()._title_button_bar
+
+    expected_actions = [
+        window.display_options_title_action,
+        window.auto_save_title_action,
+        window.share_title_action,
+        window.comments_title_action,
+        window.presence_avatar_strip_action,
+        window.feedback_title_action,
+        window.help_title_action,
+        window.account_title_action,
+    ]
+    assert window.icon_only_title_actions == expected_actions
+    assert title_bar.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+    for action in expected_actions:
+        button = title_bar.widgetForAction(action)
+        assert isinstance(button, QToolButton)
+        assert button.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+        assert not action.icon().isNull()
+        assert action.text()
+        assert button.toolTip()
+    window.close()
+
+
 def test_example_collaboration_status_text_is_available():
     window = MainWindow()
     window.show()
@@ -2182,6 +2210,7 @@ def main():
         test_example_auto_save_disabled_explanation_is_available,
         test_example_comments_title_button_is_available,
         test_example_presence_avatar_strip_is_available,
+        test_example_icon_only_title_commands_are_available,
         test_example_collaboration_status_text_is_available,
         test_example_coauthoring_indicator_is_available,
         test_example_zoom_slider_status_item_is_available,

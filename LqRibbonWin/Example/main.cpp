@@ -377,6 +377,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *commentsTitleAction,
                      QAction *presenceAvatarStripAction,
                      QAction *feedbackTitleAction,
+                     QAction *helpTitleAction,
                      QAction *accountTitleAction,
                      QAction *backstageAccountAction,
                      QWidget *backstageAccountPage,
@@ -2053,6 +2054,38 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
+    }
+
+    const QList<QAction *> iconOnlyTitleActions = {
+        displayOptionsTitleAction,
+        autoSaveTitleAction,
+        shareTitleAction,
+        commentsTitleAction,
+        presenceAvatarStripAction,
+        feedbackTitleAction,
+        helpTitleAction,
+        accountTitleAction,
+    };
+    bool allIconOnlyTitleButtons = titleButtonBar
+        && titleButtonBar->toolButtonStyle() == Qt::ToolButtonIconOnly;
+    for (QAction *action : iconOnlyTitleActions) {
+        QToolButton *button =
+            titleButtonBar
+                ? qobject_cast<QToolButton *>(
+                    titleButtonBar->widgetForAction(action))
+                : nullptr;
+        allIconOnlyTitleButtons = allIconOnlyTitleButtons
+            && action
+            && !action->icon().isNull()
+            && !action->text().isEmpty()
+            && !action->toolTip().isEmpty()
+            && button
+            && button->toolButtonStyle() == Qt::ToolButtonIconOnly
+            && !button->toolTip().isEmpty();
+    }
+    if (!require(allIconOnlyTitleButtons,
+                 QStringLiteral("Icon-only title commands are available"))) {
+        return 1;
     }
 
     if (!require(collaborationStatusText
@@ -6451,6 +6484,29 @@ int main(int argc, char *argv[])
         QObject::tr("Open account and profile settings"));
     accountTitleAction->setStatusTip(
         QObject::tr("Account: signed in as Local User"));
+    const QList<QAction *> iconOnlyTitleActions = {
+        displayOptionsTitleAction,
+        autoSaveTitleAction,
+        shareTitleAction,
+        commentsTitleAction,
+        presenceAvatarStripAction,
+        feedbackTitleAction,
+        helpTitleAction,
+        accountTitleAction,
+    };
+    if (QToolBar *titleButtonBar = mainWindow.ribbonBar()->findChild<QToolBar *>(
+            QStringLiteral("lqRibbonTitleButtonBar"))) {
+        titleButtonBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        for (QAction *action : iconOnlyTitleActions) {
+            if (QToolButton *button = qobject_cast<QToolButton *>(
+                    titleButtonBar->widgetForAction(action))) {
+                button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+                button->setToolTip(action->toolTip().isEmpty()
+                                       ? action->text()
+                                       : action->toolTip());
+            }
+        }
+    }
     QObject::connect(helpTitleAction, &QAction::triggered, [&mainWindow]() {
         QMessageBox::information(&mainWindow,
                                  QObject::tr("LqRibbon"),
@@ -6880,6 +6936,7 @@ int main(int argc, char *argv[])
                                 commentsTitleAction,
                                 presenceAvatarStripAction,
                                 feedbackTitleAction,
+                                helpTitleAction,
                                 accountTitleAction,
                                 backstageAccountAction,
                                 backstageAccountPage,
