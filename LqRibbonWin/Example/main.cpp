@@ -436,6 +436,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *collaborationPage,
                      QAction *commentsLinkAction,
                      QLabel *commentsLinkPreview,
+                     LqRibbon::RibbonPage *securityPage,
+                     QAction *macroBlockingAction,
+                     QLabel *macroBlockingPreview,
                      LqRibbon::RibbonPage *formatPage,
                      QAction *svgRecolorAction,
                      QLabel *svgRecolorPreview,
@@ -1463,6 +1466,54 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strCommentsLinkStatus.contains(
                          QStringLiteral("Comments link")),
                  QStringLiteral("Comments link opening command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const int securityPageIndex = ribbonBar->indexOf(securityPage);
+    if (securityPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(securityPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *macroBlockingButton =
+        collapseTestActionButton(ribbonBar, macroBlockingAction);
+    if (macroBlockingAction) {
+        macroBlockingAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strMacroBlockingStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(securityPageIndex >= 0
+                     && securityPage
+                     && securityPage->title() == QStringLiteral("Security")
+                     && macroBlockingAction
+                     && macroBlockingAction->objectName()
+                         == QStringLiteral("macroBlockingAction")
+                     && !macroBlockingAction->icon().isNull()
+                     && macroBlockingAction->toolTip().contains(
+                         QStringLiteral("macro blocking status"))
+                     && macroBlockingAction->statusTip()
+                         == QStringLiteral("Macro Security: not scanned")
+                     && macroBlockingPreview
+                     && macroBlockingPreview->objectName()
+                         == QStringLiteral("macroBlockingPreview")
+                     && macroBlockingPreview->text()
+                         == QStringLiteral("Macros: blocked")
+                     && macroBlockingPreview->property("macrosBlocked")
+                            .toBool()
+                     && macroBlockingPreview->styleSheet().contains(
+                         QStringLiteral("#macroBlockingPreview"))
+                     && ribbonBar->searchAction(QStringLiteral("Macro Security"))
+                         == macroBlockingAction
+                     && macroBlockingButton
+                     && macroBlockingButton->defaultAction()
+                         == macroBlockingAction
+                     && strMacroBlockingStatus.contains(
+                         QStringLiteral("Macro Security")),
+                 QStringLiteral("Macro blocking status command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -7090,6 +7141,31 @@ int main(int argc, char *argv[])
         QObject::tr("Last opened comment link state"));
     commentsGroup->addWidget(commentsLinkPreview);
 
+    LqRibbon::RibbonPage *securityPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Security"));
+    LqRibbon::RibbonGroup *macroProtectionGroup =
+        securityPage->addGroup(QObject::tr("Macro Protection"));
+    QAction *macroBlockingAction = macroProtectionGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MessageBoxWarning),
+        QObject::tr("Macro Security"),
+        Qt::ToolButtonTextUnderIcon);
+    macroBlockingAction->setObjectName(QStringLiteral("macroBlockingAction"));
+    macroBlockingAction->setToolTip(
+        QObject::tr("Show macro blocking status for untrusted files"));
+    macroBlockingAction->setStatusTip(
+        QObject::tr("Macro Security: not scanned"));
+    QLabel *macroBlockingPreview = new QLabel(macroProtectionGroup);
+    macroBlockingPreview->setObjectName(
+        QStringLiteral("macroBlockingPreview"));
+    macroBlockingPreview->setText(QObject::tr("Macros: not scanned"));
+    macroBlockingPreview->setMinimumWidth(210);
+    macroBlockingPreview->setFixedHeight(30);
+    macroBlockingPreview->setAlignment(Qt::AlignCenter);
+    macroBlockingPreview->setFrameShape(QFrame::StyledPanel);
+    macroBlockingPreview->setToolTip(
+        QObject::tr("Macro blocking security state"));
+    macroProtectionGroup->addWidget(macroBlockingPreview);
+
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
     LqRibbon::RibbonGroup *commandDiscoveryGroup =
@@ -9637,6 +9713,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(recommendedChartAction);
     mainWindow.ribbonBar()->registerSearchAction(loopComponentAction);
     mainWindow.ribbonBar()->registerSearchAction(commentsLinkAction);
+    mainWindow.ribbonBar()->registerSearchAction(macroBlockingAction);
     mainWindow.ribbonBar()->registerSearchAction(model3DAnimationAction);
     mainWindow.ribbonBar()->registerSearchAction(designerIdeasAction);
     mainWindow.ribbonBar()->registerSearchAction(dataTypesAction);
@@ -9985,6 +10062,22 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr(
                                      "Comments link: opened thread #42"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(macroBlockingAction,
+                     &QAction::triggered,
+                     [&mainWindow, macroBlockingPreview]() {
+                         macroBlockingPreview->setText(
+                             QObject::tr("Macros: blocked"));
+                         macroBlockingPreview->setStyleSheet(
+                             QStringLiteral("QLabel#macroBlockingPreview { color: #842029; background: #f8d7da; font-weight: 600; }"));
+                         macroBlockingPreview->setProperty(
+                             "macrosBlocked", true);
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Macro Security: untrusted macros blocked"),
                                  2500);
                          }
                      });
@@ -10689,6 +10782,9 @@ int main(int argc, char *argv[])
                                 collaborationPage,
                                 commentsLinkAction,
                                 commentsLinkPreview,
+                                securityPage,
+                                macroBlockingAction,
+                                macroBlockingPreview,
                                 formatPage,
                                 svgRecolorAction,
                                 svgRecolorPreview,

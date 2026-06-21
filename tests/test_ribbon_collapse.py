@@ -1244,6 +1244,34 @@ def test_example_comments_link_opening_command_surface():
     window.close()
 
 
+def test_example_macro_blocking_status_command_surface():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert ribbon.pageIndex(window.security_page) >= 0
+    assert window.security_page.title() == "Security"
+    assert window.macro_blocking_action.objectName() == "macroBlockingAction"
+    assert not window.macro_blocking_action.icon().isNull()
+    assert "macro blocking status" in window.macro_blocking_action.toolTip()
+    assert window.macro_blocking_action.statusTip() == "Macro Security: not scanned"
+    assert window.macro_blocking_preview.objectName() == "macroBlockingPreview"
+    assert window.macro_blocking_preview.text() == "Macros: not scanned"
+    assert "Macro blocking" in window.macro_blocking_preview.toolTip()
+    assert window.macro_blocking_action in window.search_actions
+    assert ribbon.searchAction("Macro Security") is window.macro_blocking_action
+
+    window.macro_blocking_action.trigger()
+    _app().processEvents()
+    assert window.macro_blocking_preview.text() == "Macros: blocked"
+    assert window.macro_blocking_preview.property("macrosBlocked")
+    assert "#macroBlockingPreview" in window.macro_blocking_preview.styleSheet()
+    assert "Macro Security" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_svg_recolor_command_surface():
     window = MainWindow()
     window.show()
@@ -3504,6 +3532,7 @@ def main():
         test_example_live_captions_command_surface,
         test_example_copilot_prompt_gallery_is_available,
         test_example_comments_link_opening_command_surface,
+        test_example_macro_blocking_status_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,

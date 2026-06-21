@@ -335,6 +335,9 @@ class MainWindow(RibbonMainWindow):
         self.collaboration_page = ribbon.addPage("Collaboration")
         self._create_collaboration_page()
 
+        self.security_page = ribbon.addPage("Security")
+        self._create_security_page()
+
         self.tell_me_page = ribbon.addPage("Tell Me")
         self._create_command_discovery_page()
 
@@ -1355,6 +1358,27 @@ class MainWindow(RibbonMainWindow):
         self.comments_link_preview.setToolTip("Last opened comment link state")
         comments_group.addWidget(self.comments_link_preview)
 
+    def _create_security_page(self):
+        macro_group = self.security_page.addGroup("Macro Protection")
+        self.macro_blocking_action = macro_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_MessageBoxWarning),
+            "Macro Security",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.macro_blocking_action.setObjectName("macroBlockingAction")
+        self.macro_blocking_action.setToolTip(
+            "Show macro blocking status for untrusted files"
+        )
+        self.macro_blocking_action.setStatusTip("Macro Security: not scanned")
+        self.macro_blocking_preview = QLabel("Macros: not scanned", macro_group)
+        self.macro_blocking_preview.setObjectName("macroBlockingPreview")
+        self.macro_blocking_preview.setMinimumWidth(210)
+        self.macro_blocking_preview.setFixedHeight(30)
+        self.macro_blocking_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.macro_blocking_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.macro_blocking_preview.setToolTip("Macro blocking security state")
+        macro_group.addWidget(self.macro_blocking_preview)
+
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
         self.tell_me_lightbulb_action = discovery_group.addAction(
@@ -2359,6 +2383,7 @@ class MainWindow(RibbonMainWindow):
             self.live_captions_action,
             self.loop_component_action,
             self.comments_link_action,
+            self.macro_blocking_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2422,6 +2447,7 @@ class MainWindow(RibbonMainWindow):
         )
         self.loop_component_action.triggered.connect(self.insert_loop_component)
         self.comments_link_action.triggered.connect(self.open_comments_link)
+        self.macro_blocking_action.triggered.connect(self.show_macro_blocking_status)
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
         self.contextual_group_color_action.triggered.connect(
@@ -2792,6 +2818,7 @@ class MainWindow(RibbonMainWindow):
             self.live_captions_action,
             self.loop_component_action,
             self.comments_link_action,
+            self.macro_blocking_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -3316,6 +3343,14 @@ class MainWindow(RibbonMainWindow):
         )
         self.comments_link_preview.setProperty("commentThreadOpened", True)
         self._message("Comments link: opened thread #42")
+
+    def show_macro_blocking_status(self):
+        self.macro_blocking_preview.setText("Macros: blocked")
+        self.macro_blocking_preview.setStyleSheet(
+            "QLabel#macroBlockingPreview { color: #842029; background: #f8d7da; font-weight: 600; }"
+        )
+        self.macro_blocking_preview.setProperty("macrosBlocked", True)
+        self._message("Macro Security: untrusted macros blocked")
 
     def convert_to_data_type(self):
         self.data_types_preview.setText("Data Types: Geography linked")

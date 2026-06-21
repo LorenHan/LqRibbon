@@ -162,5 +162,5 @@ Default style remains `Office 2016 Blue`.
 | 131 | Copilot prompt gallery | Copilot page | Complete |
 | 132 | Loop component command | Insert page | Complete |
 | 133 | Comments link opening | Collaboration page | Complete |
-| 134 | Macro blocking status command | Security page | Planned |
+| 134 | Macro blocking status command | Security page | Complete |
 | 135 | Font picker large-list scrollbar state | Font controls | Planned |
