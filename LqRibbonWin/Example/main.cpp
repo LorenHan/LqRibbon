@@ -249,6 +249,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *presenceAvatarStripAction,
                      QAction *feedbackTitleAction,
                      QAction *accountTitleAction,
+                     QLabel *uploadBeforeSharePrompt,
                      QAction *showTabsAndCommandsAction,
                      QAction *showTabsOnlyAction,
                      QAction *alwaysShowRibbonAction,
@@ -1196,6 +1197,22 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          == Qt::ToolButtonIconOnly
                      && strShareStatus.contains(QStringLiteral("Share")),
                  QStringLiteral("Share title button is available"))) {
+        return 1;
+    }
+    if (!require(uploadBeforeSharePrompt
+                     && uploadBeforeSharePrompt->objectName()
+                         == QStringLiteral("uploadBeforeSharePrompt")
+                     && uploadBeforeSharePrompt->text().contains(
+                         QStringLiteral("Upload before sharing"))
+                     && uploadBeforeSharePrompt->text().contains(
+                         QStringLiteral("OneDrive"))
+                     && uploadBeforeSharePrompt->text().contains(
+                         QStringLiteral("SharePoint"))
+                     && uploadBeforeSharePrompt->styleSheet().contains(
+                         QStringLiteral("#uploadBeforeSharePrompt"))
+                     && strShareStatus.contains(
+                         QStringLiteral("upload before sharing")),
+                 QStringLiteral("Upload-before-share prompt is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3607,6 +3624,16 @@ int main(int argc, char *argv[])
                          }
                      });
     backstageLayout->addRow(QObject::tr("Cloud location"), cloudLocationCombo);
+    QLabel *uploadBeforeSharePrompt = new QLabel(
+        QObject::tr("Upload required before sharing"),
+        backstagePage);
+    uploadBeforeSharePrompt->setObjectName(
+        QStringLiteral("uploadBeforeSharePrompt"));
+    uploadBeforeSharePrompt->setToolTip(
+        QObject::tr("Save this local draft to a cloud location before inviting people"));
+    uploadBeforeSharePrompt->setWordWrap(true);
+    backstageLayout->addRow(QObject::tr("Share readiness"),
+                            uploadBeforeSharePrompt);
     backstage->addPage(backstagePage);
     QWidget *versionHistoryPage = new QWidget(backstage);
     versionHistoryPage->setObjectName(QStringLiteral("versionHistoryPage"));
@@ -4905,7 +4932,7 @@ int main(int argc, char *argv[])
     shareTitleAction->setObjectName(QStringLiteral("shareTitleAction"));
     shareTitleAction->setToolTip(QObject::tr("Share this document"));
     shareTitleAction->setStatusTip(
-        QObject::tr("Share: invite people to this document"));
+        QObject::tr("Share: upload before sharing to invite people"));
     QAction *commentsTitleAction = mainWindow.ribbonBar()->addTitleButton(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogContentsView),
         QObject::tr("Comments"));
@@ -4967,10 +4994,23 @@ int main(int argc, char *argv[])
                      &QAction::triggered,
                      &mainWindow,
                      updateAutoSaveTitleAction);
-    QObject::connect(shareTitleAction, &QAction::triggered, [&mainWindow]() {
+    QObject::connect(shareTitleAction,
+                     &QAction::triggered,
+                     [&mainWindow,
+                      backstage,
+                      backstageOpenPage,
+                      uploadBeforeSharePrompt]() {
+        uploadBeforeSharePrompt->setText(
+            QObject::tr("Upload before sharing: save this local draft to "
+                        "OneDrive or SharePoint before inviting people."));
+        uploadBeforeSharePrompt->setStyleSheet(
+            QStringLiteral("QLabel#uploadBeforeSharePrompt { color: #8a5700; font-weight: 600; }"));
+        if (backstage && backstageOpenPage) {
+            backstage->setActivePage(backstageOpenPage);
+        }
         if (mainWindow.statusBar()) {
             mainWindow.statusBar()->showMessage(
-                QObject::tr("Share: invite people to this document"),
+                QObject::tr("Share: upload before sharing to invite people"),
                 2500);
         }
     });
@@ -5108,6 +5148,7 @@ int main(int argc, char *argv[])
                                 presenceAvatarStripAction,
                                 feedbackTitleAction,
                                 accountTitleAction,
+                                uploadBeforeSharePrompt,
                                 showTabsAndCommandsAction,
                                 showTabsOnlyAction,
                                 alwaysShowRibbonAction,

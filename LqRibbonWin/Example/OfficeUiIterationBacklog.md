@@ -92,7 +92,7 @@ Default style remains `Office 2016 Blue`.
 | 061 | Cloud location picker | Backstage | Complete |
 | 062 | Recent file pinning | Backstage recent list | Complete |
 | 063 | Frequent sites and groups | Backstage open page | Complete |
-| 064 | Upload-before-share prompt | Backstage/share flow | Planned |
+| 064 | Upload-before-share prompt | Backstage/share flow | Complete |
 | 065 | Sensitivity label command | Title or Review page | Planned |
 | 066 | Account privacy settings entry | Backstage account page | Planned |
 | 067 | Accessibility checker command | Review page | Planned |

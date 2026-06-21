@@ -858,6 +858,16 @@ class MainWindow(RibbonMainWindow):
             lambda text: self._message(f"Cloud location: {text}")
         )
         backstage_layout.addRow("Cloud location", self.cloud_location_combo)
+        self.upload_before_share_prompt = QLabel(
+            "Upload required before sharing",
+            backstage_page,
+        )
+        self.upload_before_share_prompt.setObjectName("uploadBeforeSharePrompt")
+        self.upload_before_share_prompt.setToolTip(
+            "Save this local draft to a cloud location before inviting people"
+        )
+        self.upload_before_share_prompt.setWordWrap(True)
+        backstage_layout.addRow("Share readiness", self.upload_before_share_prompt)
         self.backstage.addPage(backstage_page)
         self.version_history_page = QWidget(self.backstage)
         self.version_history_page.setObjectName("versionHistoryPage")
@@ -1191,7 +1201,9 @@ class MainWindow(RibbonMainWindow):
         )
         self.share_title_action.setObjectName("shareTitleAction")
         self.share_title_action.setToolTip("Share this document")
-        self.share_title_action.setStatusTip("Share: invite people to this document")
+        self.share_title_action.setStatusTip(
+            "Share: upload before sharing to invite people"
+        )
         self.comments_title_action = self.ribbonBar().addTitleButton(
             self._icon(QStyle.StandardPixmap.SP_FileDialogContentsView),
             "Comments",
@@ -1229,9 +1241,7 @@ class MainWindow(RibbonMainWindow):
         self.auto_save_title_action.triggered.connect(
             self._update_auto_save_title_action
         )
-        self.share_title_action.triggered.connect(
-            lambda: self._message("Share: invite people to this document")
-        )
+        self.share_title_action.triggered.connect(self._show_upload_before_share_prompt)
         self.comments_title_action.triggered.connect(
             lambda: self._message("Comments: show conversation pane")
         )
@@ -1793,6 +1803,17 @@ class MainWindow(RibbonMainWindow):
                 else "Unpinned recent file: axis-profile.lqr"
             )
         )
+
+    def _show_upload_before_share_prompt(self):
+        self.upload_before_share_prompt.setText(
+            "Upload before sharing: save this local draft to OneDrive or "
+            "SharePoint before inviting people."
+        )
+        self.upload_before_share_prompt.setStyleSheet(
+            "QLabel#uploadBeforeSharePrompt { color: #8a5700; font-weight: 600; }"
+        )
+        self.backstage.setActivePage(self.backstage_open_page)
+        self._message("Share: upload before sharing to invite people")
 
     def update_collapse_state_preview(self):
         ribbon = self.ribbonBar()

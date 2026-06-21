@@ -358,6 +358,27 @@ def test_example_share_title_button_is_available():
     window.close()
 
 
+def test_example_upload_before_share_prompt_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    prompt = window.upload_before_share_prompt
+    assert prompt.objectName() == "uploadBeforeSharePrompt"
+    assert "Upload required" in prompt.text()
+    assert "cloud location" in prompt.toolTip()
+
+    window.share_title_action.trigger()
+    _app().processEvents()
+    assert "Upload before sharing" in prompt.text()
+    assert "OneDrive" in prompt.text()
+    assert "SharePoint" in prompt.text()
+    assert "#uploadBeforeSharePrompt" in prompt.styleSheet()
+    assert window.backstage.activePage() is window.backstage_open_page
+    assert "upload before sharing" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_auto_save_title_toggle_is_available():
     window = MainWindow()
     window.show()
@@ -1603,6 +1624,7 @@ def main():
         test_example_feedback_title_button_is_available,
         test_example_account_title_button_is_available,
         test_example_share_title_button_is_available,
+        test_example_upload_before_share_prompt_is_available,
         test_example_auto_save_title_toggle_is_available,
         test_example_auto_save_disabled_explanation_is_available,
         test_example_comments_title_button_is_available,
