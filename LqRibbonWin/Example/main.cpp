@@ -411,6 +411,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *svgIconInsertPreview,
                      QAction *model3DInsertAction,
                      QLabel *model3DPreview,
+                     QAction *recommendedChartAction,
+                     QLabel *recommendedChartPreview,
                      LqRibbon::RibbonPage *animationPage,
                      QAction *model3DAnimationAction,
                      QLabel *model3DAnimationPreview,
@@ -1047,6 +1049,46 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strModel3DStatus.contains(
                          QStringLiteral("3D Model")),
                  QStringLiteral("3D model insert command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *recommendedChartButton =
+        collapseTestActionButton(ribbonBar, recommendedChartAction);
+    if (recommendedChartAction) {
+        recommendedChartAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strRecommendedChartStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(recommendedChartAction
+                     && recommendedChartAction->objectName()
+                         == QStringLiteral("recommendedChartAction")
+                     && !recommendedChartAction->icon().isNull()
+                     && recommendedChartAction->toolTip().contains(
+                         QStringLiteral("best chart type"))
+                     && recommendedChartAction->statusTip()
+                         == QStringLiteral("Recommended Chart: suggestions ready")
+                     && recommendedChartPreview
+                     && recommendedChartPreview->objectName()
+                         == QStringLiteral("recommendedChartPreview")
+                     && recommendedChartPreview->text()
+                         == QStringLiteral("Charts: clustered column")
+                     && recommendedChartPreview->styleSheet().contains(
+                         QStringLiteral("#recommendedChartPreview"))
+                     && recommendedChartPreview->toolTip().contains(
+                         QStringLiteral("Recommended chart"))
+                     && ribbonBar->searchAction(QStringLiteral("Recommended Chart"))
+                         == recommendedChartAction
+                     && recommendedChartButton
+                     && recommendedChartButton->defaultAction()
+                         == recommendedChartAction
+                     && strRecommendedChartStatus.contains(
+                         QStringLiteral("Recommended Chart")),
+                 QStringLiteral("Recommended chart command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6028,6 +6070,29 @@ int main(int argc, char *argv[])
     model3DPreview->setFrameShape(QFrame::StyledPanel);
     model3DPreview->setToolTip(QObject::tr("Last inserted 3D model state"));
     illustrationsGroup->addWidget(model3DPreview);
+    LqRibbon::RibbonGroup *chartsGroup =
+        insertPage->addGroup(QObject::tr("Charts"));
+    QAction *recommendedChartAction = chartsGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogDetailedView),
+        QObject::tr("Recommended Chart"),
+        Qt::ToolButtonTextUnderIcon);
+    recommendedChartAction->setObjectName(
+        QStringLiteral("recommendedChartAction"));
+    recommendedChartAction->setToolTip(
+        QObject::tr("Suggest the best chart type for selected data"));
+    recommendedChartAction->setStatusTip(
+        QObject::tr("Recommended Chart: suggestions ready"));
+    QLabel *recommendedChartPreview = new QLabel(chartsGroup);
+    recommendedChartPreview->setObjectName(
+        QStringLiteral("recommendedChartPreview"));
+    recommendedChartPreview->setText(QObject::tr("Charts: no recommendation"));
+    recommendedChartPreview->setMinimumWidth(220);
+    recommendedChartPreview->setFixedHeight(30);
+    recommendedChartPreview->setAlignment(Qt::AlignCenter);
+    recommendedChartPreview->setFrameShape(QFrame::StyledPanel);
+    recommendedChartPreview->setToolTip(
+        QObject::tr("Recommended chart selection state"));
+    chartsGroup->addWidget(recommendedChartPreview);
 
     LqRibbon::RibbonPage *formatPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Format"));
@@ -9049,6 +9114,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(rulerToggleAction);
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(model3DInsertAction);
+    mainWindow.ribbonBar()->registerSearchAction(recommendedChartAction);
     mainWindow.ribbonBar()->registerSearchAction(model3DAnimationAction);
     mainWindow.ribbonBar()->registerSearchAction(designerIdeasAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
@@ -9292,6 +9358,20 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr(
                                      "3D Model: inserted rotatable asset"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(recommendedChartAction,
+                     &QAction::triggered,
+                     [&mainWindow, recommendedChartPreview]() {
+                         recommendedChartPreview->setText(
+                             QObject::tr("Charts: clustered column"));
+                         recommendedChartPreview->setStyleSheet(
+                             QStringLiteral("QLabel#recommendedChartPreview { color: #124078; background: #eef6ff; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Recommended Chart: clustered column"),
                                  2500);
                          }
                      });
@@ -9920,6 +10000,8 @@ int main(int argc, char *argv[])
                                 svgIconInsertPreview,
                                 model3DInsertAction,
                                 model3DPreview,
+                                recommendedChartAction,
+                                recommendedChartPreview,
                                 animationPage,
                                 model3DAnimationAction,
                                 model3DAnimationPreview,

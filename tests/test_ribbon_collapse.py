@@ -942,6 +942,32 @@ def test_example_3d_model_insert_command_surface():
     window.close()
 
 
+def test_example_recommended_chart_command_surface():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.insert_page.title() == "Insert"
+    assert window.recommended_chart_action.objectName() == "recommendedChartAction"
+    assert not window.recommended_chart_action.icon().isNull()
+    assert "best chart type" in window.recommended_chart_action.toolTip()
+    assert window.recommended_chart_action.statusTip() == "Recommended Chart: suggestions ready"
+    assert window.recommended_chart_preview.objectName() == "recommendedChartPreview"
+    assert window.recommended_chart_preview.text() == "Charts: no recommendation"
+    assert "Recommended chart" in window.recommended_chart_preview.toolTip()
+    assert window.recommended_chart_action in window.search_actions
+    assert ribbon.searchAction("Recommended Chart") is window.recommended_chart_action
+
+    window.recommended_chart_action.trigger()
+    _app().processEvents()
+    assert window.recommended_chart_preview.text() == "Charts: clustered column"
+    assert "#recommendedChartPreview" in window.recommended_chart_preview.styleSheet()
+    assert "Recommended Chart" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_3d_animation_command_surface():
     _app()
     window = MainWindow()
@@ -3248,6 +3274,7 @@ def main():
         test_example_gallery_keyboard_navigation_is_available,
         test_example_svg_icon_insert_command_surface,
         test_example_3d_model_insert_command_surface,
+        test_example_recommended_chart_command_surface,
         test_example_3d_animation_command_surface,
         test_example_designer_ideas_command_surface,
         test_example_svg_recolor_command_surface,

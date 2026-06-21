@@ -674,6 +674,28 @@ class MainWindow(RibbonMainWindow):
         self.model_3d_preview.setToolTip("Last inserted 3D model state")
         illustrations_group.addWidget(self.model_3d_preview)
 
+        charts_group = self.insert_page.addGroup("Charts")
+        self.recommended_chart_action = charts_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogDetailedView),
+            "Recommended Chart",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.recommended_chart_action.setObjectName("recommendedChartAction")
+        self.recommended_chart_action.setToolTip(
+            "Suggest the best chart type for selected data"
+        )
+        self.recommended_chart_action.setStatusTip(
+            "Recommended Chart: suggestions ready"
+        )
+        self.recommended_chart_preview = QLabel("Charts: no recommendation", charts_group)
+        self.recommended_chart_preview.setObjectName("recommendedChartPreview")
+        self.recommended_chart_preview.setMinimumWidth(220)
+        self.recommended_chart_preview.setFixedHeight(30)
+        self.recommended_chart_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.recommended_chart_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.recommended_chart_preview.setToolTip("Recommended chart selection state")
+        charts_group.addWidget(self.recommended_chart_preview)
+
     def _create_format_page(self):
         svg_format_group = self.format_page.addGroup("SVG Format")
         self.svg_recolor_action = svg_format_group.addAction(
@@ -2167,6 +2189,7 @@ class MainWindow(RibbonMainWindow):
             self.model_3d_insert_action,
             self.model_3d_animation_action,
             self.designer_ideas_action,
+            self.recommended_chart_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2223,6 +2246,7 @@ class MainWindow(RibbonMainWindow):
         self.svg_icon_insert_action.triggered.connect(self.insert_svg_icon)
         self.model_3d_insert_action.triggered.connect(self.insert_3d_model)
         self.designer_ideas_action.triggered.connect(self.open_designer_ideas)
+        self.recommended_chart_action.triggered.connect(self.open_recommended_chart)
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
         self.contextual_group_color_action.triggered.connect(
@@ -2556,6 +2580,7 @@ class MainWindow(RibbonMainWindow):
             self.model_3d_insert_action,
             self.model_3d_animation_action,
             self.designer_ideas_action,
+            self.recommended_chart_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -3058,6 +3083,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#designerIdeasPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
         )
         self._message("Designer Ideas: 3 layout suggestions")
+
+    def open_recommended_chart(self):
+        self.recommended_chart_preview.setText("Charts: clustered column")
+        self.recommended_chart_preview.setStyleSheet(
+            "QLabel#recommendedChartPreview { color: #124078; background: #eef6ff; font-weight: 600; }"
+        )
+        self._message("Recommended Chart: clustered column")
 
     def recolor_svg_icon(self):
         self.svg_recolor_preview.setText("SVG color: blue accent")
