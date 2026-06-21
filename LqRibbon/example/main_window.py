@@ -858,6 +858,17 @@ class MainWindow(RibbonMainWindow):
         status_bar.addWidget(QLabel("|", status_bar))
         status_bar.addWidget(QLabel("Online", status_bar))
         status_bar.addWidget(QLabel("|", status_bar))
+        self.collaboration_status_label = QLabel(
+            "Saved to cloud | 3 editors",
+            status_bar,
+        )
+        self.collaboration_status_label.setObjectName("collaborationStatusText")
+        self.collaboration_status_label.setToolTip(
+            "Collaboration status for this document"
+        )
+        self.collaboration_status_label.setMinimumWidth(160)
+        status_bar.addWidget(self.collaboration_status_label)
+        status_bar.addWidget(QLabel("|", status_bar))
         self.density_status_preview = QLabel(status_bar)
         self.density_status_preview.setObjectName("ribbonDensityStatusPreview")
         self.density_status_preview.setMinimumWidth(180)

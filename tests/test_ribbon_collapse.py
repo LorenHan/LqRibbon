@@ -406,6 +406,24 @@ def test_example_presence_avatar_strip_is_available():
     window.close()
 
 
+def test_example_collaboration_status_text_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    label = window.collaboration_status_label
+
+    assert label.objectName() == "collaborationStatusText"
+    assert label.isVisible()
+    assert "Saved to cloud" in label.text()
+    assert "3 editors" in label.text()
+    assert "Collaboration status" in label.toolTip()
+
+    window.statusBar().showMessage("Transient command message", 100)
+    _app().processEvents()
+    assert label.text() == "Saved to cloud | 3 editors"
+    window.close()
+
+
 def test_example_caption_search_defaults_to_centered_microsoft_box():
     window = MainWindow()
     window.show()
@@ -1392,6 +1410,7 @@ def main():
         test_example_share_title_button_is_available,
         test_example_comments_title_button_is_available,
         test_example_presence_avatar_strip_is_available,
+        test_example_collaboration_status_text_is_available,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,

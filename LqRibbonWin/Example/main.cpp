@@ -272,6 +272,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      const QList<QAction *> &tellMePhraseActions,
                      QAction *tellMeHelpRedirectAction,
                      QLabel *tellMeHelpRedirectPreview,
+                     QLabel *collaborationStatusText,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
                      const std::function<void(QMenu *, QAction *)> &populateActionContextMenu,
                      const std::function<void(QMenu *, QAction *)> &populateQuickAccessActionContextMenu,
@@ -1183,6 +1184,34 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strPresenceStatus.contains(
                          QStringLiteral("3 collaborators")),
                  QStringLiteral("Presence avatar strip is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    if (!require(collaborationStatusText
+                     && collaborationStatusText->objectName()
+                         == QStringLiteral("collaborationStatusText")
+                     && collaborationStatusText->isVisible()
+                     && collaborationStatusText->text().contains(
+                         QStringLiteral("Saved to cloud"))
+                     && collaborationStatusText->text().contains(
+                         QStringLiteral("3 editors"))
+                     && collaborationStatusText->toolTip().contains(
+                         QStringLiteral("Collaboration status")),
+                 QStringLiteral("Collaboration status text is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->showMessage(
+            QStringLiteral("Transient command message"),
+            100);
+        processCollapseTestEvents();
+    }
+    if (!require(collaborationStatusText->text()
+                     == QStringLiteral("Saved to cloud | 3 editors"),
+                 QStringLiteral("Collaboration status text survives commands"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -4134,6 +4163,16 @@ int main(int argc, char *argv[])
     ribbonStatusBar->addAction(QObject::tr("Ready"));
     ribbonStatusBar->addSeparator();
     ribbonStatusBar->addAction(QObject::tr("Online"));
+    QLabel *collaborationStatusText = new QLabel(
+        QObject::tr("Saved to cloud | 3 editors"),
+        ribbonStatusBar);
+    collaborationStatusText->setObjectName(
+        QStringLiteral("collaborationStatusText"));
+    collaborationStatusText->setToolTip(
+        QObject::tr("Collaboration status for this document"));
+    collaborationStatusText->setMinimumWidth(160);
+    ribbonStatusBar->addSeparator();
+    ribbonStatusBar->addWidget(collaborationStatusText);
     densityStatusPreview = new QLabel(ribbonStatusBar);
     densityStatusPreview->setObjectName(QStringLiteral("ribbonDensityStatusPreview"));
     densityStatusPreview->setMinimumWidth(180);
@@ -4554,6 +4593,7 @@ int main(int argc, char *argv[])
                                 tellMePhraseActions,
                                 tellMeHelpRedirectAction,
                                 tellMeHelpRedirectPreview,
+                                collaborationStatusText,
                                 populateQuickAccessMenu,
                                 populateActionContextMenu,
                                 populateQuickAccessActionContextMenu,
