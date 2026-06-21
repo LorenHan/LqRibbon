@@ -1036,8 +1036,13 @@ class MainWindow(RibbonMainWindow):
             self.export_quick_access_action,
             self.import_quick_access_action,
         ]
+        search_aliases = {
+            self.control_modes_action: ["Axis Profile", "Servo Axis Setup"],
+        }
         for action in self.search_actions:
-            self.ribbonBar().registerSearchAction(action)
+            self.ribbonBar().registerSearchAction(
+                action, search_aliases.get(action, [])
+            )
         for action in self.quick_access_actions:
             self.ribbonBar().addQuickAccessAction(action)
         self.update_quick_access_preview()

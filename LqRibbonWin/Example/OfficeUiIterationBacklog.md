@@ -71,7 +71,7 @@ Default style remains `Office 2016 Blue`.
 | 040 | Related file result section | Search popup | Complete |
 | 041 | Search action trigger on Enter | Search popup | Complete |
 | 042 | Search keyboard navigation | Search popup | Complete |
-| 043 | Search command aliases | Search registry | Planned |
+| 043 | Search command aliases | Search registry | Complete |
 | 044 | Search fuzzy phrase matching | Search registry | Planned |
 | 045 | Search no-result affordance | Search popup | Planned |
 | 046 | Tell Me lightbulb entry | Command discovery page | Planned |

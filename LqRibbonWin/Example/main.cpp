@@ -498,6 +498,37 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
 
     ribbonBar->clearRecentSearchActions();
+    ribbonBar->setSearchText(QStringLiteral("axis"));
+    ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
+    processCollapseTestEvents();
+    QStringList aliasRows;
+    if (searchPopupView && searchPopupView->model()) {
+        QAbstractItemModel *popupModel = searchPopupView->model();
+        for (int row = 0; row < popupModel->rowCount(); ++row) {
+            aliasRows.append(
+                popupModel->index(row, 0).data(Qt::DisplayRole).toString());
+        }
+    }
+    const bool aliasTriggered =
+        ribbonBar->triggerSearchAction(QStringLiteral("Axis Profile"));
+    const QList<QAction *> aliasRecentActions =
+        ribbonBar->recentSearchActions();
+    if (!require(searchPopupView && searchPopupView->isVisible()
+                     && aliasRows.value(0) == QStringLiteral("Actions")
+                     && aliasRows.value(1) == QStringLiteral("Control Modes")
+                     && aliasTriggered
+                     && !aliasRecentActions.isEmpty()
+                     && aliasRecentActions.first()->text()
+                         == QStringLiteral("Control Modes"),
+                 QStringLiteral("search command alias matches registered action"))) {
+        return 1;
+    }
+    ribbonBar->searchLineEdit()->clear();
+    searchPopupView->hide();
+    ribbonBar->clearRecentSearchActions();
+    processCollapseTestEvents();
+
+    ribbonBar->clearRecentSearchActions();
     centerSearchAction->trigger();
     ribbonBar->setSearchText(QStringLiteral("Compact Search"));
     ribbonBar->searchLineEdit()->setFocus(Qt::OtherFocusReason);
@@ -3686,7 +3717,10 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(connectAction);
     mainWindow.ribbonBar()->registerSearchAction(basicAction);
     mainWindow.ribbonBar()->registerSearchAction(driverAction);
-    mainWindow.ribbonBar()->registerSearchAction(controlModesAction);
+    mainWindow.ribbonBar()->registerSearchAction(
+        controlModesAction,
+        QStringList() << QObject::tr("Axis Profile")
+                      << QObject::tr("Servo Axis Setup"));
     mainWindow.ribbonBar()->registerSearchAction(minimizeRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(restoreRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(classicRibbonAction);

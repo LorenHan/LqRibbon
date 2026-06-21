@@ -513,6 +513,27 @@ def test_example_search_keyboard_navigation_activates_popup_action():
     window.close()
 
 
+def test_example_search_command_alias_matches_registered_action():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    search = ribbon.searchLineEdit()
+
+    ribbon.clearRecentSearchActions()
+    search.setFocus()
+    search.setText("axis")
+    search.showPopup("axis")
+    _app().processEvents()
+    popup_rows = [action.text() for action in search._popup.actions()]
+
+    assert popup_rows[:2] == ["Actions", "Control Modes"]
+    assert ribbon.triggerSearchAction("Axis Profile")
+    assert ribbon.recentSearchActions()[0] is window.control_modes_action
+    search.closePopup()
+    window.close()
+
+
 def test_example_search_shows_document_result_section():
     window = MainWindow()
     window.show()
@@ -1085,6 +1106,7 @@ def main():
         test_example_zero_query_search_shows_default_suggestions,
         test_example_zero_query_search_groups_recent_actions,
         test_example_search_keyboard_navigation_activates_popup_action,
+        test_example_search_command_alias_matches_registered_action,
         test_example_search_shows_document_result_section,
         test_example_search_shows_help_result_section,
         test_example_search_shows_related_file_result_section,

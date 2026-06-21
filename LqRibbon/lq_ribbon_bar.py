@@ -636,12 +636,22 @@ class LqRibbonBar(QTabWidget):
     def searchActions(self):
         return list(self._search_actions)
 
+    def _normalized_search_text(self, text):
+        return str(text).replace("&", "").strip().lower()
+
+    def _search_action_terms(self, action):
+        keywords = action.data() or []
+        if isinstance(keywords, str):
+            keywords = [keywords]
+        return [action.text()] + [str(keyword) for keyword in keywords]
+
     def searchAction(self, text):
-        normalized = text.strip().lower()
+        normalized = self._normalized_search_text(text)
         for action in self._search_actions:
-            keywords = action.data() or []
-            haystack = [action.text()] + list(keywords)
-            if any(normalized == item.strip().lower() for item in haystack):
+            if any(
+                normalized == self._normalized_search_text(item)
+                for item in self._search_action_terms(action)
+            ):
                 return action
         return None
 

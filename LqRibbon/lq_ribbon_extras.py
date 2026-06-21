@@ -821,6 +821,21 @@ class LqRibbonSearchBar(QLineEdit):
     def setMaxSearchItemCount(self, count):
         self._max_search_item_count = max(0, int(count))
 
+    def _normalized_action_text(self, text):
+        return str(text).replace("&", "").strip().lower()
+
+    def _action_search_terms(self, action):
+        keywords = action.data() or []
+        if isinstance(keywords, str):
+            keywords = [keywords]
+        return [action.text()] + [str(keyword) for keyword in keywords]
+
+    def _action_matches_text(self, action, normalized):
+        return any(
+            normalized in self._normalized_action_text(term)
+            for term in self._action_search_terms(action)
+        )
+
     def _ordered_popup_actions(self, normalized):
         actions = [
             action
@@ -830,15 +845,15 @@ class LqRibbonSearchBar(QLineEdit):
         if normalized:
             return [
                 action for action in actions
-                if normalized in action.text().replace("&", "").lower()
+                if self._action_matches_text(action, normalized)
             ]
 
         ordered = []
         if self.ribbon_bar and hasattr(self.ribbon_bar, "searchSuggestions"):
             for suggestion in self.ribbon_bar.searchSuggestions():
-                normalized_suggestion = str(suggestion).replace("&", "").strip().lower()
+                normalized_suggestion = self._normalized_action_text(suggestion)
                 for action in actions:
-                    normalized_text = action.text().replace("&", "").strip().lower()
+                    normalized_text = self._normalized_action_text(action.text())
                     if action not in ordered and normalized_text == normalized_suggestion:
                         ordered.append(action)
                         break
@@ -850,9 +865,9 @@ class LqRibbonSearchBar(QLineEdit):
             return []
         ordered = []
         for suggestion in self.ribbon_bar.searchSuggestions():
-            normalized_suggestion = str(suggestion).replace("&", "").strip().lower()
+            normalized_suggestion = self._normalized_action_text(suggestion)
             for action in actions:
-                normalized_text = action.text().replace("&", "").strip().lower()
+                normalized_text = self._normalized_action_text(action.text())
                 if action not in ordered and normalized_text == normalized_suggestion:
                     ordered.append(action)
                     break
