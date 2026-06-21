@@ -1521,6 +1521,36 @@ def test_example_system_menu_export_popup_is_available():
     window.close()
 
 
+def test_example_office_popup_notification_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    action = window.office_popup_action
+    button = next(
+        (
+            child
+            for child in window.ribbonBar().findChildren(QToolButton)
+            if child.defaultAction() is action
+        ),
+        None,
+    )
+
+    assert action.objectName() == "officePopupAction"
+    assert not action.icon().isNull()
+    assert "popup notification" in action.toolTip()
+    assert action.statusTip() == "Office popup: notification ready"
+    assert button is not None
+    assert action in window.search_actions
+    assert window.ribbonBar().searchAction("Popup") is action
+
+    action.trigger()
+    _app().processEvents()
+    assert "Office popup" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_backstage_open_page_shows_frequent_sites_and_groups():
     _app()
     window = MainWindow()
@@ -2964,6 +2994,7 @@ def main():
         test_example_cloud_location_picker_is_available,
         test_example_recent_file_pinning_is_available,
         test_example_system_menu_export_popup_is_available,
+        test_example_office_popup_notification_is_available,
         test_example_backstage_open_page_shows_frequent_sites_and_groups,
         test_example_backstage_export_page_is_available,
         test_example_backstage_close_behavior_is_available,

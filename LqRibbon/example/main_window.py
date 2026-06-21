@@ -1451,6 +1451,9 @@ class MainWindow(RibbonMainWindow):
         self.office_popup_action = self._add_group_action(
             popup_group, QStyle.StandardPixmap.SP_MessageBoxInformation, "Popup"
         )
+        self.office_popup_action.setObjectName("officePopupAction")
+        self.office_popup_action.setToolTip("Show an Office popup notification")
+        self.office_popup_action.setStatusTip("Office popup: notification ready")
         self.office_menu_action = self._add_group_action(
             popup_group,
             QStyle.StandardPixmap.SP_DirOpenIcon,
@@ -3496,6 +3499,7 @@ class MainWindow(RibbonMainWindow):
         popup.setBodyText("Popup window sample")
         popup.setDisplayTime(3000)
         popup.showPopup(self.mapToGlobal(QPoint(40, 90)))
+        self._message("Office popup: notification shown")
 
     def show_office_menu(self):
         self.office_menu.exec(self.mapToGlobal(QPoint(40, 90)))

@@ -398,6 +398,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *resetQuickAccessAction,
                      QAction *exportQuickAccessAction,
                      QAction *importQuickAccessAction,
+                     QAction *officePopupAction,
                      QAction *centerSearchAction,
                      QAction *compactSearchAction,
                      QAction *hiddenSearchAction,
@@ -2248,6 +2249,37 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         ribbonBar->setCurrentPageIndex(generalPageIndex);
         processCollapseTestEvents();
     }
+    QToolButton *officePopupButton =
+        collapseTestActionButton(ribbonBar, officePopupAction);
+    if (officePopupAction) {
+        officePopupAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strOfficePopupStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(officePopupAction
+                     && officePopupAction->objectName()
+                         == QStringLiteral("officePopupAction")
+                     && !officePopupAction->icon().isNull()
+                     && officePopupAction->toolTip().contains(
+                         QStringLiteral("popup notification"))
+                     && officePopupAction->statusTip()
+                         == QStringLiteral("Office popup: notification ready")
+                     && officePopupButton
+                     && officePopupButton->defaultAction()
+                         == officePopupAction
+                     && ribbonBar->searchAction(QStringLiteral("Popup"))
+                         == officePopupAction
+                     && strOfficePopupStatus.contains(
+                         QStringLiteral("Office popup")),
+                 QStringLiteral("Office popup notification is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
     QToolButton *dictateMicrophoneButton =
         collapseTestActionButton(ribbonBar, dictateMicrophoneAction);
     if (dictateMicrophoneAction) {
@@ -6374,6 +6406,11 @@ int main(int argc, char *argv[])
         mainWindow.style()->standardIcon(QStyle::SP_MessageBoxInformation),
         QObject::tr("Popup"),
         Qt::ToolButtonTextUnderIcon);
+    officePopupAction->setObjectName(QStringLiteral("officePopupAction"));
+    officePopupAction->setToolTip(
+        QObject::tr("Show an Office popup notification"));
+    officePopupAction->setStatusTip(
+        QObject::tr("Office popup: notification ready"));
     QAction *officeMenuAction = popupGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_DirOpenIcon),
         QObject::tr("Popup Menu"),
@@ -8112,8 +8149,14 @@ int main(int argc, char *argv[])
                              &mainWindow,
                              mainWindow.style()->standardIcon(
                                  QStyle::SP_MessageBoxInformation),
-        QObject::tr("LqRibbon"),
+                             QObject::tr("LqRibbon"),
                              QObject::tr("Popup window sample"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Office popup: notification shown"),
+                                 2500);
+                         }
                      });
     QObject::connect(officeMenuAction, &QAction::triggered,
                      [&mainWindow, officeMenu]() {
@@ -9211,6 +9254,7 @@ int main(int argc, char *argv[])
                                 resetQuickAccessAction,
                                 exportQuickAccessAction,
                                 importQuickAccessAction,
+                                officePopupAction,
                                 centerSearchAction,
                                 compactSearchAction,
                                 hiddenSearchAction,
