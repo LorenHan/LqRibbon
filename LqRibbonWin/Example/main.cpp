@@ -483,6 +483,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      const QByteArray *exportedQuickAccessState,
                      QAction *addPageAction,
                      QLabel *customTabPreview,
+                     QAction *addGroupAction,
+                     QLabel *customGroupPreview,
                      QAction *renamePageAction,
                      QAction *moveGalleryAction,
                      QAction *toggleGroupAction,
@@ -3558,6 +3560,49 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("Custom tab creation adds runtime tab"))) {
         return 1;
     }
+    const int groupCountBeforeCustomGroup = customPage->groupCount();
+    if (!require(addGroupAction
+                     && addGroupAction->objectName()
+                         == QStringLiteral("addGroupAction")
+                     && !addGroupAction->icon().isNull()
+                     && addGroupAction->toolTip().contains(
+                         QStringLiteral("custom group"))
+                     && addGroupAction->statusTip()
+                         == QStringLiteral("Custom group: not created")
+                     && customGroupPreview
+                     && customGroupPreview->objectName()
+                         == QStringLiteral("customGroupPreview")
+                     && customGroupPreview->text()
+                         == QStringLiteral("Custom group: none")
+                     && ribbonBar->searchAction(QStringLiteral("Add Group"))
+                         == addGroupAction,
+                 QStringLiteral("Custom group creation defaults empty"))) {
+        return 1;
+    }
+    addGroupAction->trigger();
+    processCollapseTestEvents();
+    LqRibbon::RibbonGroup *customGroup =
+        customPage->group(groupCountBeforeCustomGroup);
+    const QString strCustomGroupStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(customPage->groupCount() == groupCountBeforeCustomGroup + 1
+                     && customGroup
+                     && customGroup->title()
+                         == QStringLiteral("Custom Group 1")
+                     && customGroup->property("customizeGroupId").toString()
+                         == QStringLiteral("customGroup1")
+                     && customGroupPreview->text()
+                         == QStringLiteral("Custom group: Custom Group 1")
+                     && customGroupPreview->styleSheet().contains(
+                         QStringLiteral("#customGroupPreview"))
+                     && addGroupAction->statusTip()
+                         == QStringLiteral("Custom group: Custom Group 1")
+                     && strCustomGroupStatus.contains(
+                         QStringLiteral("Custom group")),
+                 QStringLiteral("Custom group creation adds group"))) {
+        return 1;
+    }
 
     return 0;
 }
@@ -5529,6 +5574,23 @@ int main(int argc, char *argv[])
     customTabPreview->setToolTip(
         QObject::tr("Last custom tab created from Customize"));
     runtimeGroup->addWidget(customTabPreview);
+    QAction *addGroupAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogDetailedView),
+        QObject::tr("Add Group"),
+        Qt::ToolButtonTextBesideIcon);
+    addGroupAction->setObjectName(QStringLiteral("addGroupAction"));
+    addGroupAction->setToolTip(
+        QObject::tr("Create a custom group on the active tab"));
+    addGroupAction->setStatusTip(QObject::tr("Custom group: not created"));
+    QLabel *customGroupPreview = new QLabel(runtimeGroup);
+    customGroupPreview->setObjectName(QStringLiteral("customGroupPreview"));
+    customGroupPreview->setText(QObject::tr("Custom group: none"));
+    customGroupPreview->setMinimumWidth(180);
+    customGroupPreview->setFixedHeight(30);
+    customGroupPreview->setAlignment(Qt::AlignCenter);
+    customGroupPreview->setFrameShape(QFrame::StyledPanel);
+    customGroupPreview->setToolTip(QObject::tr("Last custom group created"));
+    runtimeGroup->addWidget(customGroupPreview);
     QAction *renamePageAction = runtimeGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
         QObject::tr("Rename Driver"),
@@ -5967,6 +6029,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), fullScreenAction);
     customizeManager->addToCategory(QObject::tr("Actions"), highContrastStyleAction);
     customizeManager->addToCategory(QObject::tr("Actions"), touchSpacingAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), addGroupAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     dictateMicrophoneAction);
@@ -6840,6 +6903,46 @@ int main(int argc, char *argv[])
                          }
                          mainWindow.ribbonBar()->setCurrentWidget(runtimePage);
                      });
+    QObject::connect(addGroupAction, &QAction::triggered,
+                     [&mainWindow,
+                      addPageAction,
+                      addGroupAction,
+                      customizeManager,
+                      customGroupPreview]() {
+                         static int runtimeGroupCounter = 1;
+                         LqRibbon::RibbonPage *page =
+                             mainWindow.ribbonBar()->currentPage();
+                         if (!page || !page->title().startsWith(
+                                          QObject::tr("Runtime"))) {
+                             addPageAction->trigger();
+                             page = mainWindow.ribbonBar()->currentPage();
+                         }
+                         const int groupNumber = runtimeGroupCounter++;
+                         LqRibbon::RibbonGroup *group = page->addGroup(
+                             QObject::tr("Custom Group %1").arg(groupNumber));
+                         group->addAction(
+                             mainWindow.style()->standardIcon(
+                                 QStyle::SP_DialogApplyButton),
+                             QObject::tr("Custom Command"),
+                             Qt::ToolButtonTextUnderIcon);
+                         customizeManager->addToCategory(
+                             QObject::tr("Groups"), group);
+                         group->setProperty(
+                             "customizeGroupId",
+                             QStringLiteral("customGroup%1").arg(groupNumber));
+                         customGroupPreview->setText(
+                             QObject::tr("Custom group: %1")
+                                 .arg(group->title()));
+                         customGroupPreview->setStyleSheet(
+                             QStringLiteral("QLabel#customGroupPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"));
+                         addGroupAction->setStatusTip(
+                             QObject::tr("Custom group: %1")
+                                 .arg(group->title()));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 addGroupAction->statusTip(), 2500);
+                         }
+                     });
     QObject::connect(renamePageAction, &QAction::triggered,
                      [driverPage]() {
                          driverPage->setTitle(
@@ -7176,6 +7279,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(pinRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(unpinRibbonAction);
     mainWindow.ribbonBar()->registerSearchAction(addPageAction);
+    mainWindow.ribbonBar()->registerSearchAction(addGroupAction);
     mainWindow.ribbonBar()->registerSearchAction(renamePageAction);
     mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
     mainWindow.ribbonBar()->registerSearchAction(toggleGroupAction);
@@ -8045,6 +8149,8 @@ int main(int argc, char *argv[])
                                 &exportedQuickAccessState,
                                 addPageAction,
                                 customTabPreview,
+                                addGroupAction,
+                                customGroupPreview,
                                 renamePageAction,
                                 moveGalleryAction,
                                 toggleGroupAction,

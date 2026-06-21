@@ -125,7 +125,7 @@ Default style remains `Office 2016 Blue`.
 | 094 | Contextual tab show/hide | Contextual page preview | Complete |
 | 095 | Title groups visibility toggle | Contextual page preview | Complete |
 | 096 | Custom tab creation | Customize dialog | Complete |
-| 097 | Custom group creation | Customize dialog | Planned |
+| 097 | Custom group creation | Customize dialog | Complete |
 | 098 | Rename tab/group | Customize dialog | Planned |
 | 099 | Add command to custom group | Customize dialog | Planned |
 | 100 | Remove command from custom group | Customize dialog | Planned |

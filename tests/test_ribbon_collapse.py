@@ -1062,6 +1062,39 @@ def test_example_custom_tab_creation_is_available():
     window.close()
 
 
+def test_example_custom_group_creation_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    window.add_page_action.trigger()
+    _app().processEvents()
+    runtime_page = ribbon.currentPage()
+    initial_group_count = runtime_page.groupCount()
+
+    assert window.add_group_action.objectName() == "addGroupAction"
+    assert not window.add_group_action.icon().isNull()
+    assert "custom group" in window.add_group_action.toolTip()
+    assert window.add_group_action.statusTip() == "Custom group: not created"
+    assert window.custom_group_preview.objectName() == "customGroupPreview"
+    assert window.custom_group_preview.text() == "Custom group: none"
+    assert window.add_group_action in window.search_actions
+    assert ribbon.searchAction("Add Group") is window.add_group_action
+
+    window.add_group_action.trigger()
+    _app().processEvents()
+    new_group = runtime_page.group(initial_group_count)
+    assert runtime_page.groupCount() == initial_group_count + 1
+    assert new_group.title() == "Custom Group 1"
+    assert window.customize_manager.groupId(new_group) == "customGroup1"
+    assert window.custom_group_preview.text() == "Custom group: Custom Group 1"
+    assert "#customGroupPreview" in window.custom_group_preview.styleSheet()
+    assert window.add_group_action.statusTip() == "Custom group: Custom Group 1"
+    assert "Custom group" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2524,6 +2557,7 @@ def main():
         test_example_contextual_tab_show_hide_toggle_is_available,
         test_example_title_groups_visibility_toggle_is_available,
         test_example_custom_tab_creation_is_available,
+        test_example_custom_group_creation_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,
