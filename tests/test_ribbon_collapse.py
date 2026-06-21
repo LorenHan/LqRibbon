@@ -1197,6 +1197,28 @@ def test_example_spelling_grammar_card_surface():
     window.close()
 
 
+def test_example_translator_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.translator_action.objectName() == "translatorAction"
+    assert not window.translator_action.icon().isNull()
+    assert "Translate selected text" in window.translator_action.toolTip()
+    assert window.translator_preview.objectName() == "translatorPreview"
+    assert window.translator_preview.text() == "Translator: no selection"
+    assert window.translator_action in window.search_actions
+    assert ribbon.searchAction("Translator") is window.translator_action
+
+    window.translator_action.trigger()
+    _app().processEvents()
+    assert window.translator_preview.text() == "Translator: English to Chinese"
+    assert "#translatorPreview" in window.translator_preview.styleSheet()
+    assert "Translator" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1832,6 +1854,7 @@ def main():
         test_example_accessibility_checker_command_surface,
         test_example_editor_pane_command_surface,
         test_example_spelling_grammar_card_surface,
+        test_example_translator_command_surface,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,

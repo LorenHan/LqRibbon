@@ -99,7 +99,7 @@ Default style remains `Office 2016 Blue`.
 | 068 | Editor pane command | Review page | Complete |
 | 069 | Spelling and grammar card | Review page | Complete |
 | 070 | Dictate microphone command | Home page | Complete |
-| 071 | Translator command | Review page | Planned |
+| 071 | Translator command | Review page | Complete |
 | 072 | Read Aloud command | Review page | Planned |
 | 073 | Immersive Reader command | View page | Planned |
 | 074 | Focus mode command | View page | Planned |

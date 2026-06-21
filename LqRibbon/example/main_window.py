@@ -659,6 +659,29 @@ class MainWindow(RibbonMainWindow):
             "Spelling and grammar result card"
         )
         editor_group.addWidget(self.spelling_grammar_card)
+        language_group = self.review_page.addGroup("Language")
+        self.translator_action = language_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogInfoView),
+            "Translator",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.translator_action.setObjectName("translatorAction")
+        self.translator_action.setToolTip(
+            "Translate selected text into another language"
+        )
+        self.translator_action.setStatusTip(
+            "Translator: choose source text and target language"
+        )
+        self.translator_preview = QLabel(
+            "Translator: no selection", language_group
+        )
+        self.translator_preview.setObjectName("translatorPreview")
+        self.translator_preview.setMinimumWidth(210)
+        self.translator_preview.setFixedHeight(30)
+        self.translator_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.translator_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.translator_preview.setToolTip("Translator pane preview")
+        language_group.addWidget(self.translator_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -1274,6 +1297,7 @@ class MainWindow(RibbonMainWindow):
             self.accessibility_checker_action,
             self.editor_pane_action,
             self.spelling_grammar_action,
+            self.translator_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1307,6 +1331,7 @@ class MainWindow(RibbonMainWindow):
         self.spelling_grammar_action.triggered.connect(
             self.show_spelling_grammar_card
         )
+        self.translator_action.triggered.connect(self.open_translator)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1576,6 +1601,7 @@ class MainWindow(RibbonMainWindow):
             self.accessibility_checker_action,
             self.editor_pane_action,
             self.spelling_grammar_action,
+            self.translator_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -1919,6 +1945,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#spellingGrammarCard { color: #a80000; font-weight: 600; }"
         )
         self._message("Spelling & Grammar: 3 issues ready")
+
+    def open_translator(self):
+        self.translator_preview.setText("Translator: English to Chinese")
+        self.translator_preview.setStyleSheet(
+            "QLabel#translatorPreview { color: #0f6cbd; font-weight: 600; }"
+        )
+        self._message("Translator: English to Chinese")
 
     def toggle_dictate_microphone(self, enabled):
         if enabled:

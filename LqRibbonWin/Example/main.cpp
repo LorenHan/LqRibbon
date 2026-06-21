@@ -285,6 +285,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *editorPanePreview,
                      QAction *spellingGrammarAction,
                      QLabel *spellingGrammarCard,
+                     QAction *translatorAction,
+                     QLabel *translatorPreview,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -912,6 +914,40 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strSpellingGrammarStatus.contains(
                          QStringLiteral("Spelling & Grammar")),
                  QStringLiteral("Spelling and grammar card surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *translatorButton =
+        collapseTestActionButton(ribbonBar, translatorAction);
+    if (translatorAction) {
+        translatorAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strTranslatorStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(translatorAction
+                     && translatorAction->objectName()
+                         == QStringLiteral("translatorAction")
+                     && !translatorAction->icon().isNull()
+                     && translatorAction->toolTip().contains(
+                         QStringLiteral("Translate selected text"))
+                     && translatorButton
+                     && translatorPreview
+                     && translatorPreview->objectName()
+                         == QStringLiteral("translatorPreview")
+                     && translatorPreview->text()
+                         == QStringLiteral("Translator: English to Chinese")
+                     && translatorPreview->styleSheet().contains(
+                         QStringLiteral("#translatorPreview"))
+                     && ribbonBar->searchAction(QStringLiteral("Translator"))
+                         == translatorAction
+                     && strTranslatorStatus.contains(
+                         QStringLiteral("Translator")),
+                 QStringLiteral("Translator command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3665,6 +3701,26 @@ int main(int argc, char *argv[])
     spellingGrammarCard->setToolTip(
         QObject::tr("Spelling and grammar result card"));
     editorGroup->addWidget(spellingGrammarCard);
+    LqRibbon::RibbonGroup *languageGroup =
+        reviewPage->addGroup(QObject::tr("Language"));
+    QAction *translatorAction = languageGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
+        QObject::tr("Translator"),
+        Qt::ToolButtonTextUnderIcon);
+    translatorAction->setObjectName(QStringLiteral("translatorAction"));
+    translatorAction->setToolTip(
+        QObject::tr("Translate selected text into another language"));
+    translatorAction->setStatusTip(
+        QObject::tr("Translator: choose source text and target language"));
+    QLabel *translatorPreview = new QLabel(languageGroup);
+    translatorPreview->setObjectName(QStringLiteral("translatorPreview"));
+    translatorPreview->setText(QObject::tr("Translator: no selection"));
+    translatorPreview->setMinimumWidth(210);
+    translatorPreview->setFixedHeight(30);
+    translatorPreview->setAlignment(Qt::AlignCenter);
+    translatorPreview->setFrameShape(QFrame::StyledPanel);
+    translatorPreview->setToolTip(QObject::tr("Translator pane preview"));
+    languageGroup->addWidget(translatorPreview);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -4244,6 +4300,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), editorPaneAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     spellingGrammarAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), translatorAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -5344,6 +5401,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(accessibilityCheckerAction);
     mainWindow.ribbonBar()->registerSearchAction(editorPaneAction);
     mainWindow.ribbonBar()->registerSearchAction(spellingGrammarAction);
+    mainWindow.ribbonBar()->registerSearchAction(translatorAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -5588,6 +5646,19 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(translatorAction,
+                     &QAction::triggered,
+                     [&mainWindow, translatorPreview]() {
+                         translatorPreview->setText(
+                             QObject::tr("Translator: English to Chinese"));
+                         translatorPreview->setStyleSheet(
+                             QStringLiteral("QLabel#translatorPreview { color: #0f6cbd; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Translator: English to Chinese"),
+                                 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -5732,6 +5803,8 @@ int main(int argc, char *argv[])
                                 editorPanePreview,
                                 spellingGrammarAction,
                                 spellingGrammarCard,
+                                translatorAction,
+                                translatorPreview,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,
