@@ -1204,6 +1204,46 @@ def test_example_remove_command_from_custom_group_is_available():
     window.close()
 
 
+def test_example_reset_selected_custom_tab_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    window.add_page_action.trigger()
+    window.add_group_action.trigger()
+    window.add_command_action.trigger()
+    window.rename_custom_action.trigger()
+    _app().processEvents()
+    runtime_page = ribbon.currentPage()
+    assert runtime_page.title() == "Renamed Tab 1"
+    assert runtime_page.groupCount() == 2
+
+    assert window.reset_selected_tab_action.objectName() == "resetSelectedTabAction"
+    assert not window.reset_selected_tab_action.icon().isNull()
+    assert "selected custom tab" in window.reset_selected_tab_action.toolTip()
+    assert window.reset_selected_tab_action.statusTip() == "Selected tab: not reset"
+    assert window.reset_selected_tab_preview.objectName() == "resetSelectedTabPreview"
+    assert window.reset_selected_tab_preview.text() == "Selected tab reset: none"
+    assert window.reset_selected_tab_action in window.search_actions
+    assert ribbon.searchAction("Reset Tab") is window.reset_selected_tab_action
+
+    window.reset_selected_tab_action.trigger()
+    _app().processEvents()
+    assert runtime_page.title() == "Runtime 1"
+    assert runtime_page.groupCount() == 1
+    assert runtime_page.group(0).title() == "Generated"
+    assert window.last_custom_group is None
+    assert window.custom_tab_preview.text() == "Custom tab: Runtime 1"
+    assert window.custom_group_preview.text() == "Custom group: none"
+    assert window.custom_command_preview.text() == "Custom command: none"
+    assert window.reset_selected_tab_preview.text() == "Selected tab reset: Runtime 1"
+    assert "#resetSelectedTabPreview" in window.reset_selected_tab_preview.styleSheet()
+    assert window.reset_selected_tab_action.statusTip() == "Selected tab reset: Runtime 1"
+    assert "Selected tab reset" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2670,6 +2710,7 @@ def main():
         test_example_rename_custom_tab_and_group_is_available,
         test_example_add_command_to_custom_group_is_available,
         test_example_remove_command_from_custom_group_is_available,
+        test_example_reset_selected_custom_tab_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

@@ -492,6 +492,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *customCommandPreview,
                      QAction *removeCommandAction,
                      QLabel *removedCommandPreview,
+                     QAction *resetSelectedTabAction,
+                     QLabel *resetSelectedTabPreview,
                      QAction *renamePageAction,
                      QAction *moveGalleryAction,
                      QAction *toggleGroupAction,
@@ -3743,6 +3745,51 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                  QStringLiteral("Remove command from custom group removes action"))) {
         return 1;
     }
+    if (!require(resetSelectedTabAction
+                     && resetSelectedTabAction->objectName()
+                         == QStringLiteral("resetSelectedTabAction")
+                     && !resetSelectedTabAction->icon().isNull()
+                     && resetSelectedTabAction->toolTip().contains(
+                         QStringLiteral("selected custom tab"))
+                     && resetSelectedTabAction->statusTip()
+                         == QStringLiteral("Selected tab: not reset")
+                     && resetSelectedTabPreview
+                     && resetSelectedTabPreview->objectName()
+                         == QStringLiteral("resetSelectedTabPreview")
+                     && resetSelectedTabPreview->text()
+                         == QStringLiteral("Selected tab reset: none")
+                     && ribbonBar->searchAction(QStringLiteral("Reset Tab"))
+                         == resetSelectedTabAction,
+                 QStringLiteral("Reset selected tab defaults empty"))) {
+        return 1;
+    }
+    resetSelectedTabAction->trigger();
+    processCollapseTestEvents();
+    const QString strResetSelectedTabStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(customPage->title() == QStringLiteral("Runtime 1")
+                     && customPage->groupCount() == 1
+                     && customPage->group(0)
+                     && customPage->group(0)->title()
+                         == QStringLiteral("Generated")
+                     && customTabPreview->text()
+                         == QStringLiteral("Custom tab: Runtime 1")
+                     && customGroupPreview->text()
+                         == QStringLiteral("Custom group: none")
+                     && customCommandPreview->text()
+                         == QStringLiteral("Custom command: none")
+                     && resetSelectedTabPreview->text()
+                         == QStringLiteral("Selected tab reset: Runtime 1")
+                     && resetSelectedTabPreview->styleSheet().contains(
+                         QStringLiteral("#resetSelectedTabPreview"))
+                     && resetSelectedTabAction->statusTip()
+                         == QStringLiteral("Selected tab reset: Runtime 1")
+                     && strResetSelectedTabStatus.contains(
+                         QStringLiteral("Selected tab reset")),
+                 QStringLiteral("Reset selected tab restores runtime default"))) {
+        return 1;
+    }
 
     return 0;
 }
@@ -5789,6 +5836,28 @@ int main(int argc, char *argv[])
     removedCommandPreview->setToolTip(
         QObject::tr("Last command removed from a custom group"));
     runtimeGroup->addWidget(removedCommandPreview);
+    QAction *resetSelectedTabAction = runtimeGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogResetButton),
+        QObject::tr("Reset Tab"),
+        Qt::ToolButtonTextBesideIcon);
+    resetSelectedTabAction->setObjectName(
+        QStringLiteral("resetSelectedTabAction"));
+    resetSelectedTabAction->setToolTip(
+        QObject::tr("Reset the selected custom tab"));
+    resetSelectedTabAction->setStatusTip(
+        QObject::tr("Selected tab: not reset"));
+    QLabel *resetSelectedTabPreview = new QLabel(runtimeGroup);
+    resetSelectedTabPreview->setObjectName(
+        QStringLiteral("resetSelectedTabPreview"));
+    resetSelectedTabPreview->setText(
+        QObject::tr("Selected tab reset: none"));
+    resetSelectedTabPreview->setMinimumWidth(190);
+    resetSelectedTabPreview->setFixedHeight(30);
+    resetSelectedTabPreview->setAlignment(Qt::AlignCenter);
+    resetSelectedTabPreview->setFrameShape(QFrame::StyledPanel);
+    resetSelectedTabPreview->setToolTip(
+        QObject::tr("Last selected custom tab reset"));
+    runtimeGroup->addWidget(resetSelectedTabPreview);
     QAction *renamePageAction = runtimeGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView),
         QObject::tr("Rename Driver"),
@@ -6231,6 +6300,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), renameCustomAction);
     customizeManager->addToCategory(QObject::tr("Actions"), addCommandAction);
     customizeManager->addToCategory(QObject::tr("Actions"), removeCommandAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), resetSelectedTabAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     dictateMicrophoneAction);
@@ -7274,6 +7344,63 @@ int main(int argc, char *argv[])
                                  removeCommandAction->statusTip(), 2500);
                          }
                      });
+    QObject::connect(resetSelectedTabAction, &QAction::triggered,
+                     [&mainWindow,
+                      addPageAction,
+                      customizeManager,
+                      customTabPreview,
+                      customGroupPreview,
+                      customCommandPreview,
+                      resetSelectedTabAction,
+                      resetSelectedTabPreview,
+                      &lastCustomGroup]() {
+                         LqRibbon::RibbonPage *page =
+                             mainWindow.ribbonBar()->currentPage();
+                         if (!page
+                             || !page->property("customizePageId")
+                                     .toString()
+                                     .startsWith(QStringLiteral("runtime"))) {
+                             addPageAction->trigger();
+                             page = mainWindow.ribbonBar()->currentPage();
+                         }
+                         const QString pageId =
+                             page->property("customizePageId").toString();
+                         QString runtimeNumber =
+                             pageId.mid(QStringLiteral("runtime").size());
+                         if (runtimeNumber.isEmpty()) {
+                             runtimeNumber = QStringLiteral("1");
+                         }
+                         while (page->groupCount() > 1) {
+                             page->removeGroupByIndex(page->groupCount() - 1);
+                         }
+                         if (page->groupCount() == 0) {
+                             page->addGroup(QObject::tr("Generated"));
+                         }
+                         const QString tabName =
+                             QObject::tr("Runtime %1").arg(runtimeNumber);
+                         customizeManager->setPageName(page, tabName);
+                         customizeManager->setGroupName(
+                             page->group(0), QObject::tr("Generated"));
+                         lastCustomGroup = nullptr;
+                         customTabPreview->setText(
+                             QObject::tr("Custom tab: %1").arg(tabName));
+                         customGroupPreview->setText(
+                             QObject::tr("Custom group: none"));
+                         customCommandPreview->setText(
+                             QObject::tr("Custom command: none"));
+                         resetSelectedTabPreview->setText(
+                             QObject::tr("Selected tab reset: %1")
+                                 .arg(tabName));
+                         resetSelectedTabPreview->setStyleSheet(
+                             QStringLiteral("QLabel#resetSelectedTabPreview { color: #084298; background: #cfe2ff; font-weight: 600; }"));
+                         resetSelectedTabAction->setStatusTip(
+                             QObject::tr("Selected tab reset: %1")
+                                 .arg(tabName));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 resetSelectedTabAction->statusTip(), 2500);
+                         }
+                     });
     QObject::connect(renamePageAction, &QAction::triggered,
                      [driverPage]() {
                          driverPage->setTitle(
@@ -7614,6 +7741,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(renameCustomAction);
     mainWindow.ribbonBar()->registerSearchAction(addCommandAction);
     mainWindow.ribbonBar()->registerSearchAction(removeCommandAction);
+    mainWindow.ribbonBar()->registerSearchAction(resetSelectedTabAction);
     mainWindow.ribbonBar()->registerSearchAction(renamePageAction);
     mainWindow.ribbonBar()->registerSearchAction(moveGalleryAction);
     mainWindow.ribbonBar()->registerSearchAction(toggleGroupAction);
@@ -8492,6 +8620,8 @@ int main(int argc, char *argv[])
                                 customCommandPreview,
                                 removeCommandAction,
                                 removedCommandPreview,
+                                resetSelectedTabAction,
+                                resetSelectedTabPreview,
                                 renamePageAction,
                                 moveGalleryAction,
                                 toggleGroupAction,

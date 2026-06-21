@@ -1307,6 +1307,23 @@ class MainWindow(RibbonMainWindow):
         self.removed_command_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.removed_command_preview.setToolTip("Last command removed from a custom group")
         self.runtime_group.addWidget(self.removed_command_preview)
+        self.reset_selected_tab_action = self._add_group_action(
+            self.runtime_group,
+            QStyle.StandardPixmap.SP_DialogResetButton,
+            "Reset Tab",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.reset_selected_tab_action.setObjectName("resetSelectedTabAction")
+        self.reset_selected_tab_action.setToolTip("Reset the selected custom tab")
+        self.reset_selected_tab_action.setStatusTip("Selected tab: not reset")
+        self.reset_selected_tab_preview = QLabel("Selected tab reset: none", self.runtime_group)
+        self.reset_selected_tab_preview.setObjectName("resetSelectedTabPreview")
+        self.reset_selected_tab_preview.setMinimumWidth(190)
+        self.reset_selected_tab_preview.setFixedHeight(30)
+        self.reset_selected_tab_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.reset_selected_tab_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.reset_selected_tab_preview.setToolTip("Last selected custom tab reset")
+        self.runtime_group.addWidget(self.reset_selected_tab_preview)
         self.rename_page_action = self._add_group_action(
             self.runtime_group,
             QStyle.StandardPixmap.SP_FileDialogInfoView,
@@ -1828,6 +1845,7 @@ class MainWindow(RibbonMainWindow):
             self.rename_custom_action,
             self.add_command_action,
             self.remove_command_action,
+            self.reset_selected_tab_action,
             self.connect_action,
             self.dictate_microphone_action,
             self.office_popup_action,
@@ -1934,6 +1952,7 @@ class MainWindow(RibbonMainWindow):
         self.rename_custom_action.triggered.connect(self.rename_custom_tab_and_group)
         self.add_command_action.triggered.connect(self.add_command_to_custom_group)
         self.remove_command_action.triggered.connect(self.remove_command_from_custom_group)
+        self.reset_selected_tab_action.triggered.connect(self.reset_selected_custom_tab)
         self.rename_page_action.triggered.connect(self.rename_driver_page)
         self.move_gallery_action.triggered.connect(self.move_gallery_page)
         self.toggle_group_action.triggered.connect(self.toggle_specialist_group)
@@ -2196,6 +2215,7 @@ class MainWindow(RibbonMainWindow):
             self.rename_custom_action,
             self.add_command_action,
             self.remove_command_action,
+            self.reset_selected_tab_action,
             self.rename_page_action,
             self.move_gallery_action,
             self.toggle_group_action,
@@ -3222,6 +3242,30 @@ class MainWindow(RibbonMainWindow):
         )
         self.remove_command_action.setStatusTip(f"Removed command: {removed_text}")
         self._message(self.remove_command_action.statusTip())
+
+    def reset_selected_custom_tab(self):
+        page = self.ribbonBar().currentPage()
+        if page is None or not self.customize_manager.pageId(page).startswith("runtime"):
+            self.add_runtime_page()
+            page = self.ribbonBar().currentPage()
+        page_id = self.customize_manager.pageId(page)
+        runtime_number = page_id.replace("runtime", "", 1) or "1"
+        while page.groupCount() > 1:
+            page.removeGroupByIndex(page.groupCount() - 1)
+        if page.groupCount() == 0:
+            page.addGroup("Generated")
+        self.customize_manager.setPageName(page, f"Runtime {runtime_number}")
+        self.customize_manager.setGroupName(page.group(0), "Generated")
+        self.last_custom_group = None
+        self.custom_tab_preview.setText(f"Custom tab: Runtime {runtime_number}")
+        self.custom_group_preview.setText("Custom group: none")
+        self.custom_command_preview.setText("Custom command: none")
+        self.reset_selected_tab_preview.setText(f"Selected tab reset: Runtime {runtime_number}")
+        self.reset_selected_tab_preview.setStyleSheet(
+            "QLabel#resetSelectedTabPreview { color: #084298; background: #cfe2ff; font-weight: 600; }"
+        )
+        self.reset_selected_tab_action.setStatusTip(f"Selected tab reset: Runtime {runtime_number}")
+        self._message(self.reset_selected_tab_action.statusTip())
 
     def rename_driver_page(self):
         self.driver_page.setTitle("Drive" if self.driver_page.title() == "Driver" else "Driver")
