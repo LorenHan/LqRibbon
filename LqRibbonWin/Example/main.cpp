@@ -429,6 +429,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *slideShowPage,
                      QAction *liveCaptionsAction,
                      QLabel *liveCaptionsPreview,
+                     LqRibbon::RibbonPage *copilotPage,
+                     LqRibbon::RibbonGallery *copilotPromptGallery,
                      LqRibbon::RibbonPage *formatPage,
                      QAction *svgRecolorAction,
                      QLabel *svgRecolorPreview,
@@ -1340,6 +1342,36 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
+    }
+
+    const int copilotPageIndex = ribbonBar->indexOf(copilotPage);
+    if (copilotPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(copilotPageIndex);
+        processCollapseTestEvents();
+    }
+    if (!require(copilotPageIndex >= 0
+                     && copilotPage
+                     && copilotPage->title() == QStringLiteral("Copilot")
+                     && copilotPromptGallery
+                     && copilotPromptGallery->objectName()
+                         == QStringLiteral("copilotPromptGallery")
+                     && copilotPromptGallery->toolTip().contains(
+                         QStringLiteral("common AI tasks"))
+                     && copilotPromptGallery->itemCount() == 3
+                     && copilotPromptGallery->columnCount() == 3
+                     && copilotPromptGallery->rowCount() == 1
+                     && copilotPromptGallery->checkedIndex() == 0
+                     && copilotPromptGallery->checkedItem()
+                     && copilotPromptGallery->checkedItem()->caption()
+                         == QStringLiteral("Summarize")
+                     && copilotPromptGallery->item(1)
+                     && copilotPromptGallery->item(1)->caption()
+                         == QStringLiteral("Rewrite")
+                     && copilotPromptGallery->item(2)
+                     && copilotPromptGallery->item(2)->caption()
+                         == QStringLiteral("Create Table"),
+                 QStringLiteral("Copilot prompt gallery is available"))) {
+        return 1;
     }
 
     const int formatPageIndex = ribbonBar->indexOf(formatPage);
@@ -6887,6 +6919,37 @@ int main(int argc, char *argv[])
         QObject::tr("Live captions presentation state"));
     captionsGroup->addWidget(liveCaptionsPreview);
 
+    LqRibbon::RibbonPage *copilotPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Copilot"));
+    LqRibbon::RibbonGroup *copilotPromptsGroup =
+        copilotPage->addGroup(QObject::tr("Prompts"));
+    LqRibbon::RibbonGalleryGroup *copilotPromptGalleryGroup =
+        new LqRibbon::RibbonGalleryGroup(&mainWindow);
+    copilotPromptGalleryGroup->setSize(QSize(120, 40));
+    copilotPromptGalleryGroup->addItem(
+        QObject::tr("Summarize"),
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogInfoView));
+    copilotPromptGalleryGroup->addItem(
+        QObject::tr("Rewrite"),
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+    copilotPromptGalleryGroup->addItem(
+        QObject::tr("Create Table"),
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogListView));
+    LqRibbon::RibbonGallery *copilotPromptGallery =
+        new LqRibbon::RibbonGallery(copilotPromptsGroup);
+    copilotPromptGallery->setObjectName(
+        QStringLiteral("copilotPromptGallery"));
+    copilotPromptGallery->setToolTip(
+        QObject::tr("Copilot prompt gallery for common AI tasks"));
+    copilotPromptGallery->setGalleryGroup(copilotPromptGalleryGroup);
+    copilotPromptGallery->setColumnCount(3);
+    copilotPromptGallery->setRowCount(1);
+    copilotPromptGallery->setCheckedIndex(0);
+    LqRibbon::RibbonGalleryControl *copilotPromptGalleryControl =
+        new LqRibbon::RibbonGalleryControl(copilotPromptsGroup,
+                                           copilotPromptGallery);
+    copilotPromptsGroup->addWidget(copilotPromptGalleryControl);
+
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
     LqRibbon::RibbonGroup *commandDiscoveryGroup =
@@ -10447,6 +10510,8 @@ int main(int argc, char *argv[])
                                 slideShowPage,
                                 liveCaptionsAction,
                                 liveCaptionsPreview,
+                                copilotPage,
+                                copilotPromptGallery,
                                 formatPage,
                                 svgRecolorAction,
                                 svgRecolorPreview,

@@ -329,6 +329,9 @@ class MainWindow(RibbonMainWindow):
         self.slide_show_page = ribbon.addPage("Slide Show")
         self._create_slide_show_page()
 
+        self.copilot_page = ribbon.addPage("Copilot")
+        self._create_copilot_page()
+
         self.tell_me_page = ribbon.addPage("Tell Me")
         self._create_command_discovery_page()
 
@@ -1279,6 +1282,32 @@ class MainWindow(RibbonMainWindow):
         self.live_captions_preview.setToolTip("Live captions presentation state")
         captions_group.addWidget(self.live_captions_preview)
         self.live_captions_action.toggled.connect(self.toggle_live_captions)
+
+    def _create_copilot_page(self):
+        prompt_group = self.copilot_page.addGroup("Prompts")
+        prompt_gallery_group = RibbonGalleryGroup(self)
+        prompt_gallery_group.setSize(QSize(120, 40))
+        for caption, icon in [
+            ("Summarize", QStyle.StandardPixmap.SP_FileDialogInfoView),
+            ("Rewrite", QStyle.StandardPixmap.SP_FileDialogDetailedView),
+            ("Create Table", QStyle.StandardPixmap.SP_FileDialogListView),
+        ]:
+            prompt_gallery_group.addItem(caption, self._icon(icon))
+        self.copilot_prompt_gallery = RibbonGallery(prompt_group)
+        self.copilot_prompt_gallery.setObjectName("copilotPromptGallery")
+        self.copilot_prompt_gallery.setToolTip(
+            "Copilot prompt gallery for common AI tasks"
+        )
+        self.copilot_prompt_gallery.setGalleryGroup(prompt_gallery_group)
+        self.copilot_prompt_gallery.setColumnCount(3)
+        self.copilot_prompt_gallery.setRowCount(1)
+        self.copilot_prompt_gallery.setCheckedIndex(0)
+        self.copilot_prompt_gallery.itemClicked.connect(
+            lambda item: self._message(f"Copilot prompt: {item.caption()}")
+        )
+        prompt_group.addWidget(
+            RibbonGalleryControl(prompt_group, self.copilot_prompt_gallery)
+        )
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")

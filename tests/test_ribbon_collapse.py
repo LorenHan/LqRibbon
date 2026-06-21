@@ -1168,6 +1168,28 @@ def test_example_live_captions_command_surface():
     window.close()
 
 
+def test_example_copilot_prompt_gallery_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    gallery = window.copilot_prompt_gallery
+
+    assert ribbon.pageIndex(window.copilot_page) >= 0
+    assert window.copilot_page.title() == "Copilot"
+    assert gallery.objectName() == "copilotPromptGallery"
+    assert "common AI tasks" in gallery.toolTip()
+    assert gallery.itemCount() == 3
+    assert gallery.columnCount() == 3
+    assert gallery.rowCount() == 1
+    assert gallery.checkedIndex() == 0
+    assert gallery.checkedItem().caption() == "Summarize"
+    assert gallery.item(1).caption() == "Rewrite"
+    assert gallery.item(2).caption() == "Create Table"
+    window.close()
+
+
 def test_example_svg_recolor_command_surface():
     window = MainWindow()
     window.show()
@@ -3425,6 +3447,7 @@ def main():
         test_example_data_types_command_surface,
         test_example_pivot_recommendation_command_surface,
         test_example_live_captions_command_surface,
+        test_example_copilot_prompt_gallery_is_available,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,

@@ -159,7 +159,7 @@ Default style remains `Office 2016 Blue`.
 | 128 | Live captions command | Slide Show page | Complete |
 | 129 | Copilot button | Title buttons | Complete |
 | 130 | Copilot command center visibility | Title buttons | Complete |
-| 131 | Copilot prompt gallery | Copilot page | Planned |
+| 131 | Copilot prompt gallery | Copilot page | Complete |
 | 132 | Loop component command | Insert page | Planned |
 | 133 | Comments link opening | Collaboration page | Planned |
 | 134 | Macro blocking status command | Security page | Planned |
