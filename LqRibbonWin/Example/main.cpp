@@ -278,6 +278,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *coauthoringIndicatorLabel,
                      LqRibbon::RibbonBackstageView *backstage,
                      QAction *saveCopyAction,
+                     QComboBox *cloudLocationCombo,
                      QAction *versionHistoryAction,
                      QWidget *versionHistoryPage,
                      QLabel *versionHistoryCurrentLabel,
@@ -1394,6 +1395,37 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strSaveCopyStatus.contains(
                          QStringLiteral("Save a Copy")),
                  QStringLiteral("Save a Copy replaces Save As backstage command"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const QString strCloudDefault =
+        cloudLocationCombo ? cloudLocationCombo->currentText() : QString();
+    if (cloudLocationCombo) {
+        cloudLocationCombo->setCurrentText(QStringLiteral("SharePoint Team Site"));
+        processCollapseTestEvents();
+    }
+    const QString strCloudLocationStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(cloudLocationCombo
+                     && cloudLocationCombo->objectName()
+                         == QStringLiteral("cloudLocationPicker")
+                     && cloudLocationCombo->count() == 3
+                     && strCloudDefault
+                         == QStringLiteral("OneDrive - Contoso")
+                     && cloudLocationCombo->findText(
+                            QStringLiteral("SharePoint Team Site"))
+                         >= 0
+                     && cloudLocationCombo->currentText()
+                         == QStringLiteral("SharePoint Team Site")
+                     && cloudLocationCombo->toolTip().contains(
+                         QStringLiteral("cloud location"))
+                     && strCloudLocationStatus.contains(
+                         QStringLiteral("SharePoint Team Site")),
+                 QStringLiteral("Cloud location picker is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3431,6 +3463,25 @@ int main(int argc, char *argv[])
                             new QLabel(QObject::tr("LqRibbon Demo"), backstagePage));
     backstageLayout->addRow(QObject::tr("Mode"),
                             new QLabel(QObject::tr("Backstage page"), backstagePage));
+    QComboBox *cloudLocationCombo = new QComboBox(backstagePage);
+    cloudLocationCombo->setObjectName(QStringLiteral("cloudLocationPicker"));
+    cloudLocationCombo->addItems(QStringList()
+                                 << QObject::tr("OneDrive - Contoso")
+                                 << QObject::tr("SharePoint Team Site")
+                                 << QObject::tr("Teams Project Files"));
+    cloudLocationCombo->setToolTip(
+        QObject::tr("Choose the cloud location used for AutoSave and sharing"));
+    QObject::connect(cloudLocationCombo,
+                     QOverload<const QString &>::of(&QComboBox::currentTextChanged),
+                     &mainWindow,
+                     [&mainWindow](const QString &text) {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Cloud location: %1").arg(text),
+                                 2500);
+                         }
+                     });
+    backstageLayout->addRow(QObject::tr("Cloud location"), cloudLocationCombo);
     backstage->addPage(backstagePage);
     QWidget *versionHistoryPage = new QWidget(backstage);
     versionHistoryPage->setObjectName(QStringLiteral("versionHistoryPage"));
@@ -4884,6 +4935,7 @@ int main(int argc, char *argv[])
                                 coauthoringIndicatorLabel,
                                 backstage,
                                 saveCopyAction,
+                                cloudLocationCombo,
                                 versionHistoryAction,
                                 versionHistoryPage,
                                 versionHistoryCurrentLabel,

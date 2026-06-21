@@ -541,6 +541,25 @@ def test_example_save_copy_replaces_save_as_backstage_command():
     window.close()
 
 
+def test_example_cloud_location_picker_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    combo = window.cloud_location_combo
+    assert combo.objectName() == "cloudLocationPicker"
+    assert combo.count() == 3
+    assert combo.currentText() == "OneDrive - Contoso"
+    assert combo.findText("SharePoint Team Site") >= 0
+    assert "cloud location" in combo.toolTip()
+
+    combo.setCurrentText("SharePoint Team Site")
+    _app().processEvents()
+    assert combo.currentText() == "SharePoint Team Site"
+    assert "SharePoint Team Site" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_caption_search_defaults_to_centered_microsoft_box():
     window = MainWindow()
     window.show()
@@ -1533,6 +1552,7 @@ def main():
         test_example_coauthoring_indicator_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
+        test_example_cloud_location_picker_is_available,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,

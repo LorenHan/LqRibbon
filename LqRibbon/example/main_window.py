@@ -17,6 +17,7 @@ from PySide6.QtGui import (
     QPixmap,
 )
 from PySide6.QtWidgets import (
+    QComboBox,
     QFormLayout,
     QFrame,
     QHBoxLayout,
@@ -841,6 +842,22 @@ class MainWindow(RibbonMainWindow):
         backstage_layout = QFormLayout(backstage_page)
         backstage_layout.addRow("Product", QLabel("LqRibbon Demo", backstage_page))
         backstage_layout.addRow("Mode", QLabel("Backstage page", backstage_page))
+        self.cloud_location_combo = QComboBox(backstage_page)
+        self.cloud_location_combo.setObjectName("cloudLocationPicker")
+        self.cloud_location_combo.addItems(
+            [
+                "OneDrive - Contoso",
+                "SharePoint Team Site",
+                "Teams Project Files",
+            ]
+        )
+        self.cloud_location_combo.setToolTip(
+            "Choose the cloud location used for AutoSave and sharing"
+        )
+        self.cloud_location_combo.currentTextChanged.connect(
+            lambda text: self._message(f"Cloud location: {text}")
+        )
+        backstage_layout.addRow("Cloud location", self.cloud_location_combo)
         self.backstage.addPage(backstage_page)
         self.version_history_page = QWidget(self.backstage)
         self.version_history_page.setObjectName("versionHistoryPage")
