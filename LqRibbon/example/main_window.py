@@ -292,6 +292,9 @@ class MainWindow(RibbonMainWindow):
         self.insert_page = ribbon.addPage("Insert")
         self._create_insert_page()
 
+        self.format_page = ribbon.addPage("Format")
+        self._create_format_page()
+
         self.review_page = ribbon.addPage("Review")
         self._create_review_page()
 
@@ -578,6 +581,28 @@ class MainWindow(RibbonMainWindow):
         self.svg_icon_insert_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.svg_icon_insert_preview.setToolTip("Last inserted SVG icon state")
         illustrations_group.addWidget(self.svg_icon_insert_preview)
+
+    def _create_format_page(self):
+        svg_format_group = self.format_page.addGroup("SVG Format")
+        self.svg_recolor_action = svg_format_group.addAction(
+            self._svg_recolor_icon(),
+            "Recolor SVG",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.svg_recolor_action.setObjectName("svgRecolorAction")
+        self.svg_recolor_action.setToolTip(
+            "Apply an accent color to the selected SVG icon"
+        )
+        self.svg_recolor_action.setStatusTip("Recolor SVG: accent preview ready")
+
+        self.svg_recolor_preview = QLabel("SVG color: original", svg_format_group)
+        self.svg_recolor_preview.setObjectName("svgRecolorPreview")
+        self.svg_recolor_preview.setMinimumWidth(190)
+        self.svg_recolor_preview.setFixedHeight(30)
+        self.svg_recolor_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.svg_recolor_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.svg_recolor_preview.setToolTip("Selected SVG recolor state")
+        svg_format_group.addWidget(self.svg_recolor_preview)
 
     def _create_review_page(self):
         insights_group = self.review_page.addGroup("Insights")
@@ -1469,6 +1494,7 @@ class MainWindow(RibbonMainWindow):
             self.controls_page,
             self.gallery_page,
             self.insert_page,
+            self.format_page,
             self.review_page,
             self.view_page,
             self.tell_me_page,
@@ -1497,6 +1523,7 @@ class MainWindow(RibbonMainWindow):
             self.focus_mode_action,
             self.dark_canvas_action,
             self.svg_icon_insert_action,
+            self.svg_recolor_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1539,6 +1566,7 @@ class MainWindow(RibbonMainWindow):
         self.focus_mode_action.toggled.connect(self.toggle_focus_mode)
         self.dark_canvas_action.toggled.connect(self.toggle_dark_canvas)
         self.svg_icon_insert_action.triggered.connect(self.insert_svg_icon)
+        self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1814,6 +1842,7 @@ class MainWindow(RibbonMainWindow):
             self.focus_mode_action,
             self.dark_canvas_action,
             self.svg_icon_insert_action,
+            self.svg_recolor_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -2253,6 +2282,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#svgIconInsertPreview { color: #124078; background: #eef6ff; font-weight: 600; }"
         )
         self._message("SVG Icon: inserted scalable artwork")
+
+    def recolor_svg_icon(self):
+        self.svg_recolor_preview.setText("SVG color: blue accent")
+        self.svg_recolor_preview.setStyleSheet(
+            "QLabel#svgRecolorPreview { color: #ffffff; background: #2563eb; font-weight: 600; }"
+        )
+        self._message("Recolor SVG: blue accent applied")
 
     def toggle_dictate_microphone(self, enabled):
         if enabled:
@@ -2712,6 +2748,23 @@ class MainWindow(RibbonMainWindow):
         painter.setBrush(QColor("#10b981"))
         painter.setPen(QPen(QColor("#ffffff"), 2))
         painter.drawEllipse(QRect(27, 27, 14, 14))
+        painter.end()
+        return QIcon(pixmap)
+
+    def _svg_recolor_icon(self):
+        pixmap = QPixmap(48, 48)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(QColor("#1d4ed8"), 3))
+        painter.setBrush(QColor("#dbeafe"))
+        painter.drawRoundedRect(QRect(8, 6, 31, 36), 5, 5)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor("#2563eb"))
+        painter.drawEllipse(QRect(15, 14, 19, 19))
+        painter.setPen(QPen(QColor("#ffffff"), 2))
+        painter.drawLine(20, 24, 24, 28)
+        painter.drawLine(24, 28, 31, 19)
         painter.end()
         return QIcon(pixmap)
 

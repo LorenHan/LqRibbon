@@ -111,7 +111,7 @@ Default style remains `Office 2016 Blue`.
 | 080 | High-DPI scalable icons | Icon gallery | Complete |
 | 081 | New app icon color set | Icon gallery | Complete |
 | 082 | SVG icon insert command | Insert page | Complete |
-| 083 | SVG recolor command | Format page | Planned |
+| 083 | SVG recolor command | Format page | Complete |
 | 084 | Convert SVG to shape command | Format page | Planned |
 | 085 | Icon-only title commands | Title buttons | Planned |
 | 086 | Accessible tooltip names | Tooltip test path | Planned |

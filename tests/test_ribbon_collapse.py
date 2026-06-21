@@ -751,6 +751,31 @@ def test_example_svg_icon_insert_command_surface():
     window.close()
 
 
+def test_example_svg_recolor_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.format_page.title() == "Format"
+    assert window.svg_recolor_action.objectName() == "svgRecolorAction"
+    assert not window.svg_recolor_action.icon().isNull()
+    assert "accent color" in window.svg_recolor_action.toolTip()
+    assert window.svg_recolor_action.statusTip() == "Recolor SVG: accent preview ready"
+    assert window.svg_recolor_preview.objectName() == "svgRecolorPreview"
+    assert window.svg_recolor_preview.text() == "SVG color: original"
+    assert "Selected SVG recolor" in window.svg_recolor_preview.toolTip()
+    assert window.svg_recolor_action in window.search_actions
+    assert ribbon.searchAction("Recolor SVG") is window.svg_recolor_action
+
+    window.svg_recolor_action.trigger()
+    _app().processEvents()
+    assert window.svg_recolor_preview.text() == "SVG color: blue accent"
+    assert "#svgRecolorPreview" in window.svg_recolor_preview.styleSheet()
+    assert "Recolor SVG" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2138,6 +2163,7 @@ def main():
         test_example_high_dpi_gallery_icon_is_available,
         test_example_app_icon_color_set_is_available,
         test_example_svg_icon_insert_command_surface,
+        test_example_svg_recolor_command_surface,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

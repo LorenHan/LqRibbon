@@ -227,6 +227,24 @@ QIcon createSvgInsertIcon()
     return QIcon(pixmap);
 }
 
+QIcon createSvgRecolorIcon()
+{
+    QPixmap pixmap(48, 48);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QPen(QColor(QStringLiteral("#1d4ed8")), 3));
+    painter.setBrush(QColor(QStringLiteral("#dbeafe")));
+    painter.drawRoundedRect(QRect(8, 6, 31, 36), 5, 5);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(QStringLiteral("#2563eb")));
+    painter.drawEllipse(QRect(15, 14, 19, 19));
+    painter.setPen(QPen(Qt::white, 2));
+    painter.drawLine(20, 24, 24, 28);
+    painter.drawLine(24, 28, 31, 19);
+    return QIcon(pixmap);
+}
+
 QTabBar *collapseTestTabBar(LqRibbon::RibbonBar *ribbonBar)
 {
     return ribbonBar->findChild<QTabBar *>();
@@ -358,6 +376,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *insertPage,
                      QAction *svgIconInsertAction,
                      QLabel *svgIconInsertPreview,
+                     LqRibbon::RibbonPage *formatPage,
+                     QAction *svgRecolorAction,
+                     QLabel *svgRecolorPreview,
                      QAction *smartLookupAction,
                      LqRibbon::RibbonPage *reviewPage,
                      QLabel *smartLookupPreview,
@@ -889,6 +910,53 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strSvgInsertStatus.contains(
                          QStringLiteral("SVG Icon")),
                  QStringLiteral("SVG icon insert command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const int formatPageIndex = ribbonBar->indexOf(formatPage);
+    if (formatPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(formatPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *svgRecolorButton =
+        collapseTestActionButton(ribbonBar, svgRecolorAction);
+    if (svgRecolorAction) {
+        svgRecolorAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strSvgRecolorStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(formatPageIndex >= 0
+                     && formatPage
+                     && formatPage->title() == QStringLiteral("Format")
+                     && svgRecolorAction
+                     && svgRecolorAction->objectName()
+                         == QStringLiteral("svgRecolorAction")
+                     && !svgRecolorAction->icon().isNull()
+                     && svgRecolorAction->toolTip().contains(
+                         QStringLiteral("accent color"))
+                     && svgRecolorAction->statusTip()
+                         == QStringLiteral("Recolor SVG: accent preview ready")
+                     && svgRecolorPreview
+                     && svgRecolorPreview->objectName()
+                         == QStringLiteral("svgRecolorPreview")
+                     && svgRecolorPreview->text()
+                         == QStringLiteral("SVG color: blue accent")
+                     && svgRecolorPreview->styleSheet().contains(
+                         QStringLiteral("#svgRecolorPreview"))
+                     && svgRecolorPreview->toolTip().contains(
+                         QStringLiteral("Selected SVG recolor"))
+                     && ribbonBar->searchAction(QStringLiteral("Recolor SVG"))
+                         == svgRecolorAction
+                     && svgRecolorButton
+                     && svgRecolorButton->defaultAction() == svgRecolorAction
+                     && strSvgRecolorStatus.contains(
+                         QStringLiteral("Recolor SVG")),
+                 QStringLiteral("SVG recolor command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -4159,6 +4227,29 @@ int main(int argc, char *argv[])
         QObject::tr("Last inserted SVG icon state"));
     illustrationsGroup->addWidget(svgIconInsertPreview);
 
+    LqRibbon::RibbonPage *formatPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Format"));
+    LqRibbon::RibbonGroup *svgFormatGroup =
+        formatPage->addGroup(QObject::tr("SVG Format"));
+    QAction *svgRecolorAction = svgFormatGroup->addAction(
+        createSvgRecolorIcon(),
+        QObject::tr("Recolor SVG"),
+        Qt::ToolButtonTextUnderIcon);
+    svgRecolorAction->setObjectName(QStringLiteral("svgRecolorAction"));
+    svgRecolorAction->setToolTip(
+        QObject::tr("Apply an accent color to the selected SVG icon"));
+    svgRecolorAction->setStatusTip(
+        QObject::tr("Recolor SVG: accent preview ready"));
+    QLabel *svgRecolorPreview = new QLabel(svgFormatGroup);
+    svgRecolorPreview->setObjectName(QStringLiteral("svgRecolorPreview"));
+    svgRecolorPreview->setText(QObject::tr("SVG color: original"));
+    svgRecolorPreview->setMinimumWidth(190);
+    svgRecolorPreview->setFixedHeight(30);
+    svgRecolorPreview->setAlignment(Qt::AlignCenter);
+    svgRecolorPreview->setFrameShape(QFrame::StyledPanel);
+    svgRecolorPreview->setToolTip(QObject::tr("Selected SVG recolor state"));
+    svgFormatGroup->addWidget(svgRecolorPreview);
+
     LqRibbon::RibbonPage *reviewPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Review"));
     LqRibbon::RibbonGroup *insightsGroup =
@@ -4935,6 +5026,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), controlsPage);
     customizeManager->addToCategory(QObject::tr("Pages"), galleryPage);
     customizeManager->addToCategory(QObject::tr("Pages"), insertPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), formatPage);
     customizeManager->addToCategory(QObject::tr("Pages"), reviewPage);
     customizeManager->addToCategory(QObject::tr("Pages"), viewPage);
     customizeManager->addToCategory(QObject::tr("Pages"), tellMePage);
@@ -4965,6 +5057,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), focusModeAction);
     customizeManager->addToCategory(QObject::tr("Actions"), darkCanvasAction);
     customizeManager->addToCategory(QObject::tr("Actions"), svgIconInsertAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), svgRecolorAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -6140,6 +6233,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(focusModeAction);
     mainWindow.ribbonBar()->registerSearchAction(darkCanvasAction);
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
+    mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -6327,6 +6421,20 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr(
                                      "SVG Icon: inserted scalable artwork"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(svgRecolorAction,
+                     &QAction::triggered,
+                     [&mainWindow, svgRecolorPreview]() {
+                         svgRecolorPreview->setText(
+                             QObject::tr("SVG color: blue accent"));
+                         svgRecolorPreview->setStyleSheet(
+                             QStringLiteral("QLabel#svgRecolorPreview { color: #ffffff; background: #2563eb; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Recolor SVG: blue accent applied"),
                                  2500);
                          }
                      });
@@ -6688,6 +6796,9 @@ int main(int argc, char *argv[])
                                 insertPage,
                                 svgIconInsertAction,
                                 svgIconInsertPreview,
+                                formatPage,
+                                svgRecolorAction,
+                                svgRecolorPreview,
                                 smartLookupAction,
                                 reviewPage,
                                 smartLookupPreview,
