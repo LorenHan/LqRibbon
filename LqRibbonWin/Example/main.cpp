@@ -401,6 +401,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *officePopupAction,
                      QAction *officeMenuAction,
                      LqRibbon::OfficePopupMenu *officeMenu,
+                     LqRibbon::PopupColorButton *colorButton,
                      QAction *centerSearchAction,
                      QAction *compactSearchAction,
                      QAction *hiddenSearchAction,
@@ -2305,6 +2306,32 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          QStringLiteral("OfficePopupMenu widget host")),
                  QStringLiteral("Office popup menu grip is available"))) {
         return 1;
+    }
+
+    if (colorButton) {
+        colorButton->setColor(QColor(QStringLiteral("#c43e1c")));
+        processCollapseTestEvents();
+    }
+    const QString strPopupColorStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(colorButton
+                     && colorButton->objectName()
+                         == QStringLiteral("popupColorButton")
+                     && colorButton->text() == QStringLiteral("Color")
+                     && colorButton->color().name()
+                         == QStringLiteral("#c43e1c")
+                     && colorButton->toolButtonStyle()
+                         == Qt::ToolButtonTextBesideIcon
+                     && colorButton->toolTip()
+                         == QStringLiteral("Popup Color Button")
+                     && strPopupColorStatus.contains(
+                         QStringLiteral("#c43e1c")),
+                 QStringLiteral("Popup color button is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
     }
 
     QToolButton *dictateMicrophoneButton =
@@ -6449,6 +6476,7 @@ int main(int argc, char *argv[])
         QObject::tr("Office popup menu: grip visible"));
     LqRibbon::PopupColorButton *colorButton =
         new LqRibbon::PopupColorButton(popupGroup);
+    colorButton->setObjectName(QStringLiteral("popupColorButton"));
     colorButton->setText(QObject::tr("Color"));
     colorButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     colorButton->setColor(QColor(QStringLiteral("#2b579a")));
@@ -9293,6 +9321,7 @@ int main(int argc, char *argv[])
                                 officePopupAction,
                                 officeMenuAction,
                                 officeMenu,
+                                colorButton,
                                 centerSearchAction,
                                 compactSearchAction,
                                 hiddenSearchAction,

@@ -20,7 +20,7 @@ sys.path.insert(
 )
 
 from PySide6.QtCore import QEvent, Qt
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtGui import QColor, QMouseEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QApplication,
@@ -1580,6 +1580,27 @@ def test_example_office_popup_menu_grip_is_available():
     window.close()
 
 
+def test_example_popup_color_button_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    button = window.color_button
+
+    assert button.objectName() == "popupColorButton"
+    assert button.text() == "Color"
+    assert button.color().name() == "#2b579a"
+    assert button.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+    assert button.toolTip() == "Popup Color Button"
+
+    button.setColor(QColor("#c43e1c"))
+    _app().processEvents()
+    assert button.color().name() == "#c43e1c"
+    assert "#c43e1c" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_backstage_open_page_shows_frequent_sites_and_groups():
     _app()
     window = MainWindow()
@@ -3025,6 +3046,7 @@ def main():
         test_example_system_menu_export_popup_is_available,
         test_example_office_popup_notification_is_available,
         test_example_office_popup_menu_grip_is_available,
+        test_example_popup_color_button_is_available,
         test_example_backstage_open_page_shows_frequent_sites_and_groups,
         test_example_backstage_export_page_is_available,
         test_example_backstage_close_behavior_is_available,

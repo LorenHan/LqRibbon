@@ -1464,6 +1464,7 @@ class MainWindow(RibbonMainWindow):
         self.office_menu_action.setToolTip("Open a resizable Office popup menu")
         self.office_menu_action.setStatusTip("Office popup menu: grip visible")
         self.color_button = PopupColorButton(popup_group)
+        self.color_button.setObjectName("popupColorButton")
         self.color_button.setText("Color")
         self.color_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.color_button.setColor(QColor("#2b579a"))
