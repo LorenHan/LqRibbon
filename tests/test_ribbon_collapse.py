@@ -1559,6 +1559,38 @@ def test_example_backstage_export_page_is_available():
     window.close()
 
 
+def test_example_backstage_close_behavior_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    action = window.backstage_close_action
+    button = window.backstage._action_buttons[action]
+
+    assert action.objectName() == "backstageCloseAction"
+    assert not action.isCheckable()
+    assert "Backstage view" in action.toolTip()
+    assert button.defaultAction() is action
+
+    window.backstage.setClosePrevented(True)
+    window.backstage.open()
+    _app().processEvents()
+    assert window.backstage.isVisible()
+    button.click()
+    _app().processEvents()
+    assert window.backstage.isClosePrevented()
+    assert window.backstage.isVisible()
+
+    window.backstage.setClosePrevented(False)
+    button.click()
+    _app().processEvents()
+    assert not window.backstage.isClosePrevented()
+    assert not window.backstage.isVisible()
+    assert "Close:" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_caption_search_defaults_to_centered_microsoft_box():
     window = MainWindow()
     window.show()
@@ -2906,6 +2938,7 @@ def main():
         test_example_recent_file_pinning_is_available,
         test_example_backstage_open_page_shows_frequent_sites_and_groups,
         test_example_backstage_export_page_is_available,
+        test_example_backstage_close_behavior_is_available,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,

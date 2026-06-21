@@ -466,6 +466,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *normalStatusViewAction,
                      QAction *compactStatusViewAction,
                      LqRibbon::RibbonBackstageView *backstage,
+                     QAction *backstageCloseAction,
                      QAction *backstageInfoAction,
                      QWidget *backstageInfoPage,
                      QLabel *backstageInfoProductLabel,
@@ -3014,6 +3015,58 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strBackstageExportStatus.contains(
                          QStringLiteral("Export:")),
                  QStringLiteral("Backstage export page is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *backstageCloseButton = nullptr;
+    if (backstage) {
+        const QList<QToolButton *> backstageButtons =
+            backstage->findChildren<QToolButton *>();
+        for (QToolButton *button : backstageButtons) {
+            if (button && button->defaultAction() == backstageCloseAction) {
+                backstageCloseButton = button;
+                break;
+            }
+        }
+        backstage->setClosePrevented(true);
+        backstage->open();
+        processCollapseTestEvents();
+    }
+    if (backstageCloseButton) {
+        backstageCloseButton->click();
+        processCollapseTestEvents();
+    }
+    const bool closePreventedKeptVisible =
+        backstage && backstage->isClosePrevented() && backstage->isVisible();
+    if (backstage) {
+        backstage->setClosePrevented(false);
+    }
+    if (backstageCloseButton) {
+        backstageCloseButton->click();
+        processCollapseTestEvents();
+    }
+    const QString strBackstageCloseStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(backstage
+                     && backstageCloseAction
+                     && backstageCloseAction->objectName()
+                         == QStringLiteral("backstageCloseAction")
+                     && !backstageCloseAction->isCheckable()
+                     && backstageCloseAction->toolTip().contains(
+                         QStringLiteral("Backstage view"))
+                     && backstageCloseButton
+                     && backstageCloseButton->defaultAction()
+                         == backstageCloseAction
+                     && closePreventedKeptVisible
+                     && !backstage->isClosePrevented()
+                     && !backstage->isVisible()
+                     && strBackstageCloseStatus.contains(
+                         QStringLiteral("Close:")),
+                 QStringLiteral("Backstage close behavior is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6371,6 +6424,26 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QAction *backstageCloseAction = backstage->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogCloseButton),
+        QObject::tr("Close"));
+    backstageCloseAction->setObjectName(
+        QStringLiteral("backstageCloseAction"));
+    backstageCloseAction->setToolTip(
+        QObject::tr("Close Backstage view"));
+    backstageCloseAction->setStatusTip(
+        QObject::tr("Close: Backstage dismissed when not prevented"));
+    QObject::connect(backstageCloseAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Close: Backstage dismissed when not prevented"),
+                                 2500);
+                         }
+                     });
     backstage->addSeparator();
     QWidget *backstageInfoPage = new QWidget(backstage);
     backstageInfoPage->setObjectName(QStringLiteral("backstageInfoPage"));
@@ -9143,6 +9216,7 @@ int main(int argc, char *argv[])
                                 normalViewAction,
                                 compactViewAction,
                                 backstage,
+                                backstageCloseAction,
                                 backstageInfoAction,
                                 backstageInfoPage,
                                 backstageInfoProductLabel,

@@ -1539,6 +1539,17 @@ class MainWindow(RibbonMainWindow):
         self.save_copy_action.triggered.connect(
             lambda: self._message("Save a Copy: create a separate file copy")
         )
+        self.backstage_close_action = self.backstage.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DialogCloseButton), "Close"
+        )
+        self.backstage_close_action.setObjectName("backstageCloseAction")
+        self.backstage_close_action.setToolTip("Close Backstage view")
+        self.backstage_close_action.setStatusTip(
+            "Close: Backstage dismissed when not prevented"
+        )
+        self.backstage_close_action.triggered.connect(
+            lambda: self._message("Close: Backstage dismissed when not prevented")
+        )
         self.backstage.addSeparator()
 
         self.backstage_info_page = QWidget(self.backstage)

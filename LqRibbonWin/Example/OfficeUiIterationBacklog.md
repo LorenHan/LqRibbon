@@ -137,7 +137,7 @@ Default style remains `Office 2016 Blue`.
 | 106 | Backstage account page | Backstage | Complete |
 | 107 | Backstage open page | Backstage | Complete |
 | 108 | Backstage export page | Backstage | Complete |
-| 109 | Backstage close behavior | Backstage | Planned |
+| 109 | Backstage close behavior | Backstage | Complete |
 | 110 | System menu recent files | System menu | Planned |
 | 111 | System menu page popup | System menu | Planned |
 | 112 | Office popup notification | Popup page | Planned |
