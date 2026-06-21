@@ -412,6 +412,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *contextualPage,
                      QAction *contextualGroupColorAction,
                      QLabel *contextualGroupColorPreview,
+                     QAction *contextualTabVisibilityAction,
+                     QLabel *contextualTabVisibilityPreview,
                      LqRibbon::RibbonPage *optionsPage,
                      QAction *reducedMotionAction,
                      QLabel *reducedMotionPreview,
@@ -1090,6 +1092,60 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strContextualGroupColorStatus.contains(
                          QStringLiteral("Contextual group color")),
                  QStringLiteral("Contextual tab group color preview is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *contextualTabVisibilityButton =
+        collapseTestActionButton(ribbonBar, contextualTabVisibilityAction);
+    if (!require(contextualTabVisibilityAction
+                     && contextualTabVisibilityAction->objectName()
+                         == QStringLiteral("contextualTabVisibilityAction")
+                     && contextualTabVisibilityAction->isCheckable()
+                     && contextualTabVisibilityAction->isChecked()
+                     && !contextualTabVisibilityAction->icon().isNull()
+                     && contextualTabVisibilityAction->toolTip().contains(
+                         QStringLiteral("Show or hide contextual"))
+                     && ribbonBar->isContextualTabsVisible()
+                     && contextualTabVisibilityPreview
+                     && contextualTabVisibilityPreview->objectName()
+                         == QStringLiteral("contextualTabVisibilityPreview")
+                     && contextualTabVisibilityPreview->text()
+                         == QStringLiteral("Contextual tabs: visible")
+                     && ribbonBar->searchAction(
+                         QStringLiteral("Show Contextual"))
+                         == contextualTabVisibilityAction
+                     && contextualTabVisibilityButton
+                     && contextualTabVisibilityButton->defaultAction()
+                         == contextualTabVisibilityAction,
+                 QStringLiteral("Contextual tab visibility defaults visible"))) {
+        return 1;
+    }
+    contextualTabVisibilityAction->trigger();
+    processCollapseTestEvents();
+    const QString strContextualHiddenStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(!contextualTabVisibilityAction->isChecked()
+                     && !ribbonBar->isContextualTabsVisible()
+                     && contextualTabVisibilityPreview->text()
+                         == QStringLiteral("Contextual tabs: hidden")
+                     && contextualTabVisibilityPreview->styleSheet().contains(
+                         QStringLiteral("#contextualTabVisibilityPreview"))
+                     && strContextualHiddenStatus.contains(
+                         QStringLiteral("hidden")),
+                 QStringLiteral("Contextual tab visibility hides tabs"))) {
+        return 1;
+    }
+    contextualTabVisibilityAction->trigger();
+    processCollapseTestEvents();
+    if (!require(contextualTabVisibilityAction->isChecked()
+                     && ribbonBar->isContextualTabsVisible()
+                     && contextualTabVisibilityPreview->text()
+                         == QStringLiteral("Contextual tabs: visible"),
+                 QStringLiteral("Contextual tab visibility restores tabs"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -4890,6 +4946,31 @@ int main(int argc, char *argv[])
     contextualGroupColorPreview->setToolTip(
         QObject::tr("Current contextual tab group color"));
     pictureToolsGroup->addWidget(contextualGroupColorPreview);
+    mainWindow.ribbonBar()->setContextualTabsVisible(true);
+    QAction *contextualTabVisibilityAction = pictureToolsGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DialogYesButton),
+        QObject::tr("Show Contextual"),
+        Qt::ToolButtonTextUnderIcon);
+    contextualTabVisibilityAction->setObjectName(
+        QStringLiteral("contextualTabVisibilityAction"));
+    contextualTabVisibilityAction->setCheckable(true);
+    contextualTabVisibilityAction->setChecked(true);
+    contextualTabVisibilityAction->setToolTip(
+        QObject::tr("Show or hide contextual ribbon tabs"));
+    contextualTabVisibilityAction->setStatusTip(
+        QObject::tr("Contextual tabs: visible"));
+    QLabel *contextualTabVisibilityPreview = new QLabel(pictureToolsGroup);
+    contextualTabVisibilityPreview->setObjectName(
+        QStringLiteral("contextualTabVisibilityPreview"));
+    contextualTabVisibilityPreview->setText(
+        QObject::tr("Contextual tabs: visible"));
+    contextualTabVisibilityPreview->setMinimumWidth(210);
+    contextualTabVisibilityPreview->setFixedHeight(30);
+    contextualTabVisibilityPreview->setAlignment(Qt::AlignCenter);
+    contextualTabVisibilityPreview->setFrameShape(QFrame::StyledPanel);
+    contextualTabVisibilityPreview->setToolTip(
+        QObject::tr("Current contextual tab visibility state"));
+    pictureToolsGroup->addWidget(contextualTabVisibilityPreview);
 
     LqRibbon::RibbonPage *optionsPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Options"));
@@ -5776,6 +5857,8 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), svgConvertShapeAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     contextualGroupColorAction);
+    customizeManager->addToCategory(QObject::tr("Actions"),
+                                    contextualTabVisibilityAction);
     customizeManager->addToCategory(QObject::tr("Actions"), reducedMotionAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
@@ -6959,6 +7042,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
     mainWindow.ribbonBar()->registerSearchAction(contextualGroupColorAction);
+    mainWindow.ribbonBar()->registerSearchAction(contextualTabVisibilityAction);
     mainWindow.ribbonBar()->registerSearchAction(reducedMotionAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
@@ -7223,6 +7307,34 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr(
                                      "Contextual group color: purple"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(contextualTabVisibilityAction,
+                     &QAction::toggled,
+                     [&mainWindow,
+                      contextualTabVisibilityAction,
+                      contextualTabVisibilityPreview](bool visible) {
+                         mainWindow.ribbonBar()->setContextualTabsVisible(
+                             visible);
+                         if (visible) {
+                             contextualTabVisibilityPreview->setText(
+                                 QObject::tr("Contextual tabs: visible"));
+                             contextualTabVisibilityPreview->setStyleSheet(
+                                 QString());
+                             contextualTabVisibilityAction->setStatusTip(
+                                 QObject::tr("Contextual tabs: visible"));
+                         } else {
+                             contextualTabVisibilityPreview->setText(
+                                 QObject::tr("Contextual tabs: hidden"));
+                             contextualTabVisibilityPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#contextualTabVisibilityPreview { color: #5b2d00; background: #fff4ce; font-weight: 600; }"));
+                             contextualTabVisibilityAction->setStatusTip(
+                                 QObject::tr("Contextual tabs: hidden"));
+                         }
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 contextualTabVisibilityAction->statusTip(),
                                  2500);
                          }
                      });
@@ -7671,6 +7783,8 @@ int main(int argc, char *argv[])
                                 contextualPage,
                                 contextualGroupColorAction,
                                 contextualGroupColorPreview,
+                                contextualTabVisibilityAction,
+                                contextualTabVisibilityPreview,
                                 optionsPage,
                                 reducedMotionAction,
                                 reducedMotionPreview,

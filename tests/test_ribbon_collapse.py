@@ -941,6 +941,53 @@ def test_example_contextual_tab_group_color_preview_is_available():
     window.close()
 
 
+def test_example_contextual_tab_show_hide_toggle_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    ribbon.setCurrentPageIndex(ribbon.pageIndex(window.contextual_page))
+    _app().processEvents()
+
+    assert (
+        window.contextual_tab_visibility_action.objectName()
+        == "contextualTabVisibilityAction"
+    )
+    assert window.contextual_tab_visibility_action.isCheckable()
+    assert window.contextual_tab_visibility_action.isChecked()
+    assert not window.contextual_tab_visibility_action.icon().isNull()
+    assert "Show or hide contextual" in window.contextual_tab_visibility_action.toolTip()
+    assert ribbon.isContextualTabsVisible()
+    assert (
+        window.contextual_tab_visibility_preview.objectName()
+        == "contextualTabVisibilityPreview"
+    )
+    assert window.contextual_tab_visibility_preview.text() == "Contextual tabs: visible"
+    assert window.contextual_tab_visibility_action in window.search_actions
+    assert (
+        ribbon.searchAction("Show Contextual")
+        is window.contextual_tab_visibility_action
+    )
+
+    window.contextual_tab_visibility_action.trigger()
+    _app().processEvents()
+    assert not window.contextual_tab_visibility_action.isChecked()
+    assert not ribbon.isContextualTabsVisible()
+    assert window.contextual_tab_visibility_preview.text() == "Contextual tabs: hidden"
+    assert (
+        "#contextualTabVisibilityPreview"
+        in window.contextual_tab_visibility_preview.styleSheet()
+    )
+    assert "hidden" in window.statusBar().currentMessage()
+
+    window.contextual_tab_visibility_action.trigger()
+    _app().processEvents()
+    assert window.contextual_tab_visibility_action.isChecked()
+    assert ribbon.isContextualTabsVisible()
+    assert window.contextual_tab_visibility_preview.text() == "Contextual tabs: visible"
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2400,6 +2447,7 @@ def main():
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,
         test_example_contextual_tab_group_color_preview_is_available,
+        test_example_contextual_tab_show_hide_toggle_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

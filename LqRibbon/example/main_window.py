@@ -711,6 +711,36 @@ class MainWindow(RibbonMainWindow):
             "Current contextual tab group color"
         )
         tools_group.addWidget(self.contextual_group_color_preview)
+        self.contextual_tab_visibility_action = tools_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DialogYesButton),
+            "Show Contextual",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.contextual_tab_visibility_action.setObjectName(
+            "contextualTabVisibilityAction"
+        )
+        self.contextual_tab_visibility_action.setCheckable(True)
+        self.contextual_tab_visibility_action.setChecked(True)
+        self.contextual_tab_visibility_action.setToolTip(
+            "Show or hide contextual ribbon tabs"
+        )
+        self.contextual_tab_visibility_action.setStatusTip(
+            "Contextual tabs: visible"
+        )
+        self.contextual_tab_visibility_preview = QLabel(
+            "Contextual tabs: visible", tools_group
+        )
+        self.contextual_tab_visibility_preview.setObjectName(
+            "contextualTabVisibilityPreview"
+        )
+        self.contextual_tab_visibility_preview.setMinimumWidth(210)
+        self.contextual_tab_visibility_preview.setFixedHeight(30)
+        self.contextual_tab_visibility_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.contextual_tab_visibility_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.contextual_tab_visibility_preview.setToolTip(
+            "Current contextual tab visibility state"
+        )
+        tools_group.addWidget(self.contextual_tab_visibility_preview)
 
     def _create_options_page(self):
         accessibility_group = self.options_page.addGroup("Accessibility")
@@ -1706,6 +1736,7 @@ class MainWindow(RibbonMainWindow):
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
+            self.contextual_tab_visibility_action,
             self.reduced_motion_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
@@ -1759,6 +1790,9 @@ class MainWindow(RibbonMainWindow):
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
         self.contextual_group_color_action.triggered.connect(
             self.apply_contextual_group_color
+        )
+        self.contextual_tab_visibility_action.toggled.connect(
+            self.toggle_contextual_tabs_visible
         )
         self.reduced_motion_action.toggled.connect(self.toggle_reduced_motion)
         self.tell_me_lightbulb_action.triggered.connect(
@@ -2064,6 +2098,7 @@ class MainWindow(RibbonMainWindow):
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
+            self.contextual_tab_visibility_action,
             self.reduced_motion_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
@@ -2527,6 +2562,24 @@ class MainWindow(RibbonMainWindow):
             "QLabel#contextualGroupColorPreview { color: #ffffff; background: #6f42c1; font-weight: 600; }"
         )
         self._message("Contextual group color: purple")
+
+    def toggle_contextual_tabs_visible(self, visible):
+        self.ribbonBar().setContextualTabsVisible(bool(visible))
+        if visible:
+            self.contextual_tab_visibility_preview.setText("Contextual tabs: visible")
+            self.contextual_tab_visibility_preview.setStyleSheet("")
+            self.contextual_tab_visibility_action.setStatusTip(
+                "Contextual tabs: visible"
+            )
+        else:
+            self.contextual_tab_visibility_preview.setText("Contextual tabs: hidden")
+            self.contextual_tab_visibility_preview.setStyleSheet(
+                "QLabel#contextualTabVisibilityPreview { color: #5b2d00; background: #fff4ce; font-weight: 600; }"
+            )
+            self.contextual_tab_visibility_action.setStatusTip(
+                "Contextual tabs: hidden"
+            )
+        self._message(self.contextual_tab_visibility_action.statusTip())
 
     def toggle_reduced_motion(self, enabled):
         self.state_timing_preview.setProperty("reducedMotion", bool(enabled))
