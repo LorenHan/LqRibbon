@@ -215,6 +215,45 @@ def test_example_high_contrast_style_preview_pass():
     window.close()
 
 
+def test_example_touch_mouse_spacing_toggle_tracks_preview():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    preview = window.style_preview_widget
+
+    assert window.touch_spacing_action.objectName() == "touchSpacingAction"
+    assert window.touch_spacing_action.isCheckable()
+    assert not window.touch_spacing_action.isChecked()
+    assert not window.touch_spacing_action.icon().isNull()
+    assert "larger touch targets" in window.touch_spacing_action.toolTip()
+    assert window.touch_spacing_action.statusTip() == "Touch spacing: off"
+    assert window.touch_spacing_preview.objectName() == "touchSpacingPreview"
+    assert window.touch_spacing_preview.text() == "Mouse spacing"
+    assert preview.property("inputSpacingMode") == "mouse"
+    assert window.touch_spacing_action in window.search_actions
+    assert (
+        window.ribbonBar().searchAction("Touch Spacing")
+        is window.touch_spacing_action
+    )
+
+    window.touch_spacing_action.trigger()
+    _app().processEvents()
+    assert window.touch_spacing_action.isChecked()
+    assert window.touch_spacing_enabled is True
+    assert window.touch_spacing_preview.text() == "Touch spacing"
+    assert preview.property("inputSpacingMode") == "touch"
+    assert "#touchSpacingPreview" in window.touch_spacing_preview.styleSheet()
+    assert "Touch spacing" in window.statusBar().currentMessage()
+
+    window.touch_spacing_action.trigger()
+    _app().processEvents()
+    assert not window.touch_spacing_action.isChecked()
+    assert window.touch_spacing_enabled is False
+    assert window.touch_spacing_preview.text() == "Mouse spacing"
+    assert preview.property("inputSpacingMode") == "mouse"
+    window.close()
+
+
 def test_example_style_choice_persists_to_settings():
     with tempfile.TemporaryDirectory() as directory:
         path = os.path.join(directory, "style.ini")
@@ -256,6 +295,7 @@ def main():
         test_example_style_preview_tracks_combo,
         test_example_state_timing_preview_tracks_style,
         test_example_high_contrast_style_preview_pass,
+        test_example_touch_mouse_spacing_toggle_tracks_preview,
         test_example_style_choice_persists_to_settings,
     ]
     for test in tests:

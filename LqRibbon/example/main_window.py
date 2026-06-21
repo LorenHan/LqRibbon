@@ -209,6 +209,7 @@ class MainWindow(RibbonMainWindow):
         self.saved_ribbon_state = b""
         self.search_actions = []
         self.high_contrast_style_pass = False
+        self.touch_spacing_enabled = False
         self.create_ribbon()
         self.install_default_content()
 
@@ -371,6 +372,7 @@ class MainWindow(RibbonMainWindow):
         self.style_preview_widget = self._create_style_preview_widget(style_group)
         self.state_timing_preview = FluentStateTimingPreview(style_group)
         self._update_style_preview(RibbonStyle.Office2016Blue)
+        self.style_preview_widget.setProperty("inputSpacingMode", "mouse")
         style_group.addWidget(self.style_preview_widget)
         style_group.addWidget(self.state_timing_preview)
         self.high_contrast_style_action = style_group.addAction(
@@ -386,6 +388,25 @@ class MainWindow(RibbonMainWindow):
         self.high_contrast_style_action.setStatusTip(
             "High Contrast: preview off"
         )
+        self.touch_spacing_preview = QLabel("Mouse spacing", style_group)
+        self.touch_spacing_preview.setObjectName("touchSpacingPreview")
+        self.touch_spacing_preview.setMinimumWidth(130)
+        self.touch_spacing_preview.setFixedHeight(24)
+        self.touch_spacing_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.touch_spacing_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.touch_spacing_preview.setToolTip("Current touch or mouse spacing mode")
+        style_group.addWidget(self.touch_spacing_preview)
+        self.touch_spacing_action = style_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_ComputerIcon),
+            "Touch Spacing",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.touch_spacing_action.setObjectName("touchSpacingAction")
+        self.touch_spacing_action.setCheckable(True)
+        self.touch_spacing_action.setToolTip(
+            "Touch/Mouse spacing: use larger touch targets"
+        )
+        self.touch_spacing_action.setStatusTip("Touch spacing: off")
         style_combo.highlighted.connect(self._preview_selected_ribbon_style)
         style_combo.currentIndexChanged.connect(self._apply_selected_ribbon_style)
 
@@ -1583,6 +1604,7 @@ class MainWindow(RibbonMainWindow):
         for action in [
             self.full_screen_action,
             self.high_contrast_style_action,
+            self.touch_spacing_action,
             self.connect_action,
             self.dictate_microphone_action,
             self.office_popup_action,
@@ -1625,6 +1647,7 @@ class MainWindow(RibbonMainWindow):
         self.high_contrast_style_action.toggled.connect(
             self.toggle_high_contrast_style_preview
         )
+        self.touch_spacing_action.toggled.connect(self.toggle_touch_spacing)
         self.mdi_action.triggered.connect(lambda: self.show_mdi_content(tabbed=False))
         self.tab_action.triggered.connect(lambda: self.show_mdi_content(tabbed=True))
         self.settings_action.triggered.connect(lambda: self._message("Settings"))
@@ -1912,6 +1935,7 @@ class MainWindow(RibbonMainWindow):
         self.search_actions = [
             self.full_screen_action,
             self.high_contrast_style_action,
+            self.touch_spacing_action,
             self.mdi_action,
             self.tab_action,
             self.settings_action,
@@ -2421,6 +2445,22 @@ class MainWindow(RibbonMainWindow):
             self.reduced_motion_preview.setStyleSheet("")
             self.reduced_motion_action.setStatusTip("Reduced Motion: off")
         self._message(self.reduced_motion_action.statusTip())
+
+    def toggle_touch_spacing(self, enabled):
+        self.touch_spacing_enabled = bool(enabled)
+        if enabled:
+            self.style_preview_widget.setProperty("inputSpacingMode", "touch")
+            self.touch_spacing_preview.setText("Touch spacing")
+            self.touch_spacing_preview.setStyleSheet(
+                "QLabel#touchSpacingPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+            )
+            self.touch_spacing_action.setStatusTip("Touch spacing: on")
+        else:
+            self.style_preview_widget.setProperty("inputSpacingMode", "mouse")
+            self.touch_spacing_preview.setText("Mouse spacing")
+            self.touch_spacing_preview.setStyleSheet("")
+            self.touch_spacing_action.setStatusTip("Touch spacing: off")
+        self._message(self.touch_spacing_action.statusTip())
 
     def toggle_dictate_microphone(self, enabled):
         if enabled:

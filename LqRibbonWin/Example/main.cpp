@@ -3738,7 +3738,9 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                   QComboBox *styleCombo,
                   QWidget *stylePreview,
                   FluentStateTimingPreview *stateTimingPreview,
-                  QAction *highContrastStyleAction)
+                  QAction *highContrastStyleAction,
+                  QAction *touchSpacingAction,
+                  QLabel *touchSpacingPreview)
 {
     LqRibbon::RibbonBar *ribbonBar = mainWindow.ribbonBar();
     auto require = [](bool condition, const QString &name) {
@@ -3808,6 +3810,59 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && highContrastStyleAction->statusTip().contains(
                          QStringLiteral("preview off")),
                  QStringLiteral("high contrast style preview restores normal"))) {
+        return 1;
+    }
+    if (!require(touchSpacingAction
+                     && touchSpacingAction->objectName()
+                         == QStringLiteral("touchSpacingAction")
+                     && touchSpacingAction->isCheckable()
+                     && !touchSpacingAction->isChecked()
+                     && !touchSpacingAction->icon().isNull()
+                     && touchSpacingAction->toolTip().contains(
+                         QStringLiteral("larger touch targets"))
+                     && touchSpacingAction->statusTip()
+                         == QStringLiteral("Touch spacing: off")
+                     && touchSpacingPreview
+                     && touchSpacingPreview->objectName()
+                         == QStringLiteral("touchSpacingPreview")
+                     && touchSpacingPreview->text()
+                         == QStringLiteral("Mouse spacing")
+                     && stylePreview->property("inputSpacingMode").toString()
+                         == QStringLiteral("mouse")
+                     && ribbonBar->searchAction(QStringLiteral("Touch Spacing"))
+                         == touchSpacingAction,
+                 QStringLiteral("touch spacing toggle defaults to mouse spacing"))) {
+        return 1;
+    }
+    touchSpacingAction->trigger();
+    QCoreApplication::processEvents();
+    const QString strTouchSpacingStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(touchSpacingAction->isChecked()
+                     && touchSpacingAction->statusTip()
+                         == QStringLiteral("Touch spacing: on")
+                     && touchSpacingPreview->text()
+                         == QStringLiteral("Touch spacing")
+                     && touchSpacingPreview->styleSheet().contains(
+                         QStringLiteral("#touchSpacingPreview"))
+                     && stylePreview->property("inputSpacingMode").toString()
+                         == QStringLiteral("touch")
+                     && strTouchSpacingStatus.contains(
+                         QStringLiteral("Touch spacing")),
+                 QStringLiteral("touch spacing toggle switches to touch spacing"))) {
+        return 1;
+    }
+    touchSpacingAction->trigger();
+    QCoreApplication::processEvents();
+    if (!require(!touchSpacingAction->isChecked()
+                     && touchSpacingAction->statusTip()
+                         == QStringLiteral("Touch spacing: off")
+                     && touchSpacingPreview->text()
+                         == QStringLiteral("Mouse spacing")
+                     && stylePreview->property("inputSpacingMode").toString()
+                         == QStringLiteral("mouse"),
+                 QStringLiteral("touch spacing toggle restores mouse spacing"))) {
         return 1;
     }
 
@@ -4239,6 +4294,7 @@ int main(int argc, char *argv[])
     stateTimingPreview->setIcon(
         mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton));
     updateRibbonStylePreview(stylePreview, LqRibbon::RibbonBar::Office2016Blue);
+    stylePreview->setProperty("inputSpacingMode", QStringLiteral("mouse"));
     updateFluentStateTimingPreview(stateTimingPreview,
                                    LqRibbon::RibbonBar::Office2016Blue);
     stylePreviewRowLayout->addWidget(stylePreview);
@@ -4256,6 +4312,25 @@ int main(int argc, char *argv[])
         QObject::tr("High Contrast: preview maximum contrast colors"));
     highContrastStyleAction->setStatusTip(
         QObject::tr("High Contrast: preview off"));
+    QLabel *touchSpacingPreview = new QLabel(styleSwitchGroup);
+    touchSpacingPreview->setObjectName(QStringLiteral("touchSpacingPreview"));
+    touchSpacingPreview->setText(QObject::tr("Mouse spacing"));
+    touchSpacingPreview->setMinimumWidth(130);
+    touchSpacingPreview->setFixedHeight(24);
+    touchSpacingPreview->setAlignment(Qt::AlignCenter);
+    touchSpacingPreview->setFrameShape(QFrame::StyledPanel);
+    touchSpacingPreview->setToolTip(
+        QObject::tr("Current touch or mouse spacing mode"));
+    styleSwitchGroup->addWidget(touchSpacingPreview);
+    QAction *touchSpacingAction = styleSwitchGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_ComputerIcon),
+        QObject::tr("Touch Spacing"),
+        Qt::ToolButtonTextBesideIcon);
+    touchSpacingAction->setObjectName(QStringLiteral("touchSpacingAction"));
+    touchSpacingAction->setCheckable(true);
+    touchSpacingAction->setToolTip(
+        QObject::tr("Touch/Mouse spacing: use larger touch targets"));
+    touchSpacingAction->setStatusTip(QObject::tr("Touch spacing: off"));
     QObject::connect(styleCombo,
                      QOverload<int>::of(&QComboBox::highlighted),
                      [styleCombo,
@@ -4314,6 +4389,37 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  highContrastStyleAction->statusTip(),
                                  2500);
+                         }
+                     });
+    QObject::connect(touchSpacingAction,
+                     &QAction::toggled,
+                     [&mainWindow,
+                      stylePreview,
+                      touchSpacingAction,
+                      touchSpacingPreview](bool enabled) {
+                         if (enabled) {
+                             stylePreview->setProperty(
+                                 "inputSpacingMode",
+                                 QStringLiteral("touch"));
+                             touchSpacingPreview->setText(
+                                 QObject::tr("Touch spacing"));
+                             touchSpacingPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#touchSpacingPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"));
+                             touchSpacingAction->setStatusTip(
+                                 QObject::tr("Touch spacing: on"));
+                         } else {
+                             stylePreview->setProperty(
+                                 "inputSpacingMode",
+                                 QStringLiteral("mouse"));
+                             touchSpacingPreview->setText(
+                                 QObject::tr("Mouse spacing"));
+                             touchSpacingPreview->setStyleSheet(QString());
+                             touchSpacingAction->setStatusTip(
+                                 QObject::tr("Touch spacing: off"));
+                         }
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 touchSpacingAction->statusTip(), 2500);
                          }
                      });
     LqRibbon::RibbonGroup *voiceGroup =
@@ -5406,6 +5512,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), shellPage);
     customizeManager->addToCategory(QObject::tr("Actions"), fullScreenAction);
     customizeManager->addToCategory(QObject::tr("Actions"), highContrastStyleAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), touchSpacingAction);
     customizeManager->addToCategory(QObject::tr("Actions"), connectAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     dictateMicrophoneAction);
@@ -6568,6 +6675,7 @@ int main(int argc, char *argv[])
         << QObject::tr("Control loop sample.lqribbon"));
     mainWindow.ribbonBar()->registerSearchAction(fullScreenAction);
     mainWindow.ribbonBar()->registerSearchAction(highContrastStyleAction);
+    mainWindow.ribbonBar()->registerSearchAction(touchSpacingAction);
     mainWindow.ribbonBar()->registerSearchAction(mdiAction);
     mainWindow.ribbonBar()->registerSearchAction(tabAction);
     mainWindow.ribbonBar()->registerSearchAction(settingsAction);
@@ -7331,7 +7439,9 @@ int main(int argc, char *argv[])
                              styleCombo,
                              stylePreview,
                              stateTimingPreview,
-                             highContrastStyleAction);
+                             highContrastStyleAction,
+                             touchSpacingAction,
+                             touchSpacingPreview);
     }
 
     if (!strPreviewPath.isEmpty()) {
