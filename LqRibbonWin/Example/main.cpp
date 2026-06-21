@@ -292,6 +292,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *viewPage,
                      QAction *immersiveReaderAction,
                      QLabel *immersiveReaderPreview,
+                     QAction *focusModeAction,
+                     QLabel *focusModePreview,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -1033,6 +1035,55 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strImmersiveReaderStatus.contains(
                          QStringLiteral("Immersive Reader")),
                  QStringLiteral("Immersive Reader command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *focusModeButton =
+        collapseTestActionButton(ribbonBar, focusModeAction);
+    if (focusModeAction) {
+        focusModeAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strFocusModeStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(focusModeAction
+                     && focusModeAction->objectName()
+                         == QStringLiteral("focusModeAction")
+                     && focusModeAction->isCheckable()
+                     && focusModeAction->isChecked()
+                     && !focusModeAction->icon().isNull()
+                     && focusModeAction->toolTip().contains(
+                         QStringLiteral("restore ribbon"))
+                     && focusModeButton
+                     && focusModePreview
+                     && focusModePreview->objectName()
+                         == QStringLiteral("focusModePreview")
+                     && focusModePreview->text()
+                         == QStringLiteral(
+                             "Focus Mode: distractions hidden")
+                     && focusModePreview->styleSheet().contains(
+                         QStringLiteral("#focusModePreview"))
+                     && ribbonBar->isRibbonMinimized()
+                     && ribbonBar->searchAction(QStringLiteral("Focus Mode"))
+                         == focusModeAction
+                     && strFocusModeStatus.contains(
+                         QStringLiteral("Focus Mode")),
+                 QStringLiteral("Focus Mode command surface is available"))) {
+        return 1;
+    }
+    if (focusModeAction) {
+        focusModeAction->trigger();
+        processCollapseTestEvents();
+    }
+    if (!require(!focusModeAction->isChecked()
+                     && !ribbonBar->isRibbonMinimized()
+                     && focusModePreview->text()
+                         == QStringLiteral("Focus Mode: ribbon visible"),
+                 QStringLiteral("Focus Mode exits and restores ribbon"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3853,6 +3904,25 @@ int main(int argc, char *argv[])
     immersiveReaderPreview->setToolTip(
         QObject::tr("Immersive Reader layout state"));
     immersiveGroup->addWidget(immersiveReaderPreview);
+    QAction *focusModeAction = immersiveGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_TitleBarMinButton),
+        QObject::tr("Focus Mode"),
+        Qt::ToolButtonTextUnderIcon);
+    focusModeAction->setObjectName(QStringLiteral("focusModeAction"));
+    focusModeAction->setCheckable(true);
+    focusModeAction->setToolTip(
+        QObject::tr("Hide ribbon distractions for focused editing"));
+    focusModeAction->setStatusTip(
+        QObject::tr("Focus Mode: hide ribbon commands"));
+    QLabel *focusModePreview = new QLabel(immersiveGroup);
+    focusModePreview->setObjectName(QStringLiteral("focusModePreview"));
+    focusModePreview->setText(QObject::tr("Focus Mode: ribbon visible"));
+    focusModePreview->setMinimumWidth(210);
+    focusModePreview->setFixedHeight(30);
+    focusModePreview->setAlignment(Qt::AlignCenter);
+    focusModePreview->setFrameShape(QFrame::StyledPanel);
+    focusModePreview->setToolTip(QObject::tr("Focus Mode visibility state"));
+    immersiveGroup->addWidget(focusModePreview);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -4436,6 +4506,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), translatorAction);
     customizeManager->addToCategory(QObject::tr("Actions"), readAloudAction);
     customizeManager->addToCategory(QObject::tr("Actions"), immersiveReaderAction);
+    customizeManager->addToCategory(QObject::tr("Actions"), focusModeAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -5540,6 +5611,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(translatorAction);
     mainWindow.ribbonBar()->registerSearchAction(readAloudAction);
     mainWindow.ribbonBar()->registerSearchAction(immersiveReaderAction);
+    mainWindow.ribbonBar()->registerSearchAction(focusModeAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -5863,6 +5935,40 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(focusModeAction,
+                     &QAction::toggled,
+                     [&mainWindow, focusModeAction, focusModePreview](
+                         bool enabled) {
+                         mainWindow.ribbonBar()->setRibbonMinimized(enabled);
+                         if (enabled) {
+                             focusModePreview->setText(
+                                 QObject::tr(
+                                     "Focus Mode: distractions hidden"));
+                             focusModePreview->setStyleSheet(
+                                 QStringLiteral("QLabel#focusModePreview { color: #107c41; font-weight: 600; }"));
+                             focusModeAction->setToolTip(
+                                 QObject::tr(
+                                     "Exit Focus Mode and restore ribbon commands"));
+                             if (mainWindow.statusBar()) {
+                                 mainWindow.statusBar()->showMessage(
+                                     QObject::tr(
+                                         "Focus Mode: distractions hidden"),
+                                     2500);
+                             }
+                             return;
+                         }
+                         focusModePreview->setText(
+                             QObject::tr("Focus Mode: ribbon visible"));
+                         focusModePreview->setStyleSheet(QString());
+                         focusModeAction->setToolTip(
+                             QObject::tr(
+                                 "Hide ribbon distractions for focused editing"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Focus Mode: ribbon visible"),
+                                 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -6014,6 +6120,8 @@ int main(int argc, char *argv[])
                                 viewPage,
                                 immersiveReaderAction,
                                 immersiveReaderPreview,
+                                focusModeAction,
+                                focusModePreview,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,

@@ -736,6 +736,29 @@ class MainWindow(RibbonMainWindow):
             "Immersive Reader layout state"
         )
         immersive_group.addWidget(self.immersive_reader_preview)
+        self.focus_mode_action = immersive_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_TitleBarMinButton),
+            "Focus Mode",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.focus_mode_action.setObjectName("focusModeAction")
+        self.focus_mode_action.setCheckable(True)
+        self.focus_mode_action.setToolTip(
+            "Hide ribbon distractions for focused editing"
+        )
+        self.focus_mode_action.setStatusTip(
+            "Focus Mode: hide ribbon commands"
+        )
+        self.focus_mode_preview = QLabel(
+            "Focus Mode: ribbon visible", immersive_group
+        )
+        self.focus_mode_preview.setObjectName("focusModePreview")
+        self.focus_mode_preview.setMinimumWidth(210)
+        self.focus_mode_preview.setFixedHeight(30)
+        self.focus_mode_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.focus_mode_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.focus_mode_preview.setToolTip("Focus Mode visibility state")
+        immersive_group.addWidget(self.focus_mode_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -1355,6 +1378,7 @@ class MainWindow(RibbonMainWindow):
             self.translator_action,
             self.read_aloud_action,
             self.immersive_reader_action,
+            self.focus_mode_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1394,6 +1418,7 @@ class MainWindow(RibbonMainWindow):
         self.immersive_reader_action.toggled.connect(
             self.toggle_immersive_reader
         )
+        self.focus_mode_action.toggled.connect(self.toggle_focus_mode)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1666,6 +1691,7 @@ class MainWindow(RibbonMainWindow):
             self.translator_action,
             self.read_aloud_action,
             self.immersive_reader_action,
+            self.focus_mode_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -2052,6 +2078,26 @@ class MainWindow(RibbonMainWindow):
                 "Open Immersive Reader for focused reading"
             )
             self._message("Immersive Reader: off")
+
+    def toggle_focus_mode(self, enabled):
+        if enabled:
+            self.ribbonBar().setRibbonMinimized(True)
+            self.focus_mode_preview.setText("Focus Mode: distractions hidden")
+            self.focus_mode_preview.setStyleSheet(
+                "QLabel#focusModePreview { color: #107c41; font-weight: 600; }"
+            )
+            self.focus_mode_action.setToolTip(
+                "Exit Focus Mode and restore ribbon commands"
+            )
+            self._message("Focus Mode: distractions hidden")
+        else:
+            self.ribbonBar().setRibbonMinimized(False)
+            self.focus_mode_preview.setText("Focus Mode: ribbon visible")
+            self.focus_mode_preview.setStyleSheet("")
+            self.focus_mode_action.setToolTip(
+                "Hide ribbon distractions for focused editing"
+            )
+            self._message("Focus Mode: ribbon visible")
 
     def toggle_dictate_microphone(self, enabled):
         if enabled:

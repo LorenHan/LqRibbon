@@ -1279,6 +1279,42 @@ def test_example_immersive_reader_command_surface():
     window.close()
 
 
+def test_example_focus_mode_command_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    ribbon.setCurrentPageIndex(ribbon.pageIndex(window.view_page))
+    _app().processEvents()
+
+    assert window.focus_mode_action.objectName() == "focusModeAction"
+    assert window.focus_mode_action.isCheckable()
+    assert not window.focus_mode_action.isChecked()
+    assert not window.focus_mode_action.icon().isNull()
+    assert "focused editing" in window.focus_mode_action.toolTip()
+    assert window.focus_mode_preview.objectName() == "focusModePreview"
+    assert window.focus_mode_preview.text() == "Focus Mode: ribbon visible"
+    assert window.focus_mode_action in window.search_actions
+    assert ribbon.searchAction("Focus Mode") is window.focus_mode_action
+    assert not ribbon.isRibbonMinimized()
+
+    window.focus_mode_action.trigger()
+    _app().processEvents()
+    assert window.focus_mode_action.isChecked()
+    assert ribbon.isRibbonMinimized()
+    assert window.focus_mode_preview.text() == "Focus Mode: distractions hidden"
+    assert "#focusModePreview" in window.focus_mode_preview.styleSheet()
+    assert "Focus Mode" in window.statusBar().currentMessage()
+
+    window.focus_mode_action.trigger()
+    _app().processEvents()
+    assert not window.focus_mode_action.isChecked()
+    assert not ribbon.isRibbonMinimized()
+    assert window.focus_mode_preview.text() == "Focus Mode: ribbon visible"
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1917,6 +1953,7 @@ def main():
         test_example_translator_command_surface,
         test_example_read_aloud_command_surface,
         test_example_immersive_reader_command_surface,
+        test_example_focus_mode_command_surface,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,

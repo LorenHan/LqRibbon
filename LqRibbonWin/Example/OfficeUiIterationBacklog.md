@@ -102,7 +102,7 @@ Default style remains `Office 2016 Blue`.
 | 071 | Translator command | Review page | Complete |
 | 072 | Read Aloud command | Review page | Complete |
 | 073 | Immersive Reader command | View page | Complete |
-| 074 | Focus mode command | View page | Planned |
+| 074 | Focus mode command | View page | Complete |
 | 075 | Dark canvas toggle | View page | Planned |
 | 076 | Zoom slider in status bar | Status bar | Planned |
 | 077 | View switch buttons in status bar | Status bar | Planned |
