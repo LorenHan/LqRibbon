@@ -1076,6 +1076,24 @@ class MainWindow(RibbonMainWindow):
         ink_group.addWidget(self.draw_mode_preview)
         self.draw_mode_action.toggled.connect(self.update_draw_mode)
 
+        pen_group = self.draw_page.addGroup("Pens")
+        pen_gallery_group = RibbonGalleryGroup(self)
+        pen_gallery_group.setSize(QSize(96, 36))
+        for caption, icon in [
+            ("Black Pen", QStyle.StandardPixmap.SP_DialogApplyButton),
+            ("Red Pen", QStyle.StandardPixmap.SP_MessageBoxWarning),
+            ("Highlighter", QStyle.StandardPixmap.SP_DialogYesButton),
+        ]:
+            pen_gallery_group.addItem(caption, self._icon(icon))
+        self.pen_gallery = RibbonGallery(pen_group)
+        self.pen_gallery.setObjectName("penGallery")
+        self.pen_gallery.setToolTip("Pen gallery for Draw tab ink tools")
+        self.pen_gallery.setGalleryGroup(pen_gallery_group)
+        self.pen_gallery.setColumnCount(3)
+        self.pen_gallery.setRowCount(1)
+        self.pen_gallery.setCheckedIndex(0)
+        pen_group.addWidget(RibbonGalleryControl(pen_group, self.pen_gallery))
+
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
         self.tell_me_lightbulb_action = discovery_group.addAction(

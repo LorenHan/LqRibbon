@@ -450,6 +450,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *drawPage,
                      QAction *drawModeAction,
                      QLabel *drawModePreview,
+                     LqRibbon::RibbonGallery *penGallery,
                      LqRibbon::RibbonGallery *styleGallery,
                      QMenu *galleryMenu,
                      QAction *tellMeLightbulbAction,
@@ -1748,6 +1749,28 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
+    }
+
+    if (!require(penGallery
+                     && penGallery->objectName()
+                         == QStringLiteral("penGallery")
+                     && penGallery->toolTip().contains(
+                         QStringLiteral("Draw tab ink tools"))
+                     && penGallery->itemCount() == 3
+                     && penGallery->columnCount() == 3
+                     && penGallery->rowCount() == 1
+                     && penGallery->checkedIndex() == 0
+                     && penGallery->checkedItem()
+                     && penGallery->checkedItem()->caption()
+                         == QStringLiteral("Black Pen")
+                     && penGallery->item(1)
+                     && penGallery->item(1)->caption()
+                         == QStringLiteral("Red Pen")
+                     && penGallery->item(2)
+                     && penGallery->item(2)->caption()
+                         == QStringLiteral("Highlighter"),
+                 QStringLiteral("Pen gallery is available"))) {
+        return 1;
     }
 
     LqRibbon::RibbonGalleryItem *highDpiGalleryItem = nullptr;
@@ -6189,6 +6212,32 @@ int main(int argc, char *argv[])
     drawModePreview->setFrameShape(QFrame::StyledPanel);
     drawModePreview->setToolTip(QObject::tr("Current drawing mode state"));
     inkGroup->addWidget(drawModePreview);
+    LqRibbon::RibbonGroup *penGroup =
+        drawPage->addGroup(QObject::tr("Pens"));
+    LqRibbon::RibbonGalleryGroup *penGalleryGroup =
+        new LqRibbon::RibbonGalleryGroup(&mainWindow);
+    penGalleryGroup->setSize(QSize(96, 36));
+    penGalleryGroup->addItem(
+        QObject::tr("Black Pen"),
+        mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton));
+    penGalleryGroup->addItem(
+        QObject::tr("Red Pen"),
+        mainWindow.style()->standardIcon(QStyle::SP_MessageBoxWarning));
+    penGalleryGroup->addItem(
+        QObject::tr("Highlighter"),
+        mainWindow.style()->standardIcon(QStyle::SP_DialogYesButton));
+    LqRibbon::RibbonGallery *penGallery =
+        new LqRibbon::RibbonGallery(penGroup);
+    penGallery->setObjectName(QStringLiteral("penGallery"));
+    penGallery->setToolTip(
+        QObject::tr("Pen gallery for Draw tab ink tools"));
+    penGallery->setGalleryGroup(penGalleryGroup);
+    penGallery->setColumnCount(3);
+    penGallery->setRowCount(1);
+    penGallery->setCheckedIndex(0);
+    LqRibbon::RibbonGalleryControl *penGalleryControl =
+        new LqRibbon::RibbonGalleryControl(penGroup, penGallery);
+    penGroup->addWidget(penGalleryControl);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -9554,6 +9603,7 @@ int main(int argc, char *argv[])
                                 drawPage,
                                 drawModeAction,
                                 drawModePreview,
+                                penGallery,
                                 styleGallery,
                                 galleryMenu,
                                 tellMeLightbulbAction,

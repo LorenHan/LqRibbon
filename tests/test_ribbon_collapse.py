@@ -2427,6 +2427,26 @@ def test_example_draw_tab_is_available():
     window.close()
 
 
+def test_example_pen_gallery_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    gallery = window.pen_gallery
+
+    assert gallery.objectName() == "penGallery"
+    assert "Draw tab ink tools" in gallery.toolTip()
+    assert gallery.itemCount() == 3
+    assert gallery.columnCount() == 3
+    assert gallery.rowCount() == 1
+    assert gallery.checkedIndex() == 0
+    assert gallery.checkedItem().caption() == "Black Pen"
+    assert gallery.item(1).caption() == "Red Pen"
+    assert gallery.item(2).caption() == "Highlighter"
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -3168,6 +3188,7 @@ def main():
         test_example_focus_mode_command_surface,
         test_example_dark_canvas_toggle_surface,
         test_example_draw_tab_is_available,
+        test_example_pen_gallery_is_available,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,
