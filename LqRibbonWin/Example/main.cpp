@@ -1719,6 +1719,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     if (!require(styleGallery
                      && styleGallery->objectName()
                          == QStringLiteral("styleGallery")
+                     && styleGallery->toolTip().contains(
+                         QStringLiteral("In-ribbon gallery"))
                      && styleGallery->itemCount() >= 7
                      && styleGallery->columnCount() == 4
                      && highDpiGalleryItem
@@ -5608,6 +5610,8 @@ int main(int argc, char *argv[])
     LqRibbon::RibbonGallery *styleGallery =
         new LqRibbon::RibbonGallery(styleGroup);
     styleGallery->setObjectName(QStringLiteral("styleGallery"));
+    styleGallery->setToolTip(
+        QObject::tr("In-ribbon gallery for style presets"));
     styleGallery->setGalleryGroup(styleGalleryGroup);
     styleGallery->setColumnCount(4);
     styleGallery->setRowCount(2);

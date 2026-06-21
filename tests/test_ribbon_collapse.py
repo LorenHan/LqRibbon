@@ -801,6 +801,7 @@ def test_example_high_dpi_gallery_icon_is_available():
     pixmap = item.icon().pixmap(64, 64)
 
     assert window.style_gallery.objectName() == "styleGallery"
+    assert "In-ribbon gallery" in window.style_gallery.toolTip()
     assert window.style_gallery.itemCount() >= 7
     assert window.style_gallery.columnCount() == 4
     assert item.caption() == "High DPI"

@@ -594,6 +594,7 @@ class MainWindow(RibbonMainWindow):
 
         self.style_gallery = RibbonGallery(style_group)
         self.style_gallery.setObjectName("styleGallery")
+        self.style_gallery.setToolTip("In-ribbon gallery for style presets")
         self.style_gallery.setGalleryGroup(gallery_group)
         self.style_gallery.setColumnCount(4)
         self.style_gallery.setRowCount(2)
