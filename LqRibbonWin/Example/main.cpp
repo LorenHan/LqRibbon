@@ -419,6 +419,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *designPage,
                      QAction *designerIdeasAction,
                      QLabel *designerIdeasPreview,
+                     LqRibbon::RibbonPage *dataPage,
+                     QAction *dataTypesAction,
+                     QLabel *dataTypesPreview,
                      LqRibbon::RibbonPage *formatPage,
                      QAction *svgRecolorAction,
                      QLabel *svgRecolorPreview,
@@ -1187,6 +1190,54 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strDesignerIdeasStatus.contains(
                          QStringLiteral("Designer Ideas")),
                  QStringLiteral("Designer Ideas command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const int dataPageIndex = ribbonBar->indexOf(dataPage);
+    if (dataPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(dataPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *dataTypesButton =
+        collapseTestActionButton(ribbonBar, dataTypesAction);
+    if (dataTypesAction) {
+        dataTypesAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strDataTypesStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(dataPageIndex >= 0
+                     && dataPage
+                     && dataPage->title() == QStringLiteral("Data")
+                     && dataTypesAction
+                     && dataTypesAction->objectName()
+                         == QStringLiteral("dataTypesAction")
+                     && !dataTypesAction->icon().isNull()
+                     && dataTypesAction->toolTip().contains(
+                         QStringLiteral("linked data types"))
+                     && dataTypesAction->statusTip()
+                         == QStringLiteral("Data Types: ready to convert")
+                     && dataTypesPreview
+                     && dataTypesPreview->objectName()
+                         == QStringLiteral("dataTypesPreview")
+                     && dataTypesPreview->text()
+                         == QStringLiteral("Data Types: Geography linked")
+                     && dataTypesPreview->styleSheet().contains(
+                         QStringLiteral("#dataTypesPreview"))
+                     && dataTypesPreview->toolTip().contains(
+                         QStringLiteral("Linked data type"))
+                     && ribbonBar->searchAction(QStringLiteral("Data Types"))
+                         == dataTypesAction
+                     && dataTypesButton
+                     && dataTypesButton->defaultAction()
+                         == dataTypesAction
+                     && strDataTypesStatus.contains(
+                         QStringLiteral("Data Types")),
+                 QStringLiteral("Data Types command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6581,6 +6632,29 @@ int main(int argc, char *argv[])
         QObject::tr("Designer Ideas suggestion pane state"));
     designerIdeasGroup->addWidget(designerIdeasPreview);
 
+    LqRibbon::RibbonPage *dataPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Data"));
+    LqRibbon::RibbonGroup *dataTypesGroup =
+        dataPage->addGroup(QObject::tr("Data Types"));
+    QAction *dataTypesAction = dataTypesGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DriveNetIcon),
+        QObject::tr("Data Types"),
+        Qt::ToolButtonTextUnderIcon);
+    dataTypesAction->setObjectName(QStringLiteral("dataTypesAction"));
+    dataTypesAction->setToolTip(
+        QObject::tr("Convert selected text into linked data types"));
+    dataTypesAction->setStatusTip(QObject::tr("Data Types: ready to convert"));
+    QLabel *dataTypesPreview = new QLabel(dataTypesGroup);
+    dataTypesPreview->setObjectName(QStringLiteral("dataTypesPreview"));
+    dataTypesPreview->setText(QObject::tr("Data Types: plain text"));
+    dataTypesPreview->setMinimumWidth(210);
+    dataTypesPreview->setFixedHeight(30);
+    dataTypesPreview->setAlignment(Qt::AlignCenter);
+    dataTypesPreview->setFrameShape(QFrame::StyledPanel);
+    dataTypesPreview->setToolTip(
+        QObject::tr("Linked data type conversion state"));
+    dataTypesGroup->addWidget(dataTypesPreview);
+
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
     LqRibbon::RibbonGroup *commandDiscoveryGroup =
@@ -9117,6 +9191,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(recommendedChartAction);
     mainWindow.ribbonBar()->registerSearchAction(model3DAnimationAction);
     mainWindow.ribbonBar()->registerSearchAction(designerIdeasAction);
+    mainWindow.ribbonBar()->registerSearchAction(dataTypesAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
     mainWindow.ribbonBar()->registerSearchAction(contextualGroupColorAction);
@@ -9410,6 +9485,19 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr(
                                      "Designer Ideas: 3 layout suggestions"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(dataTypesAction,
+                     &QAction::triggered,
+                     [&mainWindow, dataTypesPreview]() {
+                         dataTypesPreview->setText(
+                             QObject::tr("Data Types: Geography linked"));
+                         dataTypesPreview->setStyleSheet(
+                             QStringLiteral("QLabel#dataTypesPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Data Types: Geography linked"),
                                  2500);
                          }
                      });
@@ -10008,6 +10096,9 @@ int main(int argc, char *argv[])
                                 designPage,
                                 designerIdeasAction,
                                 designerIdeasPreview,
+                                dataPage,
+                                dataTypesAction,
+                                dataTypesPreview,
                                 formatPage,
                                 svgRecolorAction,
                                 svgRecolorPreview,

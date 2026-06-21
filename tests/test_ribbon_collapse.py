@@ -1025,6 +1025,33 @@ def test_example_designer_ideas_command_surface():
     window.close()
 
 
+def test_example_data_types_command_surface():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert ribbon.pageIndex(window.data_page) >= 0
+    assert window.data_page.title() == "Data"
+    assert window.data_types_action.objectName() == "dataTypesAction"
+    assert not window.data_types_action.icon().isNull()
+    assert "linked data types" in window.data_types_action.toolTip()
+    assert window.data_types_action.statusTip() == "Data Types: ready to convert"
+    assert window.data_types_preview.objectName() == "dataTypesPreview"
+    assert window.data_types_preview.text() == "Data Types: plain text"
+    assert "Linked data type" in window.data_types_preview.toolTip()
+    assert window.data_types_action in window.search_actions
+    assert ribbon.searchAction("Data Types") is window.data_types_action
+
+    window.data_types_action.trigger()
+    _app().processEvents()
+    assert window.data_types_preview.text() == "Data Types: Geography linked"
+    assert "#dataTypesPreview" in window.data_types_preview.styleSheet()
+    assert "Data Types" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_svg_recolor_command_surface():
     window = MainWindow()
     window.show()
@@ -3277,6 +3304,7 @@ def main():
         test_example_recommended_chart_command_surface,
         test_example_3d_animation_command_surface,
         test_example_designer_ideas_command_surface,
+        test_example_data_types_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,

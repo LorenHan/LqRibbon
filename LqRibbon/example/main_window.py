@@ -323,6 +323,9 @@ class MainWindow(RibbonMainWindow):
         self.design_page = ribbon.addPage("Design")
         self._create_design_page()
 
+        self.data_page = ribbon.addPage("Data")
+        self._create_data_page()
+
         self.tell_me_page = ribbon.addPage("Tell Me")
         self._create_command_discovery_page()
 
@@ -1205,6 +1208,27 @@ class MainWindow(RibbonMainWindow):
         self.designer_ideas_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.designer_ideas_preview.setToolTip("Designer Ideas suggestion pane state")
         ideas_group.addWidget(self.designer_ideas_preview)
+
+    def _create_data_page(self):
+        data_types_group = self.data_page.addGroup("Data Types")
+        self.data_types_action = data_types_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DriveNetIcon),
+            "Data Types",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.data_types_action.setObjectName("dataTypesAction")
+        self.data_types_action.setToolTip(
+            "Convert selected text into linked data types"
+        )
+        self.data_types_action.setStatusTip("Data Types: ready to convert")
+        self.data_types_preview = QLabel("Data Types: plain text", data_types_group)
+        self.data_types_preview.setObjectName("dataTypesPreview")
+        self.data_types_preview.setMinimumWidth(210)
+        self.data_types_preview.setFixedHeight(30)
+        self.data_types_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.data_types_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.data_types_preview.setToolTip("Linked data type conversion state")
+        data_types_group.addWidget(self.data_types_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -2190,6 +2214,7 @@ class MainWindow(RibbonMainWindow):
             self.model_3d_animation_action,
             self.designer_ideas_action,
             self.recommended_chart_action,
+            self.data_types_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2247,6 +2272,7 @@ class MainWindow(RibbonMainWindow):
         self.model_3d_insert_action.triggered.connect(self.insert_3d_model)
         self.designer_ideas_action.triggered.connect(self.open_designer_ideas)
         self.recommended_chart_action.triggered.connect(self.open_recommended_chart)
+        self.data_types_action.triggered.connect(self.convert_to_data_type)
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
         self.contextual_group_color_action.triggered.connect(
@@ -2581,6 +2607,7 @@ class MainWindow(RibbonMainWindow):
             self.model_3d_animation_action,
             self.designer_ideas_action,
             self.recommended_chart_action,
+            self.data_types_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -3090,6 +3117,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#recommendedChartPreview { color: #124078; background: #eef6ff; font-weight: 600; }"
         )
         self._message("Recommended Chart: clustered column")
+
+    def convert_to_data_type(self):
+        self.data_types_preview.setText("Data Types: Geography linked")
+        self.data_types_preview.setStyleSheet(
+            "QLabel#dataTypesPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+        )
+        self._message("Data Types: Geography linked")
 
     def recolor_svg_icon(self):
         self.svg_recolor_preview.setText("SVG color: blue accent")
