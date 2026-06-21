@@ -366,6 +366,7 @@ def test_example_account_title_button_is_available():
 
 
 def test_example_account_privacy_settings_entry_is_available():
+    _app()
     window = MainWindow()
     window.show()
     _app().processEvents()
@@ -376,6 +377,13 @@ def test_example_account_privacy_settings_entry_is_available():
     assert window.backstage_account_page.objectName() == "backstageAccountPage"
     assert window.account_signed_in_label.objectName() == "accountSignedInLabel"
     assert "Local User" in window.account_signed_in_label.text()
+    assert (
+        window.account_connected_services_label.objectName()
+        == "accountConnectedServicesLabel"
+    )
+    assert "OneDrive" in window.account_connected_services_label.text()
+    assert "SharePoint" in window.account_connected_services_label.text()
+    assert "Cloud services" in window.account_connected_services_label.toolTip()
     assert window.account_privacy_summary.objectName() == "accountPrivacySummary"
     assert "optional diagnostics off" in window.account_privacy_summary.text()
     assert (

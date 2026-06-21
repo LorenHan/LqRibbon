@@ -382,6 +382,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *backstageAccountAction,
                      QWidget *backstageAccountPage,
                      QLabel *accountSignedInLabel,
+                     QLabel *accountConnectedServicesLabel,
                      QAction *accountPrivacySettingsAction,
                      QToolButton *accountPrivacySettingsButton,
                      QLabel *accountPrivacySummary,
@@ -3046,6 +3047,15 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          == QStringLiteral("accountSignedInLabel")
                      && accountSignedInLabel->text().contains(
                          QStringLiteral("Local User"))
+                     && accountConnectedServicesLabel
+                     && accountConnectedServicesLabel->objectName()
+                         == QStringLiteral("accountConnectedServicesLabel")
+                     && accountConnectedServicesLabel->text().contains(
+                         QStringLiteral("OneDrive"))
+                     && accountConnectedServicesLabel->text().contains(
+                         QStringLiteral("SharePoint"))
+                     && accountConnectedServicesLabel->toolTip().contains(
+                         QStringLiteral("Cloud services"))
                      && accountPrivacySettingsAction
                      && accountPrivacySettingsAction->objectName()
                          == QStringLiteral("accountPrivacySettingsAction")
@@ -6497,6 +6507,13 @@ int main(int argc, char *argv[])
         QObject::tr("Local User | local.user@example.com"),
         backstageAccountPage);
     accountSignedInLabel->setObjectName(QStringLiteral("accountSignedInLabel"));
+    QLabel *accountConnectedServicesLabel = new QLabel(
+        QObject::tr("Connected services: OneDrive, SharePoint"),
+        backstageAccountPage);
+    accountConnectedServicesLabel->setObjectName(
+        QStringLiteral("accountConnectedServicesLabel"));
+    accountConnectedServicesLabel->setToolTip(
+        QObject::tr("Cloud services connected to the current Office account"));
     QLabel *accountPrivacySummary = new QLabel(
         QObject::tr("Connected experiences: optional diagnostics off"),
         backstageAccountPage);
@@ -6525,6 +6542,8 @@ int main(int argc, char *argv[])
         Qt::ToolButtonTextBesideIcon);
     accountPageLayout->addRow(QObject::tr("Signed in"),
                               accountSignedInLabel);
+    accountPageLayout->addRow(QObject::tr("Services"),
+                              accountConnectedServicesLabel);
     accountPageLayout->addRow(QObject::tr("Privacy"),
                               accountPrivacySummary);
     accountPageLayout->addRow(QObject::tr("Settings"),
@@ -8934,6 +8953,7 @@ int main(int argc, char *argv[])
                                 backstageAccountAction,
                                 backstageAccountPage,
                                 accountSignedInLabel,
+                                accountConnectedServicesLabel,
                                 accountPrivacySettingsAction,
                                 accountPrivacySettingsButton,
                                 accountPrivacySummary,

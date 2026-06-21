@@ -1685,6 +1685,16 @@ class MainWindow(RibbonMainWindow):
             self.backstage_account_page,
         )
         self.account_signed_in_label.setObjectName("accountSignedInLabel")
+        self.account_connected_services_label = QLabel(
+            "Connected services: OneDrive, SharePoint",
+            self.backstage_account_page,
+        )
+        self.account_connected_services_label.setObjectName(
+            "accountConnectedServicesLabel"
+        )
+        self.account_connected_services_label.setToolTip(
+            "Cloud services connected to the current Office account"
+        )
         self.account_privacy_summary = QLabel(
             "Connected experiences: optional diagnostics off",
             self.backstage_account_page,
@@ -1719,6 +1729,9 @@ class MainWindow(RibbonMainWindow):
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
         account_page_layout.addRow("Signed in", self.account_signed_in_label)
+        account_page_layout.addRow(
+            "Services", self.account_connected_services_label
+        )
         account_page_layout.addRow("Privacy", self.account_privacy_summary)
         account_page_layout.addRow("Settings", self.account_privacy_settings_button)
         self.backstage_account_action = self.backstage.addPage(
