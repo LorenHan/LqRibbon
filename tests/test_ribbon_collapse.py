@@ -1216,6 +1216,34 @@ def test_example_copilot_prompt_gallery_is_available():
     window.close()
 
 
+def test_example_comments_link_opening_command_surface():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert ribbon.pageIndex(window.collaboration_page) >= 0
+    assert window.collaboration_page.title() == "Collaboration"
+    assert window.comments_link_action.objectName() == "commentsLinkAction"
+    assert not window.comments_link_action.icon().isNull()
+    assert "linked comment thread" in window.comments_link_action.toolTip()
+    assert window.comments_link_action.statusTip() == "Comments link: ready"
+    assert window.comments_link_preview.objectName() == "commentsLinkPreview"
+    assert window.comments_link_preview.text() == "Comments link: none"
+    assert "comment link state" in window.comments_link_preview.toolTip()
+    assert window.comments_link_action in window.search_actions
+    assert ribbon.searchAction("Open Comment Link") is window.comments_link_action
+
+    window.comments_link_action.trigger()
+    _app().processEvents()
+    assert window.comments_link_preview.text() == "Comments link: thread #42"
+    assert window.comments_link_preview.property("commentThreadOpened")
+    assert "#commentsLinkPreview" in window.comments_link_preview.styleSheet()
+    assert "Comments link" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_svg_recolor_command_surface():
     window = MainWindow()
     window.show()
@@ -3475,6 +3503,7 @@ def main():
         test_example_pivot_recommendation_command_surface,
         test_example_live_captions_command_surface,
         test_example_copilot_prompt_gallery_is_available,
+        test_example_comments_link_opening_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,

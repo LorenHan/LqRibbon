@@ -332,6 +332,9 @@ class MainWindow(RibbonMainWindow):
         self.copilot_page = ribbon.addPage("Copilot")
         self._create_copilot_page()
 
+        self.collaboration_page = ribbon.addPage("Collaboration")
+        self._create_collaboration_page()
+
         self.tell_me_page = ribbon.addPage("Tell Me")
         self._create_command_discovery_page()
 
@@ -1330,6 +1333,27 @@ class MainWindow(RibbonMainWindow):
         prompt_group.addWidget(
             RibbonGalleryControl(prompt_group, self.copilot_prompt_gallery)
         )
+
+    def _create_collaboration_page(self):
+        comments_group = self.collaboration_page.addGroup("Comments")
+        self.comments_link_action = comments_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_FileDialogContentsView),
+            "Open Comment Link",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.comments_link_action.setObjectName("commentsLinkAction")
+        self.comments_link_action.setToolTip(
+            "Open a linked comment thread from the ribbon"
+        )
+        self.comments_link_action.setStatusTip("Comments link: ready")
+        self.comments_link_preview = QLabel("Comments link: none", comments_group)
+        self.comments_link_preview.setObjectName("commentsLinkPreview")
+        self.comments_link_preview.setMinimumWidth(210)
+        self.comments_link_preview.setFixedHeight(30)
+        self.comments_link_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.comments_link_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.comments_link_preview.setToolTip("Last opened comment link state")
+        comments_group.addWidget(self.comments_link_preview)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -2334,6 +2358,7 @@ class MainWindow(RibbonMainWindow):
             self.pivot_recommendation_action,
             self.live_captions_action,
             self.loop_component_action,
+            self.comments_link_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2396,6 +2421,7 @@ class MainWindow(RibbonMainWindow):
             self.open_pivot_recommendation
         )
         self.loop_component_action.triggered.connect(self.insert_loop_component)
+        self.comments_link_action.triggered.connect(self.open_comments_link)
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
         self.contextual_group_color_action.triggered.connect(
@@ -2765,6 +2791,7 @@ class MainWindow(RibbonMainWindow):
             self.pivot_recommendation_action,
             self.live_captions_action,
             self.loop_component_action,
+            self.comments_link_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -3281,6 +3308,14 @@ class MainWindow(RibbonMainWindow):
             "QLabel#loopComponentPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
         )
         self._message("Loop Component: task list inserted")
+
+    def open_comments_link(self):
+        self.comments_link_preview.setText("Comments link: thread #42")
+        self.comments_link_preview.setStyleSheet(
+            "QLabel#commentsLinkPreview { color: #124078; background: #eef6ff; font-weight: 600; }"
+        )
+        self.comments_link_preview.setProperty("commentThreadOpened", True)
+        self._message("Comments link: opened thread #42")
 
     def convert_to_data_type(self):
         self.data_types_preview.setText("Data Types: Geography linked")

@@ -433,6 +433,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *liveCaptionsPreview,
                      LqRibbon::RibbonPage *copilotPage,
                      LqRibbon::RibbonGallery *copilotPromptGallery,
+                     LqRibbon::RibbonPage *collaborationPage,
+                     QAction *commentsLinkAction,
+                     QLabel *commentsLinkPreview,
                      LqRibbon::RibbonPage *formatPage,
                      QAction *svgRecolorAction,
                      QLabel *svgRecolorPreview,
@@ -1414,6 +1417,56 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          == QStringLiteral("Create Table"),
                  QStringLiteral("Copilot prompt gallery is available"))) {
         return 1;
+    }
+
+    const int collaborationPageIndex = ribbonBar->indexOf(collaborationPage);
+    if (collaborationPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(collaborationPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *commentsLinkButton =
+        collapseTestActionButton(ribbonBar, commentsLinkAction);
+    if (commentsLinkAction) {
+        commentsLinkAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strCommentsLinkStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(collaborationPageIndex >= 0
+                     && collaborationPage
+                     && collaborationPage->title()
+                         == QStringLiteral("Collaboration")
+                     && commentsLinkAction
+                     && commentsLinkAction->objectName()
+                         == QStringLiteral("commentsLinkAction")
+                     && !commentsLinkAction->icon().isNull()
+                     && commentsLinkAction->toolTip().contains(
+                         QStringLiteral("linked comment thread"))
+                     && commentsLinkAction->statusTip()
+                         == QStringLiteral("Comments link: ready")
+                     && commentsLinkPreview
+                     && commentsLinkPreview->objectName()
+                         == QStringLiteral("commentsLinkPreview")
+                     && commentsLinkPreview->text()
+                         == QStringLiteral("Comments link: thread #42")
+                     && commentsLinkPreview->property("commentThreadOpened")
+                            .toBool()
+                     && commentsLinkPreview->styleSheet().contains(
+                         QStringLiteral("#commentsLinkPreview"))
+                     && ribbonBar->searchAction(
+                            QStringLiteral("Open Comment Link"))
+                         == commentsLinkAction
+                     && commentsLinkButton
+                     && commentsLinkButton->defaultAction()
+                         == commentsLinkAction
+                     && strCommentsLinkStatus.contains(
+                         QStringLiteral("Comments link")),
+                 QStringLiteral("Comments link opening command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
     }
 
     const int formatPageIndex = ribbonBar->indexOf(formatPage);
@@ -7014,6 +7067,29 @@ int main(int argc, char *argv[])
                                            copilotPromptGallery);
     copilotPromptsGroup->addWidget(copilotPromptGalleryControl);
 
+    LqRibbon::RibbonPage *collaborationPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Collaboration"));
+    LqRibbon::RibbonGroup *commentsGroup =
+        collaborationPage->addGroup(QObject::tr("Comments"));
+    QAction *commentsLinkAction = commentsGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_FileDialogContentsView),
+        QObject::tr("Open Comment Link"),
+        Qt::ToolButtonTextUnderIcon);
+    commentsLinkAction->setObjectName(QStringLiteral("commentsLinkAction"));
+    commentsLinkAction->setToolTip(
+        QObject::tr("Open a linked comment thread from the ribbon"));
+    commentsLinkAction->setStatusTip(QObject::tr("Comments link: ready"));
+    QLabel *commentsLinkPreview = new QLabel(commentsGroup);
+    commentsLinkPreview->setObjectName(QStringLiteral("commentsLinkPreview"));
+    commentsLinkPreview->setText(QObject::tr("Comments link: none"));
+    commentsLinkPreview->setMinimumWidth(210);
+    commentsLinkPreview->setFixedHeight(30);
+    commentsLinkPreview->setAlignment(Qt::AlignCenter);
+    commentsLinkPreview->setFrameShape(QFrame::StyledPanel);
+    commentsLinkPreview->setToolTip(
+        QObject::tr("Last opened comment link state"));
+    commentsGroup->addWidget(commentsLinkPreview);
+
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
     LqRibbon::RibbonGroup *commandDiscoveryGroup =
@@ -9560,6 +9636,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(model3DInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(recommendedChartAction);
     mainWindow.ribbonBar()->registerSearchAction(loopComponentAction);
+    mainWindow.ribbonBar()->registerSearchAction(commentsLinkAction);
     mainWindow.ribbonBar()->registerSearchAction(model3DAnimationAction);
     mainWindow.ribbonBar()->registerSearchAction(designerIdeasAction);
     mainWindow.ribbonBar()->registerSearchAction(dataTypesAction);
@@ -9892,6 +9969,22 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr(
                                      "Loop Component: task list inserted"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(commentsLinkAction,
+                     &QAction::triggered,
+                     [&mainWindow, commentsLinkPreview]() {
+                         commentsLinkPreview->setText(
+                             QObject::tr("Comments link: thread #42"));
+                         commentsLinkPreview->setStyleSheet(
+                             QStringLiteral("QLabel#commentsLinkPreview { color: #124078; background: #eef6ff; font-weight: 600; }"));
+                         commentsLinkPreview->setProperty(
+                             "commentThreadOpened", true);
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Comments link: opened thread #42"),
                                  2500);
                          }
                      });
@@ -10593,6 +10686,9 @@ int main(int argc, char *argv[])
                                 liveCaptionsPreview,
                                 copilotPage,
                                 copilotPromptGallery,
+                                collaborationPage,
+                                commentsLinkAction,
+                                commentsLinkPreview,
                                 formatPage,
                                 svgRecolorAction,
                                 svgRecolorPreview,
