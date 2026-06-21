@@ -1141,6 +1141,34 @@ def test_example_editor_pane_command_surface():
     window.close()
 
 
+def test_example_spelling_grammar_card_surface():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.spelling_grammar_action.objectName() == "spellingGrammarAction"
+    assert not window.spelling_grammar_action.icon().isNull()
+    assert "spelling and grammar" in window.spelling_grammar_action.toolTip()
+    assert window.spelling_grammar_card.objectName() == "spellingGrammarCard"
+    assert window.spelling_grammar_card.text() == "Spelling & Grammar: no scan yet"
+    assert window.spelling_grammar_action in window.search_actions
+    assert (
+        ribbon.searchAction("Spelling & Grammar")
+        is window.spelling_grammar_action
+    )
+
+    window.spelling_grammar_action.trigger()
+    _app().processEvents()
+    assert (
+        window.spelling_grammar_card.text()
+        == "Spelling & Grammar: 1 spelling, 2 grammar"
+    )
+    assert "#spellingGrammarCard" in window.spelling_grammar_card.styleSheet()
+    assert "Spelling & Grammar" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_tell_me_lightbulb_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1774,6 +1802,7 @@ def main():
         test_example_sensitivity_label_command_surface,
         test_example_accessibility_checker_command_surface,
         test_example_editor_pane_command_surface,
+        test_example_spelling_grammar_card_surface,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
         test_example_tell_me_help_redirect_opens_help_search_path,

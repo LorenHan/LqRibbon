@@ -280,6 +280,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *accessibilityCheckerPreview,
                      QAction *editorPaneAction,
                      QLabel *editorPanePreview,
+                     QAction *spellingGrammarAction,
+                     QLabel *spellingGrammarCard,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
@@ -871,6 +873,42 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          == editorPaneAction
                      && strEditorStatus.contains(QStringLiteral("Editor")),
                  QStringLiteral("Editor pane command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *spellingGrammarButton =
+        collapseTestActionButton(ribbonBar, spellingGrammarAction);
+    if (spellingGrammarAction) {
+        spellingGrammarAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strSpellingGrammarStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(spellingGrammarAction
+                     && spellingGrammarAction->objectName()
+                         == QStringLiteral("spellingGrammarAction")
+                     && !spellingGrammarAction->icon().isNull()
+                     && spellingGrammarAction->toolTip().contains(
+                         QStringLiteral("spelling and grammar"))
+                     && spellingGrammarButton
+                     && spellingGrammarCard
+                     && spellingGrammarCard->objectName()
+                         == QStringLiteral("spellingGrammarCard")
+                     && spellingGrammarCard->text()
+                         == QStringLiteral(
+                             "Spelling & Grammar: 1 spelling, 2 grammar")
+                     && spellingGrammarCard->styleSheet().contains(
+                         QStringLiteral("#spellingGrammarCard"))
+                     && ribbonBar->searchAction(
+                            QStringLiteral("Spelling & Grammar"))
+                         == spellingGrammarAction
+                     && strSpellingGrammarStatus.contains(
+                         QStringLiteral("Spelling & Grammar")),
+                 QStringLiteral("Spelling and grammar card surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -3536,6 +3574,27 @@ int main(int argc, char *argv[])
     editorPanePreview->setFrameShape(QFrame::StyledPanel);
     editorPanePreview->setToolTip(QObject::tr("Editor pane suggestion preview"));
     editorGroup->addWidget(editorPanePreview);
+    QAction *spellingGrammarAction = editorGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MessageBoxQuestion),
+        QObject::tr("Spelling & Grammar"),
+        Qt::ToolButtonTextUnderIcon);
+    spellingGrammarAction->setObjectName(
+        QStringLiteral("spellingGrammarAction"));
+    spellingGrammarAction->setToolTip(
+        QObject::tr("Review spelling and grammar issues"));
+    spellingGrammarAction->setStatusTip(
+        QObject::tr("Spelling & Grammar: inspect writing checks"));
+    QLabel *spellingGrammarCard = new QLabel(editorGroup);
+    spellingGrammarCard->setObjectName(QStringLiteral("spellingGrammarCard"));
+    spellingGrammarCard->setText(
+        QObject::tr("Spelling & Grammar: no scan yet"));
+    spellingGrammarCard->setMinimumWidth(230);
+    spellingGrammarCard->setFixedHeight(34);
+    spellingGrammarCard->setAlignment(Qt::AlignCenter);
+    spellingGrammarCard->setFrameShape(QFrame::StyledPanel);
+    spellingGrammarCard->setToolTip(
+        QObject::tr("Spelling and grammar result card"));
+    editorGroup->addWidget(spellingGrammarCard);
 
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
@@ -4111,6 +4170,8 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accessibilityCheckerAction);
     customizeManager->addToCategory(QObject::tr("Actions"), editorPaneAction);
+    customizeManager->addToCategory(QObject::tr("Actions"),
+                                    spellingGrammarAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
     customizeManager->addToCategory(QObject::tr("Actions"), tellMeLightbulbAction);
@@ -5178,6 +5239,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(sensitivityLabelAction);
     mainWindow.ribbonBar()->registerSearchAction(accessibilityCheckerAction);
     mainWindow.ribbonBar()->registerSearchAction(editorPaneAction);
+    mainWindow.ribbonBar()->registerSearchAction(spellingGrammarAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
@@ -5407,6 +5469,21 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    QObject::connect(spellingGrammarAction,
+                     &QAction::triggered,
+                     [&mainWindow, spellingGrammarCard]() {
+                         spellingGrammarCard->setText(
+                             QObject::tr(
+                                 "Spelling & Grammar: 1 spelling, 2 grammar"));
+                         spellingGrammarCard->setStyleSheet(
+                             QStringLiteral("QLabel#spellingGrammarCard { color: #a80000; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Spelling & Grammar: 3 issues ready"),
+                                 2500);
+                         }
+                     });
     QObject::connect(tellMeLightbulbAction,
                      &QAction::triggered,
                      [&mainWindow]() {
@@ -5546,6 +5623,8 @@ int main(int argc, char *argv[])
                                 accessibilityCheckerPreview,
                                 editorPaneAction,
                                 editorPanePreview,
+                                spellingGrammarAction,
+                                spellingGrammarCard,
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,

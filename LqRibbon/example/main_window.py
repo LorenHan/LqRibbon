@@ -609,6 +609,30 @@ class MainWindow(RibbonMainWindow):
         self.editor_pane_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.editor_pane_preview.setToolTip("Editor pane suggestion preview")
         editor_group.addWidget(self.editor_pane_preview)
+        self.spelling_grammar_action = editor_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_MessageBoxQuestion),
+            "Spelling & Grammar",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.spelling_grammar_action.setObjectName("spellingGrammarAction")
+        self.spelling_grammar_action.setToolTip(
+            "Review spelling and grammar issues"
+        )
+        self.spelling_grammar_action.setStatusTip(
+            "Spelling & Grammar: inspect writing checks"
+        )
+        self.spelling_grammar_card = QLabel(
+            "Spelling & Grammar: no scan yet", editor_group
+        )
+        self.spelling_grammar_card.setObjectName("spellingGrammarCard")
+        self.spelling_grammar_card.setMinimumWidth(230)
+        self.spelling_grammar_card.setFixedHeight(34)
+        self.spelling_grammar_card.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.spelling_grammar_card.setFrameShape(QFrame.Shape.StyledPanel)
+        self.spelling_grammar_card.setToolTip(
+            "Spelling and grammar result card"
+        )
+        editor_group.addWidget(self.spelling_grammar_card)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -1222,6 +1246,7 @@ class MainWindow(RibbonMainWindow):
             self.sensitivity_label_action,
             self.accessibility_checker_action,
             self.editor_pane_action,
+            self.spelling_grammar_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.reorder_quick_access_action,
@@ -1249,6 +1274,9 @@ class MainWindow(RibbonMainWindow):
             self.run_accessibility_checker
         )
         self.editor_pane_action.triggered.connect(self.open_editor_pane)
+        self.spelling_grammar_action.triggered.connect(
+            self.show_spelling_grammar_card
+        )
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
         )
@@ -1516,6 +1544,7 @@ class MainWindow(RibbonMainWindow):
             self.sensitivity_label_action,
             self.accessibility_checker_action,
             self.editor_pane_action,
+            self.spelling_grammar_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
             self.tell_me_help_redirect_action,
@@ -1850,6 +1879,15 @@ class MainWindow(RibbonMainWindow):
             "QLabel#editorPanePreview { color: #107c41; font-weight: 600; }"
         )
         self._message("Editor: 5 writing suggestions ready")
+
+    def show_spelling_grammar_card(self):
+        self.spelling_grammar_card.setText(
+            "Spelling & Grammar: 1 spelling, 2 grammar"
+        )
+        self.spelling_grammar_card.setStyleSheet(
+            "QLabel#spellingGrammarCard { color: #a80000; font-weight: 600; }"
+        )
+        self._message("Spelling & Grammar: 3 issues ready")
 
     def open_tell_me_help_redirect(self):
         query = self.ribbonBar().searchText().strip() or "unmatched Tell Me phrase"
