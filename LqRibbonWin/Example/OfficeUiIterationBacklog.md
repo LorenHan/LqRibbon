@@ -121,7 +121,7 @@ Default style remains `Office 2016 Blue`.
 | 090 | Touch/mouse spacing toggle | Style preview page | Complete |
 | 091 | KeyTips overlay | Keyboard overlay | Complete |
 | 092 | Alt key tab activation | Keyboard overlay | Complete |
-| 093 | Contextual tab group color | Contextual page preview | Planned |
+| 093 | Contextual tab group color | Contextual page preview | Complete |
 | 094 | Contextual tab show/hide | Contextual page preview | Planned |
 | 095 | Title groups visibility toggle | Contextual page preview | Planned |
 | 096 | Custom tab creation | Customize dialog | Planned |

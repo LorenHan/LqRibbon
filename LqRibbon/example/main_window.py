@@ -297,6 +297,9 @@ class MainWindow(RibbonMainWindow):
         self.format_page = ribbon.addPage("Format")
         self._create_format_page()
 
+        self.contextual_page = ribbon.addPage("Contextual")
+        self._create_contextual_page()
+
         self.options_page = ribbon.addPage("Options")
         self._create_options_page()
 
@@ -677,6 +680,37 @@ class MainWindow(RibbonMainWindow):
         self.svg_convert_shape_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.svg_convert_shape_preview.setToolTip("Selected SVG shape conversion state")
         svg_format_group.addWidget(self.svg_convert_shape_preview)
+
+    def _create_contextual_page(self):
+        tools_group = self.contextual_page.addGroup("Picture Tools")
+        self.contextual_group_color_action = tools_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_DriveDVDIcon),
+            "Group Color",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.contextual_group_color_action.setObjectName(
+            "contextualGroupColorAction"
+        )
+        self.contextual_group_color_action.setToolTip(
+            "Apply a contextual tab group color to Picture Tools"
+        )
+        self.contextual_group_color_action.setStatusTip(
+            "Contextual group color: purple"
+        )
+        self.contextual_group_color_preview = QLabel(
+            "Picture Tools: neutral", tools_group
+        )
+        self.contextual_group_color_preview.setObjectName(
+            "contextualGroupColorPreview"
+        )
+        self.contextual_group_color_preview.setMinimumWidth(210)
+        self.contextual_group_color_preview.setFixedHeight(30)
+        self.contextual_group_color_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.contextual_group_color_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.contextual_group_color_preview.setToolTip(
+            "Current contextual tab group color"
+        )
+        tools_group.addWidget(self.contextual_group_color_preview)
 
     def _create_options_page(self):
         accessibility_group = self.options_page.addGroup("Accessibility")
@@ -1637,6 +1671,7 @@ class MainWindow(RibbonMainWindow):
             self.gallery_page,
             self.insert_page,
             self.format_page,
+            self.contextual_page,
             self.options_page,
             self.review_page,
             self.view_page,
@@ -1670,6 +1705,7 @@ class MainWindow(RibbonMainWindow):
             self.svg_icon_insert_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
+            self.contextual_group_color_action,
             self.reduced_motion_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
@@ -1721,6 +1757,9 @@ class MainWindow(RibbonMainWindow):
         self.svg_icon_insert_action.triggered.connect(self.insert_svg_icon)
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
+        self.contextual_group_color_action.triggered.connect(
+            self.apply_contextual_group_color
+        )
         self.reduced_motion_action.toggled.connect(self.toggle_reduced_motion)
         self.tell_me_lightbulb_action.triggered.connect(
             lambda: self._message("Tell Me: type a command or phrase in Search")
@@ -2024,6 +2063,7 @@ class MainWindow(RibbonMainWindow):
             self.svg_icon_insert_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
+            self.contextual_group_color_action,
             self.reduced_motion_action,
             self.account_privacy_settings_action,
             self.tell_me_lightbulb_action,
@@ -2480,6 +2520,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#svgConvertShapePreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
         )
         self._message("Convert to Shape: editable vector created")
+
+    def apply_contextual_group_color(self):
+        self.contextual_group_color_preview.setText("Picture Tools: purple")
+        self.contextual_group_color_preview.setStyleSheet(
+            "QLabel#contextualGroupColorPreview { color: #ffffff; background: #6f42c1; font-weight: 600; }"
+        )
+        self._message("Contextual group color: purple")
 
     def toggle_reduced_motion(self, enabled):
         self.state_timing_preview.setProperty("reducedMotion", bool(enabled))

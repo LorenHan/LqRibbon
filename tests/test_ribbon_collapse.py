@@ -900,6 +900,47 @@ def test_example_reduced_motion_option_is_available():
     window.close()
 
 
+def test_example_contextual_tab_group_color_preview_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    ribbon.setCurrentPageIndex(ribbon.pageIndex(window.contextual_page))
+    _app().processEvents()
+
+    assert window.contextual_page.title() == "Contextual"
+    assert (
+        window.contextual_group_color_action.objectName()
+        == "contextualGroupColorAction"
+    )
+    assert not window.contextual_group_color_action.icon().isNull()
+    assert "contextual tab group color" in window.contextual_group_color_action.toolTip()
+    assert (
+        window.contextual_group_color_action.statusTip()
+        == "Contextual group color: purple"
+    )
+    assert (
+        window.contextual_group_color_preview.objectName()
+        == "contextualGroupColorPreview"
+    )
+    assert window.contextual_group_color_preview.text() == "Picture Tools: neutral"
+    assert window.contextual_group_color_action in window.search_actions
+    assert (
+        ribbon.searchAction("Group Color")
+        is window.contextual_group_color_action
+    )
+
+    window.contextual_group_color_action.trigger()
+    _app().processEvents()
+    assert window.contextual_group_color_preview.text() == "Picture Tools: purple"
+    assert (
+        "#contextualGroupColorPreview"
+        in window.contextual_group_color_preview.styleSheet()
+    )
+    assert "Contextual group color" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2358,6 +2399,7 @@ def main():
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,
+        test_example_contextual_tab_group_color_preview_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

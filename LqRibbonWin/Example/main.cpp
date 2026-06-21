@@ -409,6 +409,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *svgRecolorPreview,
                      QAction *svgConvertShapeAction,
                      QLabel *svgConvertShapePreview,
+                     LqRibbon::RibbonPage *contextualPage,
+                     QAction *contextualGroupColorAction,
+                     QLabel *contextualGroupColorPreview,
                      LqRibbon::RibbonPage *optionsPage,
                      QAction *reducedMotionAction,
                      QLabel *reducedMotionPreview,
@@ -1038,6 +1041,55 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strSvgConvertShapeStatus.contains(
                          QStringLiteral("Convert to Shape")),
                  QStringLiteral("SVG convert to shape command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const int contextualPageIndex = ribbonBar->indexOf(contextualPage);
+    if (contextualPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(contextualPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *contextualGroupColorButton =
+        collapseTestActionButton(ribbonBar, contextualGroupColorAction);
+    if (contextualGroupColorAction) {
+        contextualGroupColorAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strContextualGroupColorStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(contextualPageIndex >= 0
+                     && contextualPage
+                     && contextualPage->title()
+                         == QStringLiteral("Contextual")
+                     && contextualGroupColorAction
+                     && contextualGroupColorAction->objectName()
+                         == QStringLiteral("contextualGroupColorAction")
+                     && !contextualGroupColorAction->icon().isNull()
+                     && contextualGroupColorAction->toolTip().contains(
+                         QStringLiteral("contextual tab group color"))
+                     && contextualGroupColorAction->statusTip()
+                         == QStringLiteral("Contextual group color: purple")
+                     && contextualGroupColorPreview
+                     && contextualGroupColorPreview->objectName()
+                         == QStringLiteral("contextualGroupColorPreview")
+                     && contextualGroupColorPreview->text()
+                         == QStringLiteral("Picture Tools: purple")
+                     && contextualGroupColorPreview->styleSheet().contains(
+                         QStringLiteral("#contextualGroupColorPreview"))
+                     && contextualGroupColorPreview->toolTip().contains(
+                         QStringLiteral("contextual tab group color"))
+                     && ribbonBar->searchAction(QStringLiteral("Group Color"))
+                         == contextualGroupColorAction
+                     && contextualGroupColorButton
+                     && contextualGroupColorButton->defaultAction()
+                         == contextualGroupColorAction
+                     && strContextualGroupColorStatus.contains(
+                         QStringLiteral("Contextual group color")),
+                 QStringLiteral("Contextual tab group color preview is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -4812,6 +4864,33 @@ int main(int argc, char *argv[])
         QObject::tr("Selected SVG shape conversion state"));
     svgFormatGroup->addWidget(svgConvertShapePreview);
 
+    LqRibbon::RibbonPage *contextualPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Contextual"));
+    LqRibbon::RibbonGroup *pictureToolsGroup =
+        contextualPage->addGroup(QObject::tr("Picture Tools"));
+    QAction *contextualGroupColorAction = pictureToolsGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_DriveDVDIcon),
+        QObject::tr("Group Color"),
+        Qt::ToolButtonTextUnderIcon);
+    contextualGroupColorAction->setObjectName(
+        QStringLiteral("contextualGroupColorAction"));
+    contextualGroupColorAction->setToolTip(
+        QObject::tr("Apply a contextual tab group color to Picture Tools"));
+    contextualGroupColorAction->setStatusTip(
+        QObject::tr("Contextual group color: purple"));
+    QLabel *contextualGroupColorPreview = new QLabel(pictureToolsGroup);
+    contextualGroupColorPreview->setObjectName(
+        QStringLiteral("contextualGroupColorPreview"));
+    contextualGroupColorPreview->setText(
+        QObject::tr("Picture Tools: neutral"));
+    contextualGroupColorPreview->setMinimumWidth(210);
+    contextualGroupColorPreview->setFixedHeight(30);
+    contextualGroupColorPreview->setAlignment(Qt::AlignCenter);
+    contextualGroupColorPreview->setFrameShape(QFrame::StyledPanel);
+    contextualGroupColorPreview->setToolTip(
+        QObject::tr("Current contextual tab group color"));
+    pictureToolsGroup->addWidget(contextualGroupColorPreview);
+
     LqRibbon::RibbonPage *optionsPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Options"));
     LqRibbon::RibbonGroup *accessibilityOptionsGroup =
@@ -5659,6 +5738,7 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Pages"), galleryPage);
     customizeManager->addToCategory(QObject::tr("Pages"), insertPage);
     customizeManager->addToCategory(QObject::tr("Pages"), formatPage);
+    customizeManager->addToCategory(QObject::tr("Pages"), contextualPage);
     customizeManager->addToCategory(QObject::tr("Pages"), optionsPage);
     customizeManager->addToCategory(QObject::tr("Pages"), reviewPage);
     customizeManager->addToCategory(QObject::tr("Pages"), viewPage);
@@ -5694,6 +5774,8 @@ int main(int argc, char *argv[])
     customizeManager->addToCategory(QObject::tr("Actions"), svgIconInsertAction);
     customizeManager->addToCategory(QObject::tr("Actions"), svgRecolorAction);
     customizeManager->addToCategory(QObject::tr("Actions"), svgConvertShapeAction);
+    customizeManager->addToCategory(QObject::tr("Actions"),
+                                    contextualGroupColorAction);
     customizeManager->addToCategory(QObject::tr("Actions"), reducedMotionAction);
     customizeManager->addToCategory(QObject::tr("Actions"),
                                     accountPrivacySettingsAction);
@@ -6876,6 +6958,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
+    mainWindow.ribbonBar()->registerSearchAction(contextualGroupColorAction);
     mainWindow.ribbonBar()->registerSearchAction(reducedMotionAction);
     mainWindow.ribbonBar()->registerSearchAction(accountPrivacySettingsAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
@@ -7126,6 +7209,20 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr(
                                      "Convert to Shape: editable vector created"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(contextualGroupColorAction,
+                     &QAction::triggered,
+                     [&mainWindow, contextualGroupColorPreview]() {
+                         contextualGroupColorPreview->setText(
+                             QObject::tr("Picture Tools: purple"));
+                         contextualGroupColorPreview->setStyleSheet(
+                             QStringLiteral("QLabel#contextualGroupColorPreview { color: #ffffff; background: #6f42c1; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Contextual group color: purple"),
                                  2500);
                          }
                      });
@@ -7571,6 +7668,9 @@ int main(int argc, char *argv[])
                                 svgRecolorPreview,
                                 svgConvertShapeAction,
                                 svgConvertShapePreview,
+                                contextualPage,
+                                contextualGroupColorAction,
+                                contextualGroupColorPreview,
                                 optionsPage,
                                 reducedMotionAction,
                                 reducedMotionPreview,
