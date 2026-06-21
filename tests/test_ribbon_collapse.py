@@ -916,6 +916,32 @@ def test_example_svg_icon_insert_command_surface():
     window.close()
 
 
+def test_example_3d_model_insert_command_surface():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert window.insert_page.title() == "Insert"
+    assert window.model_3d_insert_action.objectName() == "model3DInsertAction"
+    assert not window.model_3d_insert_action.icon().isNull()
+    assert "rotatable 3D model" in window.model_3d_insert_action.toolTip()
+    assert window.model_3d_insert_action.statusTip() == "3D Model: ready to insert"
+    assert window.model_3d_preview.objectName() == "model3DPreview"
+    assert window.model_3d_preview.text() == "3D Models: none inserted"
+    assert "Last inserted 3D" in window.model_3d_preview.toolTip()
+    assert window.model_3d_insert_action in window.search_actions
+    assert ribbon.searchAction("3D Model") is window.model_3d_insert_action
+
+    window.model_3d_insert_action.trigger()
+    _app().processEvents()
+    assert window.model_3d_preview.text() == "3D Models: 1 inserted"
+    assert "#model3DPreview" in window.model_3d_preview.styleSheet()
+    assert "3D Model" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_svg_recolor_command_surface():
     window = MainWindow()
     window.show()
@@ -3164,6 +3190,7 @@ def main():
         test_example_gallery_checked_item_state_is_available,
         test_example_gallery_keyboard_navigation_is_available,
         test_example_svg_icon_insert_command_surface,
+        test_example_3d_model_insert_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,

@@ -409,6 +409,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *insertPage,
                      QAction *svgIconInsertAction,
                      QLabel *svgIconInsertPreview,
+                     QAction *model3DInsertAction,
+                     QLabel *model3DPreview,
                      LqRibbon::RibbonPage *formatPage,
                      QAction *svgRecolorAction,
                      QLabel *svgRecolorPreview,
@@ -999,6 +1001,46 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strSvgInsertStatus.contains(
                          QStringLiteral("SVG Icon")),
                  QStringLiteral("SVG icon insert command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    QToolButton *model3DButton =
+        collapseTestActionButton(ribbonBar, model3DInsertAction);
+    if (model3DInsertAction) {
+        model3DInsertAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strModel3DStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(model3DInsertAction
+                     && model3DInsertAction->objectName()
+                         == QStringLiteral("model3DInsertAction")
+                     && !model3DInsertAction->icon().isNull()
+                     && model3DInsertAction->toolTip().contains(
+                         QStringLiteral("rotatable 3D model"))
+                     && model3DInsertAction->statusTip()
+                         == QStringLiteral("3D Model: ready to insert")
+                     && model3DPreview
+                     && model3DPreview->objectName()
+                         == QStringLiteral("model3DPreview")
+                     && model3DPreview->text()
+                         == QStringLiteral("3D Models: 1 inserted")
+                     && model3DPreview->styleSheet().contains(
+                         QStringLiteral("#model3DPreview"))
+                     && model3DPreview->toolTip().contains(
+                         QStringLiteral("Last inserted 3D"))
+                     && ribbonBar->searchAction(QStringLiteral("3D Model"))
+                         == model3DInsertAction
+                     && model3DButton
+                     && model3DButton->defaultAction()
+                         == model3DInsertAction
+                     && strModel3DStatus.contains(
+                         QStringLiteral("3D Model")),
+                 QStringLiteral("3D model insert command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -5863,6 +5905,25 @@ int main(int argc, char *argv[])
     svgIconInsertPreview->setToolTip(
         QObject::tr("Last inserted SVG icon state"));
     illustrationsGroup->addWidget(svgIconInsertPreview);
+    QAction *model3DInsertAction = illustrationsGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_ComputerIcon),
+        QObject::tr("3D Model"),
+        Qt::ToolButtonTextUnderIcon);
+    model3DInsertAction->setObjectName(
+        QStringLiteral("model3DInsertAction"));
+    model3DInsertAction->setToolTip(
+        QObject::tr("Insert a rotatable 3D model into the document"));
+    model3DInsertAction->setStatusTip(
+        QObject::tr("3D Model: ready to insert"));
+    QLabel *model3DPreview = new QLabel(illustrationsGroup);
+    model3DPreview->setObjectName(QStringLiteral("model3DPreview"));
+    model3DPreview->setText(QObject::tr("3D Models: none inserted"));
+    model3DPreview->setMinimumWidth(190);
+    model3DPreview->setFixedHeight(30);
+    model3DPreview->setAlignment(Qt::AlignCenter);
+    model3DPreview->setFrameShape(QFrame::StyledPanel);
+    model3DPreview->setToolTip(QObject::tr("Last inserted 3D model state"));
+    illustrationsGroup->addWidget(model3DPreview);
 
     LqRibbon::RibbonPage *formatPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Format"));
@@ -8831,6 +8892,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(drawModeAction);
     mainWindow.ribbonBar()->registerSearchAction(rulerToggleAction);
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
+    mainWindow.ribbonBar()->registerSearchAction(model3DInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
     mainWindow.ribbonBar()->registerSearchAction(contextualGroupColorAction);
@@ -9058,6 +9120,20 @@ int main(int argc, char *argv[])
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr(
                                      "SVG Icon: inserted scalable artwork"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(model3DInsertAction,
+                     &QAction::triggered,
+                     [&mainWindow, model3DPreview]() {
+                         model3DPreview->setText(
+                             QObject::tr("3D Models: 1 inserted"));
+                         model3DPreview->setStyleSheet(
+                             QStringLiteral("QLabel#model3DPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"));
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "3D Model: inserted rotatable asset"),
                                  2500);
                          }
                      });
@@ -9646,6 +9722,8 @@ int main(int argc, char *argv[])
                                 insertPage,
                                 svgIconInsertAction,
                                 svgIconInsertPreview,
+                                model3DInsertAction,
+                                model3DPreview,
                                 formatPage,
                                 svgRecolorAction,
                                 svgRecolorPreview,

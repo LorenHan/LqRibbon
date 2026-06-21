@@ -648,6 +648,26 @@ class MainWindow(RibbonMainWindow):
         self.svg_icon_insert_preview.setToolTip("Last inserted SVG icon state")
         illustrations_group.addWidget(self.svg_icon_insert_preview)
 
+        self.model_3d_insert_action = illustrations_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_ComputerIcon),
+            "3D Model",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.model_3d_insert_action.setObjectName("model3DInsertAction")
+        self.model_3d_insert_action.setToolTip(
+            "Insert a rotatable 3D model into the document"
+        )
+        self.model_3d_insert_action.setStatusTip("3D Model: ready to insert")
+
+        self.model_3d_preview = QLabel("3D Models: none inserted", illustrations_group)
+        self.model_3d_preview.setObjectName("model3DPreview")
+        self.model_3d_preview.setMinimumWidth(190)
+        self.model_3d_preview.setFixedHeight(30)
+        self.model_3d_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.model_3d_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.model_3d_preview.setToolTip("Last inserted 3D model state")
+        illustrations_group.addWidget(self.model_3d_preview)
+
     def _create_format_page(self):
         svg_format_group = self.format_page.addGroup("SVG Format")
         self.svg_recolor_action = svg_format_group.addAction(
@@ -2094,6 +2114,7 @@ class MainWindow(RibbonMainWindow):
             self.draw_mode_action,
             self.ruler_toggle_action,
             self.svg_icon_insert_action,
+            self.model_3d_insert_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2148,6 +2169,7 @@ class MainWindow(RibbonMainWindow):
         self.focus_mode_action.toggled.connect(self.toggle_focus_mode)
         self.dark_canvas_action.toggled.connect(self.toggle_dark_canvas)
         self.svg_icon_insert_action.triggered.connect(self.insert_svg_icon)
+        self.model_3d_insert_action.triggered.connect(self.insert_3d_model)
         self.svg_recolor_action.triggered.connect(self.recolor_svg_icon)
         self.svg_convert_shape_action.triggered.connect(self.convert_svg_to_shape)
         self.contextual_group_color_action.triggered.connect(
@@ -2478,6 +2500,7 @@ class MainWindow(RibbonMainWindow):
             self.draw_mode_action,
             self.ruler_toggle_action,
             self.svg_icon_insert_action,
+            self.model_3d_insert_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2953,6 +2976,13 @@ class MainWindow(RibbonMainWindow):
             "QLabel#svgIconInsertPreview { color: #124078; background: #eef6ff; font-weight: 600; }"
         )
         self._message("SVG Icon: inserted scalable artwork")
+
+    def insert_3d_model(self):
+        self.model_3d_preview.setText("3D Models: 1 inserted")
+        self.model_3d_preview.setStyleSheet(
+            "QLabel#model3DPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
+        )
+        self._message("3D Model: inserted rotatable asset")
 
     def recolor_svg_icon(self):
         self.svg_recolor_preview.setText("SVG color: blue accent")
