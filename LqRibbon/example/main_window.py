@@ -518,6 +518,15 @@ class MainWindow(RibbonMainWindow):
             Qt.ItemDataRole.UserRole,
             "highDpiScalableIcon",
         )
+        self.app_icon_color_set_item = gallery_group.addItem(
+            "App Colors",
+            self._app_icon_color_set_icon(),
+        )
+        self.app_icon_color_set_item.setToolTip("New Office app icon color set")
+        self.app_icon_color_set_item.setData(
+            Qt.ItemDataRole.UserRole,
+            "newAppIconColorSet",
+        )
 
         self.style_gallery = RibbonGallery(style_group)
         self.style_gallery.setObjectName("styleGallery")
@@ -2634,6 +2643,25 @@ class MainWindow(RibbonMainWindow):
             painter.end()
             icon.addPixmap(pixmap)
         return icon
+
+    def _app_icon_color_set_icon(self):
+        pixmap = QPixmap(64, 64)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        colors = ("#185abd", "#107c41", "#c43e1c", "#7719aa")
+        rects = (
+            QRect(6, 6, 24, 24),
+            QRect(34, 6, 24, 24),
+            QRect(6, 34, 24, 24),
+            QRect(34, 34, 24, 24),
+        )
+        for rect, color in zip(rects, colors):
+            painter.setPen(QPen(QColor("#ffffff"), 2))
+            painter.setBrush(QColor(color))
+            painter.drawRoundedRect(rect, 6, 6)
+        painter.end()
+        return QIcon(pixmap)
 
     def _tell_me_lightbulb_icon(self):
         pixmap = QPixmap(32, 32)

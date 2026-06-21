@@ -184,6 +184,30 @@ QIcon createHighDpiGalleryIcon()
     return icon;
 }
 
+QIcon createAppIconColorSetIcon()
+{
+    QPixmap pixmap(64, 64);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const struct ColorTile
+    {
+        QRect rect;
+        const char *color;
+    } tiles[] = {
+        {QRect(6, 6, 24, 24), "#185abd"},
+        {QRect(34, 6, 24, 24), "#107c41"},
+        {QRect(6, 34, 24, 24), "#c43e1c"},
+        {QRect(34, 34, 24, 24), "#7719aa"},
+    };
+    for (const ColorTile &tile : tiles) {
+        painter.setPen(QPen(Qt::white, 2));
+        painter.setBrush(QColor(QString::fromLatin1(tile.color)));
+        painter.drawRoundedRect(tile.rect, 6, 6);
+    }
+    return QIcon(pixmap);
+}
+
 QTabBar *collapseTestTabBar(LqRibbon::RibbonBar *ribbonBar)
 {
     return ribbonBar->findChild<QTabBar *>();
@@ -1219,6 +1243,33 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && highDpiPixmap.width() >= 64
                      && highDpiPixmap.height() >= 64,
                  QStringLiteral("High-DPI scalable gallery icon is available"))) {
+        return 1;
+    }
+    LqRibbon::RibbonGalleryItem *appIconColorSetItem = nullptr;
+    if (styleGallery) {
+        for (int index = 0; index < styleGallery->itemCount(); ++index) {
+            LqRibbon::RibbonGalleryItem *item = styleGallery->item(index);
+            if (item && item->caption() == QStringLiteral("App Colors")) {
+                appIconColorSetItem = item;
+                break;
+            }
+        }
+    }
+    const QPixmap appColorSetPixmap =
+        appIconColorSetItem
+            ? appIconColorSetItem->icon().pixmap(QSize(64, 64))
+            : QPixmap();
+    if (!require(styleGallery
+                     && styleGallery->itemCount() >= 8
+                     && appIconColorSetItem
+                     && appIconColorSetItem->toolTip()
+                         == QStringLiteral("New Office app icon color set")
+                     && appIconColorSetItem->data(Qt::UserRole).toString()
+                         == QStringLiteral("newAppIconColorSet")
+                     && !appIconColorSetItem->icon().isNull()
+                     && appColorSetPixmap.width() >= 64
+                     && appColorSetPixmap.height() >= 64,
+                 QStringLiteral("New app icon color set is available"))) {
         return 1;
     }
 
@@ -3972,6 +4023,13 @@ int main(int argc, char *argv[])
         QObject::tr("Scalable high-DPI icon sample"));
     highDpiGalleryItem->setData(Qt::UserRole,
                                 QStringLiteral("highDpiScalableIcon"));
+    LqRibbon::RibbonGalleryItem *appIconColorSetItem =
+        styleGalleryGroup->addItem(QObject::tr("App Colors"),
+                                   createAppIconColorSetIcon());
+    appIconColorSetItem->setToolTip(
+        QObject::tr("New Office app icon color set"));
+    appIconColorSetItem->setData(Qt::UserRole,
+                                 QStringLiteral("newAppIconColorSet"));
 
     LqRibbon::RibbonGallery *styleGallery =
         new LqRibbon::RibbonGallery(styleGroup);

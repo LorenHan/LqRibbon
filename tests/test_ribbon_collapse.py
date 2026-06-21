@@ -708,6 +708,24 @@ def test_example_high_dpi_gallery_icon_is_available():
     window.close()
 
 
+def test_example_app_icon_color_set_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    item = window.app_icon_color_set_item
+    pixmap = item.icon().pixmap(64, 64)
+
+    assert window.style_gallery.itemCount() >= 8
+    assert item.caption() == "App Colors"
+    assert item.toolTip() == "New Office app icon color set"
+    assert item.data(Qt.ItemDataRole.UserRole) == "newAppIconColorSet"
+    assert not item.icon().isNull()
+    assert pixmap.width() >= 64
+    assert pixmap.height() >= 64
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -2093,6 +2111,7 @@ def main():
         test_example_character_count_status_item_is_available,
         test_example_sync_status_action_is_available,
         test_example_high_dpi_gallery_icon_is_available,
+        test_example_app_icon_color_set_is_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

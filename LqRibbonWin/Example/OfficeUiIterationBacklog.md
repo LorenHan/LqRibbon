@@ -109,7 +109,7 @@ Default style remains `Office 2016 Blue`.
 | 078 | Character count status item | Status bar | Complete |
 | 079 | Sync status action | Status bar | Complete |
 | 080 | High-DPI scalable icons | Icon gallery | Complete |
-| 081 | New app icon color set | Icon gallery | Planned |
+| 081 | New app icon color set | Icon gallery | Complete |
 | 082 | SVG icon insert command | Insert page | Planned |
 | 083 | SVG recolor command | Format page | Planned |
 | 084 | Convert SVG to shape command | Format page | Planned |
