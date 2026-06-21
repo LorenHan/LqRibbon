@@ -75,7 +75,7 @@ Default style remains `Office 2016 Blue`.
 | 044 | Search fuzzy phrase matching | Search registry | Complete |
 | 045 | Search no-result affordance | Search popup | Complete |
 | 046 | Tell Me lightbulb entry | Command discovery page | Complete |
-| 047 | Tell Me natural phrase examples | Command discovery page | Planned |
+| 047 | Tell Me natural phrase examples | Command discovery page | Complete |
 | 048 | Tell Me help redirect row | Command discovery page | Planned |
 | 049 | Smart Lookup command surface | Review page | Planned |
 | 050 | Feedback button in title area | Title buttons | Planned |

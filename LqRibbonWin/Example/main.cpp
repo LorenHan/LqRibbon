@@ -229,6 +229,7 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QAction *tellMeLightbulbAction,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
+                     const QList<QAction *> &tellMePhraseActions,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
                      const std::function<void(QMenu *, QAction *)> &populateActionContextMenu,
                      const std::function<void(QMenu *, QAction *)> &populateQuickAccessActionContextMenu,
@@ -698,6 +699,54 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
     }
+
+    QStringList tellMePhraseTextList;
+    QStringList tellMePhraseObjectNameList;
+    for (QAction *action : tellMePhraseActions) {
+        if (!action) {
+            continue;
+        }
+        tellMePhraseTextList.append(action->text());
+        tellMePhraseObjectNameList.append(action->objectName());
+    }
+    const QStringList expectedTellMePhraseTextList = QStringList()
+        << QStringLiteral("Change the ribbon display")
+        << QStringLiteral("Find driver settings")
+        << QStringLiteral("Customize quick access toolbar");
+    const QStringList expectedTellMePhraseObjectNameList = QStringList()
+        << QStringLiteral("tellMePhraseRibbonDisplayAction")
+        << QStringLiteral("tellMePhraseDriverSettingsAction")
+        << QStringLiteral("tellMePhraseCustomizeQatAction");
+    hiddenSearchAction->trigger();
+    processCollapseTestEvents();
+    QAction *driverSettingsPhraseAction =
+        tellMePhraseActions.value(1, nullptr);
+    if (driverSettingsPhraseAction) {
+        driverSettingsPhraseAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strTellMePhraseStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(tellMePhraseTextList == expectedTellMePhraseTextList
+                     && tellMePhraseObjectNameList
+                         == expectedTellMePhraseObjectNameList
+                     && driverSettingsPhraseAction
+                     && ribbonBar->searchText()
+                         == QStringLiteral("Find driver settings")
+                     && ribbonBar->searchLineEdit()->isVisible()
+                     && ribbonBar->searchLineEdit()->hasFocus()
+                     && centerSearchAction->isChecked()
+                     && strTellMePhraseStatus.contains(
+                         QStringLiteral("Find driver settings")),
+                 QStringLiteral("Tell Me natural phrase examples drive search text"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+    ribbonBar->searchLineEdit()->clear();
+    processCollapseTestEvents();
 
     reset();
     doubleClickCollapseTestTab(ribbonBar, firstIndex);
@@ -2566,6 +2615,30 @@ int main(int argc, char *argv[])
     tellMeEntryPreview->setToolTip(
         QObject::tr("Natural-language command discovery entry"));
     commandDiscoveryGroup->addWidget(tellMeEntryPreview);
+    LqRibbon::RibbonGroup *tellMeExamplesGroup =
+        tellMePage->addGroup(QObject::tr("Examples"));
+    QList<QAction *> tellMePhraseActions;
+    auto addTellMePhraseAction =
+        [tellMeExamplesGroup, &tellMePhraseActions](
+            const QString &strObjectName,
+            const char *sourceText) {
+        const QString strPhrase = QObject::tr(sourceText);
+        QAction *action = tellMeExamplesGroup->addAction(
+            createTellMeLightbulbIcon(),
+            strPhrase,
+            Qt::ToolButtonTextBesideIcon);
+        action->setObjectName(strObjectName);
+        action->setToolTip(QObject::tr("Try \"%1\" in Search").arg(strPhrase));
+        action->setStatusTip(QObject::tr("Tell Me phrase: %1").arg(strPhrase));
+        tellMePhraseActions.append(action);
+        return action;
+    };
+    addTellMePhraseAction(QStringLiteral("tellMePhraseRibbonDisplayAction"),
+                          "Change the ribbon display");
+    addTellMePhraseAction(QStringLiteral("tellMePhraseDriverSettingsAction"),
+                          "Find driver settings");
+    addTellMePhraseAction(QStringLiteral("tellMePhraseCustomizeQatAction"),
+                          "Customize quick access toolbar");
 
     LqRibbon::RibbonPage *shellPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Shell"));
@@ -3927,6 +4000,29 @@ int main(int argc, char *argv[])
                                  2500);
                          }
                      });
+    auto applyTellMePhrase =
+        [&mainWindow, centerSearchAction](const QString &strPhrase) {
+        centerSearchAction->setChecked(true);
+        mainWindow.ribbonBar()->setSearchBarAppearance(
+            LqRibbon::RibbonBar::SearchBarCentral);
+        mainWindow.ribbonBar()->setSearchText(strPhrase);
+        mainWindow.ribbonBar()->searchLineEdit()->setFocus(
+            Qt::ShortcutFocusReason);
+        mainWindow.ribbonBar()->searchLineEdit()->selectAll();
+        if (mainWindow.statusBar()) {
+            mainWindow.statusBar()->showMessage(
+                QObject::tr("Tell Me phrase: %1").arg(strPhrase),
+                2500);
+        }
+    };
+    for (QAction *action : tellMePhraseActions) {
+        QObject::connect(action,
+                         &QAction::triggered,
+                         &mainWindow,
+                         [action, applyTellMePhrase]() {
+                             applyTellMePhrase(action->text());
+                         });
+    }
     QObject::connect(showTabsAndCommandsAction, &QAction::triggered,
                      [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setMinimizationEnabled(true);
@@ -3989,6 +4085,7 @@ int main(int argc, char *argv[])
                                 tellMeLightbulbAction,
                                 tellMePage,
                                 tellMeEntryPreview,
+                                tellMePhraseActions,
                                 populateQuickAccessMenu,
                                 populateActionContextMenu,
                                 populateQuickAccessActionContextMenu,

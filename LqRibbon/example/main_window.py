@@ -528,6 +528,26 @@ class MainWindow(RibbonMainWindow):
             "Natural-language command discovery entry"
         )
         discovery_group.addWidget(self.tell_me_entry_preview)
+        examples_group = self.tell_me_page.addGroup("Examples")
+        self.tell_me_phrase_actions = []
+        phrase_items = [
+            ("tellMePhraseRibbonDisplayAction", "Change the ribbon display"),
+            ("tellMePhraseDriverSettingsAction", "Find driver settings"),
+            ("tellMePhraseCustomizeQatAction", "Customize quick access toolbar"),
+        ]
+        for object_name, phrase in phrase_items:
+            action = examples_group.addAction(
+                self._tell_me_lightbulb_icon(),
+                phrase,
+                Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+            )
+            action.setObjectName(object_name)
+            action.setToolTip(f'Try "{phrase}" in Search')
+            action.setStatusTip(f"Tell Me phrase: {phrase}")
+            action.triggered.connect(
+                lambda _checked=False, text=phrase: self.apply_tell_me_phrase(text)
+            )
+            self.tell_me_phrase_actions.append(action)
 
     def _create_shell_page(self):
         window_group = self.shell_page.addGroup("Window")
@@ -1377,6 +1397,11 @@ class MainWindow(RibbonMainWindow):
         search = self.ribbonBar().searchLineEdit()
         search.setFocus(Qt.FocusReason.ShortcutFocusReason)
         search.selectAll()
+
+    def apply_tell_me_phrase(self, phrase):
+        self.focus_caption_search()
+        self.ribbonBar().setSearchText(phrase)
+        self._message(f"Tell Me phrase: {phrase}")
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()

@@ -675,6 +675,41 @@ def test_example_tell_me_lightbulb_entry_is_available():
     window.close()
 
 
+def test_example_tell_me_phrase_examples_drive_search_text():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    search = ribbon.searchLineEdit()
+    phrases = [
+        "Change the ribbon display",
+        "Find driver settings",
+        "Customize quick access toolbar",
+    ]
+
+    assert [action.text() for action in window.tell_me_phrase_actions] == phrases
+    assert [
+        action.objectName() for action in window.tell_me_phrase_actions
+    ] == [
+        "tellMePhraseRibbonDisplayAction",
+        "tellMePhraseDriverSettingsAction",
+        "tellMePhraseCustomizeQatAction",
+    ]
+
+    window.hidden_search_action.trigger()
+    _app().processEvents()
+    assert not search.isVisible()
+
+    window.tell_me_phrase_actions[1].trigger()
+    _app().processEvents()
+    assert ribbon.searchText() == "Find driver settings"
+    assert search.isVisible()
+    assert search.hasFocus()
+    assert window.center_search_action.isChecked()
+    assert "Find driver settings" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_collapse_state_preview_tracks_modes():
     window = MainWindow()
     window.show()
@@ -1189,6 +1224,7 @@ def main():
         test_example_search_shows_help_result_section,
         test_example_search_shows_related_file_result_section,
         test_example_tell_me_lightbulb_entry_is_available,
+        test_example_tell_me_phrase_examples_drive_search_text,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,
