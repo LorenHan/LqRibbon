@@ -317,6 +317,9 @@ class MainWindow(RibbonMainWindow):
         self.draw_page = ribbon.addPage("Draw")
         self._create_draw_page()
 
+        self.animation_page = ribbon.addPage("Animation")
+        self._create_animation_page()
+
         self.tell_me_page = ribbon.addPage("Tell Me")
         self._create_command_discovery_page()
 
@@ -1133,6 +1136,29 @@ class MainWindow(RibbonMainWindow):
         self.ruler_preview.setToolTip("Drawing ruler overlay state")
         tools_group.addWidget(self.ruler_preview)
         self.ruler_toggle_action.toggled.connect(self.toggle_ruler_overlay)
+
+    def _create_animation_page(self):
+        model_group = self.animation_page.addGroup("3D")
+        self.model_3d_animation_action = model_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_MediaPlay),
+            "3D Animation",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.model_3d_animation_action.setObjectName("model3DAnimationAction")
+        self.model_3d_animation_action.setCheckable(True)
+        self.model_3d_animation_action.setToolTip(
+            "Preview a 3D model animation from the ribbon"
+        )
+        self.model_3d_animation_action.setStatusTip("3D Animation: stopped")
+        self.model_3d_animation_preview = QLabel("3D Animation: stopped", model_group)
+        self.model_3d_animation_preview.setObjectName("model3DAnimationPreview")
+        self.model_3d_animation_preview.setMinimumWidth(210)
+        self.model_3d_animation_preview.setFixedHeight(30)
+        self.model_3d_animation_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.model_3d_animation_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.model_3d_animation_preview.setToolTip("Current 3D animation preview state")
+        model_group.addWidget(self.model_3d_animation_preview)
+        self.model_3d_animation_action.toggled.connect(self.toggle_3d_animation)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -2115,6 +2141,7 @@ class MainWindow(RibbonMainWindow):
             self.ruler_toggle_action,
             self.svg_icon_insert_action,
             self.model_3d_insert_action,
+            self.model_3d_animation_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2501,6 +2528,7 @@ class MainWindow(RibbonMainWindow):
             self.ruler_toggle_action,
             self.svg_icon_insert_action,
             self.model_3d_insert_action,
+            self.model_3d_animation_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2983,6 +3011,19 @@ class MainWindow(RibbonMainWindow):
             "QLabel#model3DPreview { color: #0f5132; background: #d1e7dd; font-weight: 600; }"
         )
         self._message("3D Model: inserted rotatable asset")
+
+    def toggle_3d_animation(self, playing):
+        if playing:
+            self.model_3d_animation_preview.setText("3D Animation: playing")
+            self.model_3d_animation_preview.setStyleSheet(
+                "QLabel#model3DAnimationPreview { color: #ffffff; background: #c43e1c; font-weight: 600; }"
+            )
+            self.model_3d_animation_action.setStatusTip("3D Animation: playing")
+        else:
+            self.model_3d_animation_preview.setText("3D Animation: stopped")
+            self.model_3d_animation_preview.setStyleSheet("")
+            self.model_3d_animation_action.setStatusTip("3D Animation: stopped")
+        self._message(self.model_3d_animation_action.statusTip())
 
     def recolor_svg_icon(self):
         self.svg_recolor_preview.setText("SVG color: blue accent")

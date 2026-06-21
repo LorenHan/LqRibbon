@@ -151,7 +151,7 @@ Default style remains `Office 2016 Blue`.
 | 120 | Pen gallery | Draw page | Complete |
 | 121 | Ruler toggle | Draw page | Complete |
 | 122 | 3D model command | Insert page | Complete |
-| 123 | 3D animation command | Animation page | Planned |
+| 123 | 3D animation command | Animation page | Complete |
 | 124 | Designer/Ideas command | Design page | Planned |
 | 125 | Recommended chart command | Insert page | Planned |
 | 126 | Data types command | Data page | Planned |

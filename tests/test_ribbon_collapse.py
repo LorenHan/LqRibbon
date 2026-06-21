@@ -942,6 +942,36 @@ def test_example_3d_model_insert_command_surface():
     window.close()
 
 
+def test_example_3d_animation_command_surface():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert ribbon.pageIndex(window.animation_page) >= 0
+    assert window.animation_page.title() == "Animation"
+    assert window.model_3d_animation_action.objectName() == "model3DAnimationAction"
+    assert window.model_3d_animation_action.isCheckable()
+    assert not window.model_3d_animation_action.icon().isNull()
+    assert "3D model animation" in window.model_3d_animation_action.toolTip()
+    assert window.model_3d_animation_action.statusTip() == "3D Animation: stopped"
+    assert window.model_3d_animation_preview.objectName() == "model3DAnimationPreview"
+    assert window.model_3d_animation_preview.text() == "3D Animation: stopped"
+    assert "3D animation preview" in window.model_3d_animation_preview.toolTip()
+    assert window.model_3d_animation_action in window.search_actions
+    assert ribbon.searchAction("3D Animation") is window.model_3d_animation_action
+
+    window.model_3d_animation_action.trigger()
+    _app().processEvents()
+    assert window.model_3d_animation_action.isChecked()
+    assert window.model_3d_animation_action.statusTip() == "3D Animation: playing"
+    assert window.model_3d_animation_preview.text() == "3D Animation: playing"
+    assert "#model3DAnimationPreview" in window.model_3d_animation_preview.styleSheet()
+    assert "3D Animation: playing" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_svg_recolor_command_surface():
     window = MainWindow()
     window.show()
@@ -3191,6 +3221,7 @@ def main():
         test_example_gallery_keyboard_navigation_is_available,
         test_example_svg_icon_insert_command_surface,
         test_example_3d_model_insert_command_surface,
+        test_example_3d_animation_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,

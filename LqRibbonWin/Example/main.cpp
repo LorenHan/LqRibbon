@@ -411,6 +411,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *svgIconInsertPreview,
                      QAction *model3DInsertAction,
                      QLabel *model3DPreview,
+                     LqRibbon::RibbonPage *animationPage,
+                     QAction *model3DAnimationAction,
+                     QLabel *model3DAnimationPreview,
                      LqRibbon::RibbonPage *formatPage,
                      QAction *svgRecolorAction,
                      QLabel *svgRecolorPreview,
@@ -1041,6 +1044,56 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strModel3DStatus.contains(
                          QStringLiteral("3D Model")),
                  QStringLiteral("3D model insert command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const int animationPageIndex = ribbonBar->indexOf(animationPage);
+    if (animationPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(animationPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *model3DAnimationButton =
+        collapseTestActionButton(ribbonBar, model3DAnimationAction);
+    if (model3DAnimationAction) {
+        model3DAnimationAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strModel3DAnimationStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(animationPageIndex >= 0
+                     && animationPage
+                     && animationPage->title() == QStringLiteral("Animation")
+                     && model3DAnimationAction
+                     && model3DAnimationAction->objectName()
+                         == QStringLiteral("model3DAnimationAction")
+                     && model3DAnimationAction->isCheckable()
+                     && model3DAnimationAction->isChecked()
+                     && !model3DAnimationAction->icon().isNull()
+                     && model3DAnimationAction->toolTip().contains(
+                         QStringLiteral("3D model animation"))
+                     && model3DAnimationAction->statusTip()
+                         == QStringLiteral("3D Animation: playing")
+                     && model3DAnimationPreview
+                     && model3DAnimationPreview->objectName()
+                         == QStringLiteral("model3DAnimationPreview")
+                     && model3DAnimationPreview->text()
+                         == QStringLiteral("3D Animation: playing")
+                     && model3DAnimationPreview->styleSheet().contains(
+                         QStringLiteral("#model3DAnimationPreview"))
+                     && model3DAnimationPreview->toolTip().contains(
+                         QStringLiteral("3D animation preview"))
+                     && ribbonBar->searchAction(QStringLiteral("3D Animation"))
+                         == model3DAnimationAction
+                     && model3DAnimationButton
+                     && model3DAnimationButton->defaultAction()
+                         == model3DAnimationAction
+                     && strModel3DAnimationStatus.contains(
+                         QStringLiteral("3D Animation: playing")),
+                 QStringLiteral("3D animation command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6360,6 +6413,33 @@ int main(int argc, char *argv[])
     rulerPreview->setToolTip(QObject::tr("Drawing ruler overlay state"));
     drawToolsGroup->addWidget(rulerPreview);
 
+    LqRibbon::RibbonPage *animationPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Animation"));
+    LqRibbon::RibbonGroup *animation3DGroup =
+        animationPage->addGroup(QObject::tr("3D"));
+    QAction *model3DAnimationAction = animation3DGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MediaPlay),
+        QObject::tr("3D Animation"),
+        Qt::ToolButtonTextUnderIcon);
+    model3DAnimationAction->setObjectName(
+        QStringLiteral("model3DAnimationAction"));
+    model3DAnimationAction->setCheckable(true);
+    model3DAnimationAction->setToolTip(
+        QObject::tr("Preview a 3D model animation from the ribbon"));
+    model3DAnimationAction->setStatusTip(
+        QObject::tr("3D Animation: stopped"));
+    QLabel *model3DAnimationPreview = new QLabel(animation3DGroup);
+    model3DAnimationPreview->setObjectName(
+        QStringLiteral("model3DAnimationPreview"));
+    model3DAnimationPreview->setText(QObject::tr("3D Animation: stopped"));
+    model3DAnimationPreview->setMinimumWidth(210);
+    model3DAnimationPreview->setFixedHeight(30);
+    model3DAnimationPreview->setAlignment(Qt::AlignCenter);
+    model3DAnimationPreview->setFrameShape(QFrame::StyledPanel);
+    model3DAnimationPreview->setToolTip(
+        QObject::tr("Current 3D animation preview state"));
+    animation3DGroup->addWidget(model3DAnimationPreview);
+
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
     LqRibbon::RibbonGroup *commandDiscoveryGroup =
@@ -8893,6 +8973,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(rulerToggleAction);
     mainWindow.ribbonBar()->registerSearchAction(svgIconInsertAction);
     mainWindow.ribbonBar()->registerSearchAction(model3DInsertAction);
+    mainWindow.ribbonBar()->registerSearchAction(model3DAnimationAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
     mainWindow.ribbonBar()->registerSearchAction(contextualGroupColorAction);
@@ -9135,6 +9216,30 @@ int main(int argc, char *argv[])
                                  QObject::tr(
                                      "3D Model: inserted rotatable asset"),
                                  2500);
+                         }
+                     });
+    QObject::connect(model3DAnimationAction,
+                     &QAction::toggled,
+                     [&mainWindow,
+                      model3DAnimationAction,
+                      model3DAnimationPreview](bool playing) {
+                         if (playing) {
+                             model3DAnimationPreview->setText(
+                                 QObject::tr("3D Animation: playing"));
+                             model3DAnimationPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#model3DAnimationPreview { color: #ffffff; background: #c43e1c; font-weight: 600; }"));
+                             model3DAnimationAction->setStatusTip(
+                                 QObject::tr("3D Animation: playing"));
+                         } else {
+                             model3DAnimationPreview->setText(
+                                 QObject::tr("3D Animation: stopped"));
+                             model3DAnimationPreview->setStyleSheet(QString());
+                             model3DAnimationAction->setStatusTip(
+                                 QObject::tr("3D Animation: stopped"));
+                         }
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 model3DAnimationAction->statusTip(), 2500);
                          }
                      });
     QObject::connect(svgRecolorAction,
@@ -9724,6 +9829,9 @@ int main(int argc, char *argv[])
                                 svgIconInsertPreview,
                                 model3DInsertAction,
                                 model3DPreview,
+                                animationPage,
+                                model3DAnimationAction,
+                                model3DAnimationPreview,
                                 formatPage,
                                 svgRecolorAction,
                                 svgRecolorPreview,
