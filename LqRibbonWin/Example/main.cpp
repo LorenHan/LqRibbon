@@ -275,6 +275,10 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *collaborationStatusText,
                      QFrame *coauthoringIndicatorDot,
                      QLabel *coauthoringIndicatorLabel,
+                     LqRibbon::RibbonBackstageView *backstage,
+                     QAction *versionHistoryAction,
+                     QWidget *versionHistoryPage,
+                     QLabel *versionHistoryCurrentLabel,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
                      const std::function<void(QMenu *, QAction *)> &populateActionContextMenu,
                      const std::function<void(QMenu *, QAction *)> &populateQuickAccessActionContextMenu,
@@ -1239,6 +1243,50 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                          QStringLiteral("coauthoring"), Qt::CaseInsensitive),
                  QStringLiteral("Coauthoring indicator is available"))) {
         return 1;
+    }
+
+    if (versionHistoryAction) {
+        versionHistoryAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strVersionHistoryStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (backstage) {
+        backstage->open();
+        processCollapseTestEvents();
+        backstage->setActivePage(versionHistoryPage);
+        processCollapseTestEvents();
+    }
+    if (!require(backstage
+                     && versionHistoryAction
+                     && versionHistoryAction->objectName()
+                         == QStringLiteral("versionHistoryAction")
+                     && versionHistoryAction->isCheckable()
+                     && versionHistoryAction->text().contains(
+                         QStringLiteral("Version History"))
+                     && versionHistoryAction->toolTip().contains(
+                         QStringLiteral("version history"))
+                     && versionHistoryPage
+                     && versionHistoryPage->objectName()
+                         == QStringLiteral("versionHistoryPage")
+                     && backstage->activePage() == versionHistoryPage
+                     && versionHistoryAction->isChecked()
+                     && versionHistoryCurrentLabel
+                     && versionHistoryCurrentLabel->objectName()
+                         == QStringLiteral("versionHistoryCurrentLabel")
+                     && versionHistoryCurrentLabel->text().contains(
+                         QStringLiteral("Saved 2 minutes ago"))
+                     && strVersionHistoryStatus.contains(
+                         QStringLiteral("Version History")),
+                 QStringLiteral("Version history entry is available"))) {
+        return 1;
+    }
+    if (backstage) {
+        backstage->hide();
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
     }
 
     QToolButton *feedbackButton =
@@ -3254,6 +3302,42 @@ int main(int argc, char *argv[])
     backstageLayout->addRow(QObject::tr("Mode"),
                             new QLabel(QObject::tr("Backstage page"), backstagePage));
     backstage->addPage(backstagePage);
+    QWidget *versionHistoryPage = new QWidget(backstage);
+    versionHistoryPage->setObjectName(QStringLiteral("versionHistoryPage"));
+    versionHistoryPage->setWindowTitle(QObject::tr("Version History"));
+    QFormLayout *versionHistoryLayout = new QFormLayout(versionHistoryPage);
+    QLabel *versionHistoryCurrentLabel = new QLabel(
+        QObject::tr("Current version: Saved 2 minutes ago"),
+        versionHistoryPage);
+    versionHistoryCurrentLabel->setObjectName(
+        QStringLiteral("versionHistoryCurrentLabel"));
+    versionHistoryLayout->addRow(QObject::tr("Current"),
+                                 versionHistoryCurrentLabel);
+    versionHistoryLayout->addRow(
+        QObject::tr("Previous"),
+        new QLabel(QObject::tr("Yesterday 18:42 by Alice Chen"),
+                   versionHistoryPage));
+    versionHistoryLayout->addRow(
+        QObject::tr("Restore"),
+        new QLabel(QObject::tr("Restore a previous cloud save"),
+                   versionHistoryPage));
+    QAction *versionHistoryAction = backstage->addPage(versionHistoryPage);
+    versionHistoryAction->setObjectName(QStringLiteral("versionHistoryAction"));
+    versionHistoryAction->setToolTip(
+        QObject::tr("Open document version history"));
+    versionHistoryAction->setStatusTip(
+        QObject::tr("Version History: review and restore previous versions"));
+    QObject::connect(versionHistoryAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "Version History: review and restore previous versions"),
+                                 2500);
+                         }
+                     });
 
     LqRibbon::RibbonSystemMenu *systemMenu =
         new LqRibbon::RibbonSystemMenu(mainWindow.ribbonBar());
@@ -4637,6 +4721,10 @@ int main(int argc, char *argv[])
                                 collaborationStatusText,
                                 coauthoringIndicatorDot,
                                 coauthoringIndicatorLabel,
+                                backstage,
+                                versionHistoryAction,
+                                versionHistoryPage,
+                                versionHistoryCurrentLabel,
                                 populateQuickAccessMenu,
                                 populateActionContextMenu,
                                 populateQuickAccessActionContextMenu,

@@ -829,6 +829,42 @@ class MainWindow(RibbonMainWindow):
         backstage_layout.addRow("Product", QLabel("LqRibbon Demo", backstage_page))
         backstage_layout.addRow("Mode", QLabel("Backstage page", backstage_page))
         self.backstage.addPage(backstage_page)
+        self.version_history_page = QWidget(self.backstage)
+        self.version_history_page.setObjectName("versionHistoryPage")
+        self.version_history_page.setWindowTitle("Version History")
+        version_history_layout = QFormLayout(self.version_history_page)
+        self.version_history_current_label = QLabel(
+            "Current version: Saved 2 minutes ago",
+            self.version_history_page,
+        )
+        self.version_history_current_label.setObjectName(
+            "versionHistoryCurrentLabel"
+        )
+        version_history_layout.addRow(
+            "Current",
+            self.version_history_current_label,
+        )
+        version_history_layout.addRow(
+            "Previous",
+            QLabel("Yesterday 18:42 by Alice Chen", self.version_history_page),
+        )
+        version_history_layout.addRow(
+            "Restore",
+            QLabel("Restore a previous cloud save", self.version_history_page),
+        )
+        self.version_history_action = self.backstage.addPage(
+            self.version_history_page
+        )
+        self.version_history_action.setObjectName("versionHistoryAction")
+        self.version_history_action.setToolTip("Open document version history")
+        self.version_history_action.setStatusTip(
+            "Version History: review and restore previous versions"
+        )
+        self.version_history_action.triggered.connect(
+            lambda: self._message(
+                "Version History: review and restore previous versions"
+            )
+        )
 
         self.system_menu = RibbonSystemMenu(self.ribbonBar())
         self.system_menu.addPopupBarAction("New")

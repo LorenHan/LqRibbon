@@ -444,6 +444,33 @@ def test_example_coauthoring_indicator_is_available():
     window.close()
 
 
+def test_example_version_history_entry_is_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    assert window.version_history_action.objectName() == "versionHistoryAction"
+    assert window.version_history_action.isCheckable()
+    assert "Version History" in window.version_history_action.text()
+    assert "version history" in window.version_history_action.toolTip()
+    assert window.version_history_page.objectName() == "versionHistoryPage"
+    assert (
+        window.backstage._action_pages[window.version_history_action]
+        is window.version_history_page
+    )
+
+    window.backstage.setActivePage(window.version_history_page)
+    _app().processEvents()
+    assert window.backstage.activePage() is window.version_history_page
+    assert window.version_history_action.isChecked()
+    assert "Saved 2 minutes ago" in window.version_history_current_label.text()
+
+    window.version_history_action.trigger()
+    _app().processEvents()
+    assert "Version History" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_caption_search_defaults_to_centered_microsoft_box():
     window = MainWindow()
     window.show()
@@ -1432,6 +1459,7 @@ def main():
         test_example_presence_avatar_strip_is_available,
         test_example_collaboration_status_text_is_available,
         test_example_coauthoring_indicator_is_available,
+        test_example_version_history_entry_is_available,
         test_example_caption_search_defaults_to_centered_microsoft_box,
         test_example_compact_search_action_switches_caption_search_to_icon_mode,
         test_example_hidden_search_action_removes_caption_search_box,
