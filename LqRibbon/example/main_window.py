@@ -1333,19 +1333,26 @@ class MainWindow(RibbonMainWindow):
         status_bar.addWidget(self.quick_access_status_preview)
 
         switch_group = RibbonStatusBarSwitchGroup(status_bar)
+        switch_group.setObjectName("statusViewSwitchGroup")
         view_actions = QActionGroup(switch_group)
         view_actions.setExclusive(True)
-        normal_view_action = view_actions.addAction(
+        self.normal_status_view_action = view_actions.addAction(
             self._icon(QStyle.StandardPixmap.SP_FileDialogDetailedView), "Normal View"
         )
-        compact_view_action = view_actions.addAction(
+        self.compact_status_view_action = view_actions.addAction(
             self._icon(QStyle.StandardPixmap.SP_FileDialogListView), "Compact View"
         )
-        normal_view_action.setCheckable(True)
-        compact_view_action.setCheckable(True)
-        normal_view_action.setChecked(True)
-        self._add_status_action_button(switch_group, normal_view_action)
-        self._add_status_action_button(switch_group, compact_view_action)
+        self.normal_status_view_action.setObjectName("normalStatusViewAction")
+        self.compact_status_view_action.setObjectName("compactStatusViewAction")
+        self.normal_status_view_action.setToolTip("Switch to Normal document view")
+        self.compact_status_view_action.setToolTip("Switch to Compact document view")
+        self.normal_status_view_action.setCheckable(True)
+        self.compact_status_view_action.setCheckable(True)
+        self.normal_status_view_action.setChecked(True)
+        self.status_view_mode = "Normal View"
+        self.status_view_switch_group = switch_group
+        self._add_status_action_button(switch_group, self.normal_status_view_action)
+        self._add_status_action_button(switch_group, self.compact_status_view_action)
 
         self.zoom_status_label = QLabel("100%", status_bar)
         self.zoom_status_label.setObjectName("zoomStatusLabel")
@@ -1378,7 +1385,17 @@ class MainWindow(RibbonMainWindow):
         self.ribbon_status_bar = status_bar
         self.zoom_slider = zoom_slider
         self.progress_bar = progress_bar
+        self.normal_status_view_action.triggered.connect(
+            lambda: self.set_status_view_mode("Normal View")
+        )
+        self.compact_status_view_action.triggered.connect(
+            lambda: self.set_status_view_mode("Compact View")
+        )
         zoom_slider.valueChanged.connect(self.update_zoom_status)
+
+    def set_status_view_mode(self, mode):
+        self.status_view_mode = mode
+        self._message(f"View: {mode}")
 
     def update_zoom_status(self, value):
         self.zoom_status_label.setText(f"{value}%")

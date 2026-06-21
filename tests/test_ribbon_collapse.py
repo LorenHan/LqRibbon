@@ -610,6 +610,48 @@ def test_example_zoom_slider_status_item_is_available():
     window.close()
 
 
+def test_example_view_switch_status_buttons_are_available():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    group = window.status_view_switch_group
+    buttons = group.findChildren(QToolButton)
+
+    assert group.objectName() == "statusViewSwitchGroup"
+    assert window.normal_status_view_action.objectName() == "normalStatusViewAction"
+    assert window.compact_status_view_action.objectName() == "compactStatusViewAction"
+    assert "Normal document view" in window.normal_status_view_action.toolTip()
+    assert "Compact document view" in window.compact_status_view_action.toolTip()
+    assert window.normal_status_view_action.isCheckable()
+    assert window.compact_status_view_action.isCheckable()
+    assert window.normal_status_view_action.isChecked()
+    assert not window.compact_status_view_action.isChecked()
+    assert any(
+        button.defaultAction() is window.normal_status_view_action
+        for button in buttons
+    )
+    assert any(
+        button.defaultAction() is window.compact_status_view_action
+        for button in buttons
+    )
+
+    window.compact_status_view_action.trigger()
+    _app().processEvents()
+    assert window.status_view_mode == "Compact View"
+    assert window.compact_status_view_action.isChecked()
+    assert not window.normal_status_view_action.isChecked()
+    assert "View: Compact View" in window.statusBar().currentMessage()
+
+    window.normal_status_view_action.trigger()
+    _app().processEvents()
+    assert window.status_view_mode == "Normal View"
+    assert window.normal_status_view_action.isChecked()
+    assert not window.compact_status_view_action.isChecked()
+    assert "View: Normal View" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_version_history_entry_is_available():
     window = MainWindow()
     window.show()
@@ -1991,6 +2033,7 @@ def main():
         test_example_collaboration_status_text_is_available,
         test_example_coauthoring_indicator_is_available,
         test_example_zoom_slider_status_item_is_available,
+        test_example_view_switch_status_buttons_are_available,
         test_example_version_history_entry_is_available,
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,

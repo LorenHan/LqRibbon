@@ -308,6 +308,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonSliderPane *zoomSlider,
                      QLabel *zoomStatusLabel,
                      LqRibbon::RibbonProgressBar *zoomProgressBar,
+                     LqRibbon::RibbonStatusBarSwitchGroup *statusViewSwitchGroup,
+                     QAction *normalStatusViewAction,
+                     QAction *compactStatusViewAction,
                      LqRibbon::RibbonBackstageView *backstage,
                      QAction *saveCopyAction,
                      QComboBox *cloudLocationCombo,
@@ -1800,6 +1803,70 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && zoomProgressBar->value() == 125
                      && strZoomStatus.contains(QStringLiteral("Zoom: 125%")),
                  QStringLiteral("Zoom slider updates status value"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const QList<QToolButton *> statusViewButtons =
+        statusViewSwitchGroup
+            ? statusViewSwitchGroup->findChildren<QToolButton *>()
+            : QList<QToolButton *>();
+    bool hasNormalStatusButton = false;
+    bool hasCompactStatusButton = false;
+    for (QToolButton *button : statusViewButtons) {
+        if (button && button->defaultAction() == normalStatusViewAction) {
+            hasNormalStatusButton = true;
+        }
+        if (button && button->defaultAction() == compactStatusViewAction) {
+            hasCompactStatusButton = true;
+        }
+    }
+    if (!require(statusViewSwitchGroup
+                     && statusViewSwitchGroup->objectName()
+                         == QStringLiteral("statusViewSwitchGroup")
+                     && normalStatusViewAction
+                     && normalStatusViewAction->objectName()
+                         == QStringLiteral("normalStatusViewAction")
+                     && compactStatusViewAction
+                     && compactStatusViewAction->objectName()
+                         == QStringLiteral("compactStatusViewAction")
+                     && normalStatusViewAction->isCheckable()
+                     && compactStatusViewAction->isCheckable()
+                     && normalStatusViewAction->isChecked()
+                     && !compactStatusViewAction->isChecked()
+                     && normalStatusViewAction->toolTip().contains(
+                         QStringLiteral("Normal document view"))
+                     && compactStatusViewAction->toolTip().contains(
+                         QStringLiteral("Compact document view"))
+                     && hasNormalStatusButton
+                     && hasCompactStatusButton,
+                 QStringLiteral("View switch status buttons are available"))) {
+        return 1;
+    }
+    compactStatusViewAction->trigger();
+    processCollapseTestEvents();
+    const QString strCompactViewStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(compactStatusViewAction->isChecked()
+                     && !normalStatusViewAction->isChecked()
+                     && strCompactViewStatus.contains(
+                         QStringLiteral("View: Compact View")),
+                 QStringLiteral("View switch selects compact view"))) {
+        return 1;
+    }
+    normalStatusViewAction->trigger();
+    processCollapseTestEvents();
+    const QString strNormalViewStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(normalStatusViewAction->isChecked()
+                     && !compactStatusViewAction->isChecked()
+                     && strNormalViewStatus.contains(
+                         QStringLiteral("View: Normal View")),
+                 QStringLiteral("View switch restores normal view"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -5591,6 +5658,7 @@ int main(int argc, char *argv[])
 
     LqRibbon::RibbonStatusBarSwitchGroup *switchGroup =
         new LqRibbon::RibbonStatusBarSwitchGroup(ribbonStatusBar);
+    switchGroup->setObjectName(QStringLiteral("statusViewSwitchGroup"));
     QActionGroup *viewActionGroup = new QActionGroup(switchGroup);
     viewActionGroup->setExclusive(true);
     QAction *normalViewAction = viewActionGroup->addAction(
@@ -5599,6 +5667,10 @@ int main(int argc, char *argv[])
     QAction *compactViewAction = viewActionGroup->addAction(
         mainWindow.style()->standardIcon(QStyle::SP_FileDialogListView),
         QObject::tr("Compact View"));
+    normalViewAction->setObjectName(QStringLiteral("normalStatusViewAction"));
+    compactViewAction->setObjectName(QStringLiteral("compactStatusViewAction"));
+    normalViewAction->setToolTip(QObject::tr("Switch to Normal document view"));
+    compactViewAction->setToolTip(QObject::tr("Switch to Compact document view"));
     normalViewAction->setCheckable(true);
     compactViewAction->setCheckable(true);
     normalViewAction->setChecked(true);
@@ -5650,6 +5722,24 @@ int main(int argc, char *argv[])
                          if (mainWindow.statusBar()) {
                              mainWindow.statusBar()->showMessage(
                                  QObject::tr("Zoom: %1%").arg(value),
+                                 2500);
+                         }
+                     });
+    QObject::connect(normalViewAction,
+                     &QAction::triggered,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("View: Normal View"),
+                                 2500);
+                         }
+                     });
+    QObject::connect(compactViewAction,
+                     &QAction::triggered,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("View: Compact View"),
                                  2500);
                          }
                      });
@@ -6319,6 +6409,9 @@ int main(int argc, char *argv[])
                                 zoomSlider,
                                 zoomStatusLabel,
                                 progressBar,
+                                switchGroup,
+                                normalViewAction,
+                                compactViewAction,
                                 backstage,
                                 saveCopyAction,
                                 cloudLocationCombo,
