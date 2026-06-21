@@ -475,6 +475,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QComboBox *cloudLocationCombo,
                      LqRibbon::RibbonPageSystemRecentFileList *recentFiles,
                      QAction *pinRecentFileAction,
+                     LqRibbon::RibbonPageSystemPopup *systemExportPopup,
+                     QAction *systemExportAction,
                      QAction *backstageOpenAction,
                      QWidget *backstageOpenPage,
                      QLabel *frequentSitesLabel,
@@ -2911,6 +2913,37 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strRecentRestoredStatus.contains(
                          QStringLiteral("Unpinned recent file")),
                  QStringLiteral("Recent file pinning restores default order"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    if (systemExportAction) {
+        systemExportAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strSystemExportStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(systemExportPopup
+                     && systemExportPopup->objectName()
+                         == QStringLiteral("systemExportPopup")
+                     && systemExportPopup->title()
+                         == QStringLiteral("Export")
+                     && systemExportPopup->toolTip().contains(
+                         QStringLiteral("export commands"))
+                     && systemExportAction
+                     && systemExportAction->objectName()
+                         == QStringLiteral("systemExportAction")
+                     && systemExportPopup->actions().contains(
+                         systemExportAction)
+                     && !systemExportAction->icon().isNull()
+                     && systemExportAction->toolTip().contains(
+                         QStringLiteral("export page"))
+                     && strSystemExportStatus.contains(
+                         QStringLiteral("System Export")),
+                 QStringLiteral("System menu export popup is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6565,7 +6598,30 @@ int main(int argc, char *argv[])
     QAction *exportAction = new QAction(
         mainWindow.style()->standardIcon(QStyle::SP_DialogSaveButton),
         QObject::tr("Export"), systemMenu);
-    systemMenu->addPageSystemPopup(QObject::tr("Export"), exportAction, true);
+    exportAction->setObjectName(QStringLiteral("systemExportAction"));
+    exportAction->setToolTip(
+        QObject::tr("Open the system menu export page"));
+    exportAction->setStatusTip(
+        QObject::tr("System Export: choose an export format"));
+    QObject::connect(exportAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow]() {
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr(
+                                     "System Export: choose an export format"),
+                                 2500);
+                         }
+                     });
+    LqRibbon::RibbonPageSystemPopup *systemExportPopup =
+        systemMenu->addPageSystemPopup(QObject::tr("Export"),
+                                       exportAction,
+                                       true);
+    systemExportPopup->setObjectName(QStringLiteral("systemExportPopup"));
+    systemExportPopup->setToolTipsVisible(true);
+    systemExportPopup->setToolTip(
+        QObject::tr("System menu page popup for export commands"));
     QAction *pinRecentFileAction = new QAction(
         mainWindow.style()->standardIcon(QStyle::SP_DialogApplyButton),
         QObject::tr("Pin Recent File"),
@@ -9232,6 +9288,8 @@ int main(int argc, char *argv[])
                                 cloudLocationCombo,
                                 recentFiles,
                                 pinRecentFileAction,
+                                systemExportPopup,
+                                exportAction,
                                 backstageOpenAction,
                                 backstageOpenPage,
                                 frequentSitesLabel,

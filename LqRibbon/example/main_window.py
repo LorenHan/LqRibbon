@@ -1646,7 +1646,19 @@ class MainWindow(RibbonMainWindow):
         export_action = QAction(
             self._icon(QStyle.StandardPixmap.SP_DialogSaveButton), "Export", self.system_menu
         )
-        self.system_menu.addPageSystemPopup("Export", export_action, True)
+        export_action.setObjectName("systemExportAction")
+        export_action.setToolTip("Open the system menu export page")
+        export_action.setStatusTip("System Export: choose an export format")
+        export_action.triggered.connect(
+            lambda: self._message("System Export: choose an export format")
+        )
+        self.system_export_action = export_action
+        self.system_export_popup = self.system_menu.addPageSystemPopup(
+            "Export", export_action, True
+        )
+        self.system_export_popup.setObjectName("systemExportPopup")
+        self.system_export_popup.setToolTipsVisible(True)
+        self.system_export_popup.setToolTip("System menu page popup for export commands")
         self.pin_recent_file_action = QAction(
             self._icon(QStyle.StandardPixmap.SP_DialogApplyButton),
             "Pin Recent File",

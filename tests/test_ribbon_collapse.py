@@ -1498,6 +1498,29 @@ def test_example_recent_file_pinning_is_available():
     window.close()
 
 
+def test_example_system_menu_export_popup_is_available():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    popup = window.system_export_popup
+    action = window.system_export_action
+
+    assert popup.objectName() == "systemExportPopup"
+    assert popup.title() == "Export"
+    assert "export commands" in popup.toolTip()
+    assert action.objectName() == "systemExportAction"
+    assert action in popup.actions()
+    assert not action.icon().isNull()
+    assert "export page" in action.toolTip()
+
+    action.trigger()
+    _app().processEvents()
+    assert "System Export" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_backstage_open_page_shows_frequent_sites_and_groups():
     _app()
     window = MainWindow()
@@ -2940,6 +2963,7 @@ def main():
         test_example_save_copy_replaces_save_as_backstage_command,
         test_example_cloud_location_picker_is_available,
         test_example_recent_file_pinning_is_available,
+        test_example_system_menu_export_popup_is_available,
         test_example_backstage_open_page_shows_frequent_sites_and_groups,
         test_example_backstage_export_page_is_available,
         test_example_backstage_close_behavior_is_available,
