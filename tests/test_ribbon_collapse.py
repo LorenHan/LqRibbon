@@ -710,6 +710,48 @@ def test_example_tell_me_phrase_examples_drive_search_text():
     window.close()
 
 
+def test_example_tell_me_help_redirect_opens_help_search_path():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+    search = ribbon.searchLineEdit()
+
+    assert (
+        window.tell_me_help_redirect_action.objectName()
+        == "tellMeHelpRedirectAction"
+    )
+    assert not window.tell_me_help_redirect_action.icon().isNull()
+    assert (
+        window.tell_me_help_redirect_preview.text()
+        == "Help redirects unmatched phrases"
+    )
+    assert window.tell_me_help_redirect_action in window.search_actions
+    assert (
+        ribbon.searchAction("Open Tell Me Help")
+        is window.tell_me_help_redirect_action
+    )
+
+    window.hidden_search_action.trigger()
+    ribbon.setSearchText("")
+    _app().processEvents()
+    assert not search.isVisible()
+
+    window.tell_me_help_redirect_action.trigger()
+    _app().processEvents()
+    popup_rows = [action.text() for action in search._popup.actions()]
+    assert ribbon.searchText() == "unmatched Tell Me phrase"
+    assert search.isVisible()
+    assert search.hasFocus()
+    assert window.center_search_action.isChecked()
+    assert "Tell Me help" in window.statusBar().currentMessage()
+    assert "No Results" in popup_rows
+    assert "Help" in popup_rows
+    assert 'Get Help "unmatched Tell Me phrase"' in popup_rows
+    search.closePopup()
+    window.close()
+
+
 def test_example_collapse_state_preview_tracks_modes():
     window = MainWindow()
     window.show()
@@ -1225,6 +1267,7 @@ def main():
         test_example_search_shows_related_file_result_section,
         test_example_tell_me_lightbulb_entry_is_available,
         test_example_tell_me_phrase_examples_drive_search_text,
+        test_example_tell_me_help_redirect_opens_help_search_path,
         test_example_collapse_state_preview_tracks_modes,
         test_example_double_click_preview_tracks_modes,
         test_example_quick_access_menu_controls_toolbar_visibility,

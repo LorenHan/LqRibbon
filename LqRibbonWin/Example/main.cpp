@@ -230,6 +230,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      LqRibbon::RibbonPage *tellMePage,
                      QLabel *tellMeEntryPreview,
                      const QList<QAction *> &tellMePhraseActions,
+                     QAction *tellMeHelpRedirectAction,
+                     QLabel *tellMeHelpRedirectPreview,
                      const std::function<void(QMenu *)> &populateQuickAccessMenu,
                      const std::function<void(QMenu *, QAction *)> &populateActionContextMenu,
                      const std::function<void(QMenu *, QAction *)> &populateQuickAccessActionContextMenu,
@@ -745,6 +747,58 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     if (mainWindow.statusBar()) {
         mainWindow.statusBar()->clearMessage();
     }
+    ribbonBar->searchLineEdit()->clear();
+    processCollapseTestEvents();
+
+    hiddenSearchAction->trigger();
+    ribbonBar->setSearchText(QString());
+    processCollapseTestEvents();
+    if (tellMeHelpRedirectAction) {
+        tellMeHelpRedirectAction->trigger();
+        processCollapseTestEvents();
+    }
+    QStringList tellMeHelpRedirectRows;
+    if (searchPopupView && searchPopupView->model()) {
+        QAbstractItemModel *popupModel = searchPopupView->model();
+        for (int row = 0; row < popupModel->rowCount(); ++row) {
+            tellMeHelpRedirectRows.append(
+                popupModel->index(row, 0).data(Qt::DisplayRole).toString());
+        }
+    }
+    const QString strTellMeHelpRedirectStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(tellMeHelpRedirectAction
+                     && tellMeHelpRedirectAction->objectName()
+                         == QStringLiteral("tellMeHelpRedirectAction")
+                     && !tellMeHelpRedirectAction->icon().isNull()
+                     && tellMeHelpRedirectPreview
+                     && tellMeHelpRedirectPreview->text()
+                         == QStringLiteral("Help redirects unmatched phrases")
+                     && ribbonBar->searchAction(
+                            QStringLiteral("Open Tell Me Help"))
+                         == tellMeHelpRedirectAction
+                     && ribbonBar->searchText()
+                         == QStringLiteral("unmatched Tell Me phrase")
+                     && ribbonBar->searchLineEdit()->isVisible()
+                     && ribbonBar->searchLineEdit()->hasFocus()
+                     && centerSearchAction->isChecked()
+                     && tellMeHelpRedirectRows.contains(
+                         QStringLiteral("No Results"))
+                     && tellMeHelpRedirectRows.contains(
+                         QStringLiteral("Help"))
+                     && tellMeHelpRedirectRows.contains(
+                         QStringLiteral(
+                             "Get Help with \"unmatched Tell Me phrase\""))
+                     && strTellMeHelpRedirectStatus.contains(
+                         QStringLiteral("Tell Me help")),
+                 QStringLiteral("Tell Me help redirect opens help search path"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+    ribbonBar->searchBar()->closePopup();
     ribbonBar->searchLineEdit()->clear();
     processCollapseTestEvents();
 
@@ -2639,6 +2693,30 @@ int main(int argc, char *argv[])
                           "Find driver settings");
     addTellMePhraseAction(QStringLiteral("tellMePhraseCustomizeQatAction"),
                           "Customize quick access toolbar");
+    LqRibbon::RibbonGroup *tellMeHelpGroup =
+        tellMePage->addGroup(QObject::tr("Help Redirect"));
+    QAction *tellMeHelpRedirectAction = tellMeHelpGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MessageBoxQuestion),
+        QObject::tr("Open Tell Me Help"),
+        Qt::ToolButtonTextBesideIcon);
+    tellMeHelpRedirectAction->setObjectName(
+        QStringLiteral("tellMeHelpRedirectAction"));
+    tellMeHelpRedirectAction->setToolTip(
+        QObject::tr("Redirect unmatched Tell Me phrases to Search help"));
+    tellMeHelpRedirectAction->setStatusTip(
+        QObject::tr("Tell Me help redirects unmatched phrases"));
+    QLabel *tellMeHelpRedirectPreview = new QLabel(tellMeHelpGroup);
+    tellMeHelpRedirectPreview->setObjectName(
+        QStringLiteral("tellMeHelpRedirectPreview"));
+    tellMeHelpRedirectPreview->setText(
+        QObject::tr("Help redirects unmatched phrases"));
+    tellMeHelpRedirectPreview->setMinimumWidth(230);
+    tellMeHelpRedirectPreview->setFixedHeight(30);
+    tellMeHelpRedirectPreview->setAlignment(Qt::AlignCenter);
+    tellMeHelpRedirectPreview->setFrameShape(QFrame::StyledPanel);
+    tellMeHelpRedirectPreview->setToolTip(
+        QObject::tr("Fallback path for commands that are not found"));
+    tellMeHelpGroup->addWidget(tellMeHelpRedirectPreview);
 
     LqRibbon::RibbonPage *shellPage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Shell"));
@@ -3934,6 +4012,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(officePopupAction);
     mainWindow.ribbonBar()->registerSearchAction(officeMenuAction);
     mainWindow.ribbonBar()->registerSearchAction(tellMeLightbulbAction);
+    mainWindow.ribbonBar()->registerSearchAction(tellMeHelpRedirectAction);
     mainWindow.ribbonBar()->registerSearchAction(showCustomizeAction);
     mainWindow.ribbonBar()->registerSearchAction(reorderQuickAccessAction);
     mainWindow.ribbonBar()->registerSearchAction(resetQuickAccessAction);
@@ -4023,6 +4102,31 @@ int main(int argc, char *argv[])
                              applyTellMePhrase(action->text());
                          });
     }
+    QObject::connect(tellMeHelpRedirectAction,
+                     &QAction::triggered,
+                     &mainWindow,
+                     [&mainWindow, centerSearchAction]() {
+                         QString strQuery =
+                             mainWindow.ribbonBar()->searchText().trimmed();
+                         if (strQuery.isEmpty()) {
+                             strQuery =
+                                 QObject::tr("unmatched Tell Me phrase");
+                         }
+                         centerSearchAction->setChecked(true);
+                         mainWindow.ribbonBar()->setSearchBarAppearance(
+                             LqRibbon::RibbonBar::SearchBarCentral);
+                         mainWindow.ribbonBar()->setSearchText(strQuery);
+                         mainWindow.ribbonBar()->searchLineEdit()->setFocus(
+                             Qt::ShortcutFocusReason);
+                         mainWindow.ribbonBar()->searchLineEdit()->selectAll();
+                         mainWindow.ribbonBar()->searchBar()->showPopup(
+                             strQuery);
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 QObject::tr("Tell Me help: %1").arg(strQuery),
+                                 2500);
+                         }
+                     });
     QObject::connect(showTabsAndCommandsAction, &QAction::triggered,
                      [&mainWindow, updateCollapseStatePreview]() {
                          mainWindow.ribbonBar()->setMinimizationEnabled(true);
@@ -4086,6 +4190,8 @@ int main(int argc, char *argv[])
                                 tellMePage,
                                 tellMeEntryPreview,
                                 tellMePhraseActions,
+                                tellMeHelpRedirectAction,
+                                tellMeHelpRedirectPreview,
                                 populateQuickAccessMenu,
                                 populateActionContextMenu,
                                 populateQuickAccessActionContextMenu,

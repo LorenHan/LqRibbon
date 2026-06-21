@@ -549,6 +549,39 @@ class MainWindow(RibbonMainWindow):
             )
             self.tell_me_phrase_actions.append(action)
 
+        help_group = self.tell_me_page.addGroup("Help Redirect")
+        self.tell_me_help_redirect_action = help_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_MessageBoxQuestion),
+            "Open Tell Me Help",
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+        )
+        self.tell_me_help_redirect_action.setObjectName(
+            "tellMeHelpRedirectAction"
+        )
+        self.tell_me_help_redirect_action.setToolTip(
+            "Redirect unmatched Tell Me phrases to Search help"
+        )
+        self.tell_me_help_redirect_action.setStatusTip(
+            "Tell Me help redirects unmatched phrases"
+        )
+        self.tell_me_help_redirect_action.triggered.connect(
+            self.open_tell_me_help_redirect
+        )
+        self.tell_me_help_redirect_preview = QLabel(
+            "Help redirects unmatched phrases", help_group
+        )
+        self.tell_me_help_redirect_preview.setObjectName(
+            "tellMeHelpRedirectPreview"
+        )
+        self.tell_me_help_redirect_preview.setMinimumWidth(230)
+        self.tell_me_help_redirect_preview.setFixedHeight(30)
+        self.tell_me_help_redirect_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tell_me_help_redirect_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.tell_me_help_redirect_preview.setToolTip(
+            "Fallback path for commands that are not found"
+        )
+        help_group.addWidget(self.tell_me_help_redirect_preview)
+
     def _create_shell_page(self):
         window_group = self.shell_page.addGroup("Window")
         self.minimize_ribbon_action = self._add_group_action(
@@ -1096,6 +1129,7 @@ class MainWindow(RibbonMainWindow):
             self.office_popup_action,
             self.office_menu_action,
             self.tell_me_lightbulb_action,
+            self.tell_me_help_redirect_action,
             self.show_customize_action,
             self.reorder_quick_access_action,
             self.reset_quick_access_action,
@@ -1402,6 +1436,13 @@ class MainWindow(RibbonMainWindow):
         self.focus_caption_search()
         self.ribbonBar().setSearchText(phrase)
         self._message(f"Tell Me phrase: {phrase}")
+
+    def open_tell_me_help_redirect(self):
+        query = self.ribbonBar().searchText().strip() or "unmatched Tell Me phrase"
+        self.focus_caption_search()
+        self.ribbonBar().setSearchText(query)
+        self.ribbonBar().searchLineEdit().showPopup(query)
+        self._message(f"Tell Me help: {query}")
 
     def set_quick_access_visible(self, visible):
         ribbon = self.ribbonBar()
