@@ -1078,6 +1078,36 @@ def test_example_pivot_recommendation_command_surface():
     window.close()
 
 
+def test_example_live_captions_command_surface():
+    _app()
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+    ribbon = window.ribbonBar()
+
+    assert ribbon.pageIndex(window.slide_show_page) >= 0
+    assert window.slide_show_page.title() == "Slide Show"
+    assert window.live_captions_action.objectName() == "liveCaptionsAction"
+    assert window.live_captions_action.isCheckable()
+    assert not window.live_captions_action.icon().isNull()
+    assert "live captions" in window.live_captions_action.toolTip()
+    assert window.live_captions_action.statusTip() == "Live Captions: off"
+    assert window.live_captions_preview.objectName() == "liveCaptionsPreview"
+    assert window.live_captions_preview.text() == "Captions: off"
+    assert "presentation state" in window.live_captions_preview.toolTip()
+    assert window.live_captions_action in window.search_actions
+    assert ribbon.searchAction("Live Captions") is window.live_captions_action
+
+    window.live_captions_action.trigger()
+    _app().processEvents()
+    assert window.live_captions_action.isChecked()
+    assert window.live_captions_action.statusTip() == "Live Captions: on"
+    assert window.live_captions_preview.text() == "Captions: live English"
+    assert "#liveCaptionsPreview" in window.live_captions_preview.styleSheet()
+    assert "Live Captions" in window.statusBar().currentMessage()
+    window.close()
+
+
 def test_example_svg_recolor_command_surface():
     window = MainWindow()
     window.show()
@@ -3332,6 +3362,7 @@ def main():
         test_example_designer_ideas_command_surface,
         test_example_data_types_command_surface,
         test_example_pivot_recommendation_command_surface,
+        test_example_live_captions_command_surface,
         test_example_svg_recolor_command_surface,
         test_example_svg_convert_shape_command_surface,
         test_example_reduced_motion_option_is_available,

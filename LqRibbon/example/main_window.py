@@ -326,6 +326,9 @@ class MainWindow(RibbonMainWindow):
         self.data_page = ribbon.addPage("Data")
         self._create_data_page()
 
+        self.slide_show_page = ribbon.addPage("Slide Show")
+        self._create_slide_show_page()
+
         self.tell_me_page = ribbon.addPage("Tell Me")
         self._create_command_discovery_page()
 
@@ -1253,6 +1256,29 @@ class MainWindow(RibbonMainWindow):
         self.pivot_recommendation_preview.setFrameShape(QFrame.Shape.StyledPanel)
         self.pivot_recommendation_preview.setToolTip("Recommended pivot table state")
         analysis_group.addWidget(self.pivot_recommendation_preview)
+
+    def _create_slide_show_page(self):
+        captions_group = self.slide_show_page.addGroup("Captions")
+        self.live_captions_action = captions_group.addAction(
+            self._icon(QStyle.StandardPixmap.SP_MediaVolume),
+            "Live Captions",
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+        )
+        self.live_captions_action.setObjectName("liveCaptionsAction")
+        self.live_captions_action.setCheckable(True)
+        self.live_captions_action.setToolTip(
+            "Show live captions during a presentation"
+        )
+        self.live_captions_action.setStatusTip("Live Captions: off")
+        self.live_captions_preview = QLabel("Captions: off", captions_group)
+        self.live_captions_preview.setObjectName("liveCaptionsPreview")
+        self.live_captions_preview.setMinimumWidth(190)
+        self.live_captions_preview.setFixedHeight(30)
+        self.live_captions_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.live_captions_preview.setFrameShape(QFrame.Shape.StyledPanel)
+        self.live_captions_preview.setToolTip("Live captions presentation state")
+        captions_group.addWidget(self.live_captions_preview)
+        self.live_captions_action.toggled.connect(self.toggle_live_captions)
 
     def _create_command_discovery_page(self):
         discovery_group = self.tell_me_page.addGroup("Command Discovery")
@@ -2240,6 +2266,7 @@ class MainWindow(RibbonMainWindow):
             self.recommended_chart_action,
             self.data_types_action,
             self.pivot_recommendation_action,
+            self.live_captions_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -2637,6 +2664,7 @@ class MainWindow(RibbonMainWindow):
             self.recommended_chart_action,
             self.data_types_action,
             self.pivot_recommendation_action,
+            self.live_captions_action,
             self.svg_recolor_action,
             self.svg_convert_shape_action,
             self.contextual_group_color_action,
@@ -3160,6 +3188,19 @@ class MainWindow(RibbonMainWindow):
             "QLabel#pivotRecommendationPreview { color: #5c2d91; background: #f3e8ff; font-weight: 600; }"
         )
         self._message("Recommended Pivot: sales by region")
+
+    def toggle_live_captions(self, enabled):
+        if enabled:
+            self.live_captions_preview.setText("Captions: live English")
+            self.live_captions_preview.setStyleSheet(
+                "QLabel#liveCaptionsPreview { color: #ffffff; background: #0f6cbd; font-weight: 600; }"
+            )
+            self.live_captions_action.setStatusTip("Live Captions: on")
+        else:
+            self.live_captions_preview.setText("Captions: off")
+            self.live_captions_preview.setStyleSheet("")
+            self.live_captions_action.setStatusTip("Live Captions: off")
+        self._message(self.live_captions_action.statusTip())
 
     def recolor_svg_icon(self):
         self.svg_recolor_preview.setText("SVG color: blue accent")

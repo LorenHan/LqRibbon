@@ -156,7 +156,7 @@ Default style remains `Office 2016 Blue`.
 | 125 | Recommended chart command | Insert page | Complete |
 | 126 | Data types command | Data page | Complete |
 | 127 | Pivot recommendation command | Data page | Complete |
-| 128 | Live captions command | Slide Show page | Planned |
+| 128 | Live captions command | Slide Show page | Complete |
 | 129 | Copilot button | Title buttons | Planned |
 | 130 | Copilot command center visibility | Title buttons | Planned |
 | 131 | Copilot prompt gallery | Copilot page | Planned |

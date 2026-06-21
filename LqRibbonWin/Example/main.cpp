@@ -424,6 +424,9 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QLabel *dataTypesPreview,
                      QAction *pivotRecommendationAction,
                      QLabel *pivotRecommendationPreview,
+                     LqRibbon::RibbonPage *slideShowPage,
+                     QAction *liveCaptionsAction,
+                     QLabel *liveCaptionsPreview,
                      LqRibbon::RibbonPage *formatPage,
                      QAction *svgRecolorAction,
                      QLabel *svgRecolorPreview,
@@ -1280,6 +1283,56 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
                      && strPivotRecommendationStatus.contains(
                          QStringLiteral("Recommended Pivot")),
                  QStringLiteral("Recommended pivot command surface is available"))) {
+        return 1;
+    }
+    if (mainWindow.statusBar()) {
+        mainWindow.statusBar()->clearMessage();
+    }
+
+    const int slideShowPageIndex = ribbonBar->indexOf(slideShowPage);
+    if (slideShowPageIndex >= 0) {
+        ribbonBar->setCurrentPageIndex(slideShowPageIndex);
+        processCollapseTestEvents();
+    }
+    QToolButton *liveCaptionsButton =
+        collapseTestActionButton(ribbonBar, liveCaptionsAction);
+    if (liveCaptionsAction) {
+        liveCaptionsAction->trigger();
+        processCollapseTestEvents();
+    }
+    const QString strLiveCaptionsStatus =
+        mainWindow.statusBar() ? mainWindow.statusBar()->currentMessage()
+                               : QString();
+    if (!require(slideShowPageIndex >= 0
+                     && slideShowPage
+                     && slideShowPage->title() == QStringLiteral("Slide Show")
+                     && liveCaptionsAction
+                     && liveCaptionsAction->objectName()
+                         == QStringLiteral("liveCaptionsAction")
+                     && liveCaptionsAction->isCheckable()
+                     && liveCaptionsAction->isChecked()
+                     && !liveCaptionsAction->icon().isNull()
+                     && liveCaptionsAction->toolTip().contains(
+                         QStringLiteral("live captions"))
+                     && liveCaptionsAction->statusTip()
+                         == QStringLiteral("Live Captions: on")
+                     && liveCaptionsPreview
+                     && liveCaptionsPreview->objectName()
+                         == QStringLiteral("liveCaptionsPreview")
+                     && liveCaptionsPreview->text()
+                         == QStringLiteral("Captions: live English")
+                     && liveCaptionsPreview->styleSheet().contains(
+                         QStringLiteral("#liveCaptionsPreview"))
+                     && liveCaptionsPreview->toolTip().contains(
+                         QStringLiteral("presentation state"))
+                     && ribbonBar->searchAction(QStringLiteral("Live Captions"))
+                         == liveCaptionsAction
+                     && liveCaptionsButton
+                     && liveCaptionsButton->defaultAction()
+                         == liveCaptionsAction
+                     && strLiveCaptionsStatus.contains(
+                         QStringLiteral("Live Captions")),
+                 QStringLiteral("Live Captions command surface is available"))) {
         return 1;
     }
     if (mainWindow.statusBar()) {
@@ -6721,6 +6774,30 @@ int main(int argc, char *argv[])
         QObject::tr("Recommended pivot table state"));
     dataAnalysisGroup->addWidget(pivotRecommendationPreview);
 
+    LqRibbon::RibbonPage *slideShowPage =
+        mainWindow.ribbonBar()->addPage(QObject::tr("Slide Show"));
+    LqRibbon::RibbonGroup *captionsGroup =
+        slideShowPage->addGroup(QObject::tr("Captions"));
+    QAction *liveCaptionsAction = captionsGroup->addAction(
+        mainWindow.style()->standardIcon(QStyle::SP_MediaVolume),
+        QObject::tr("Live Captions"),
+        Qt::ToolButtonTextUnderIcon);
+    liveCaptionsAction->setObjectName(QStringLiteral("liveCaptionsAction"));
+    liveCaptionsAction->setCheckable(true);
+    liveCaptionsAction->setToolTip(
+        QObject::tr("Show live captions during a presentation"));
+    liveCaptionsAction->setStatusTip(QObject::tr("Live Captions: off"));
+    QLabel *liveCaptionsPreview = new QLabel(captionsGroup);
+    liveCaptionsPreview->setObjectName(QStringLiteral("liveCaptionsPreview"));
+    liveCaptionsPreview->setText(QObject::tr("Captions: off"));
+    liveCaptionsPreview->setMinimumWidth(190);
+    liveCaptionsPreview->setFixedHeight(30);
+    liveCaptionsPreview->setAlignment(Qt::AlignCenter);
+    liveCaptionsPreview->setFrameShape(QFrame::StyledPanel);
+    liveCaptionsPreview->setToolTip(
+        QObject::tr("Live captions presentation state"));
+    captionsGroup->addWidget(liveCaptionsPreview);
+
     LqRibbon::RibbonPage *tellMePage =
         mainWindow.ribbonBar()->addPage(QObject::tr("Tell Me"));
     LqRibbon::RibbonGroup *commandDiscoveryGroup =
@@ -9259,6 +9336,7 @@ int main(int argc, char *argv[])
     mainWindow.ribbonBar()->registerSearchAction(designerIdeasAction);
     mainWindow.ribbonBar()->registerSearchAction(dataTypesAction);
     mainWindow.ribbonBar()->registerSearchAction(pivotRecommendationAction);
+    mainWindow.ribbonBar()->registerSearchAction(liveCaptionsAction);
     mainWindow.ribbonBar()->registerSearchAction(svgRecolorAction);
     mainWindow.ribbonBar()->registerSearchAction(svgConvertShapeAction);
     mainWindow.ribbonBar()->registerSearchAction(contextualGroupColorAction);
@@ -9580,6 +9658,30 @@ int main(int argc, char *argv[])
                                  QObject::tr(
                                      "Recommended Pivot: sales by region"),
                                  2500);
+                         }
+                     });
+    QObject::connect(liveCaptionsAction,
+                     &QAction::toggled,
+                     [&mainWindow,
+                      liveCaptionsAction,
+                      liveCaptionsPreview](bool enabled) {
+                         if (enabled) {
+                             liveCaptionsPreview->setText(
+                                 QObject::tr("Captions: live English"));
+                             liveCaptionsPreview->setStyleSheet(
+                                 QStringLiteral("QLabel#liveCaptionsPreview { color: #ffffff; background: #0f6cbd; font-weight: 600; }"));
+                             liveCaptionsAction->setStatusTip(
+                                 QObject::tr("Live Captions: on"));
+                         } else {
+                             liveCaptionsPreview->setText(
+                                 QObject::tr("Captions: off"));
+                             liveCaptionsPreview->setStyleSheet(QString());
+                             liveCaptionsAction->setStatusTip(
+                                 QObject::tr("Live Captions: off"));
+                         }
+                         if (mainWindow.statusBar()) {
+                             mainWindow.statusBar()->showMessage(
+                                 liveCaptionsAction->statusTip(), 2500);
                          }
                      });
     QObject::connect(svgRecolorAction,
@@ -10182,6 +10284,9 @@ int main(int argc, char *argv[])
                                 dataTypesPreview,
                                 pivotRecommendationAction,
                                 pivotRecommendationPreview,
+                                slideShowPage,
+                                liveCaptionsAction,
+                                liveCaptionsPreview,
                                 formatPage,
                                 svgRecolorAction,
                                 svgRecolorPreview,
