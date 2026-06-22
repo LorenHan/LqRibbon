@@ -20,7 +20,7 @@ sys.path.insert(
 )
 
 from PySide6.QtCore import QSettings, Qt
-from PySide6.QtGui import QColor, QPalette
+from PySide6.QtGui import QColor, QIcon, QPalette
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QFrame, QStackedWidget, QWidget, QMdiArea, QVBoxLayout
 
@@ -333,6 +333,26 @@ def test_macos_platform_layout_keeps_style_choices_with_custom_frame():
     assert bool(window.windowFlags() & Qt.WindowType.FramelessWindowHint)
     assert "border-bottom: 2px solid #2b579a;" in blue_style
     assert "#202020" in dark_style
+    window.close()
+
+
+def test_macos_platform_layout_keeps_group_title_visible():
+    window = RibbonMainWindow()
+    ribbon = window.ribbonBar()
+    ribbon.setPlatformLayout(RibbonPlatformLayout.MacOS)
+    window.setFrameThemeEnabled(True)
+    page = ribbon.addPage("Draw")
+    group = page.addGroup("Tools")
+    group.addAction(QIcon(), "Ruler")
+
+    window.resize(1180, 560)
+    window.show()
+    _app().processEvents()
+
+    title_bottom = group.title_label.mapTo(
+        page, group.title_label.rect().bottomLeft()
+    ).y()
+    assert title_bottom < page.height()
     window.close()
 
 
