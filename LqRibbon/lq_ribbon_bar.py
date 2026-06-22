@@ -11,9 +11,11 @@ from PySide6.QtWidgets import (
     QStackedWidget,
     QToolBar,
     QToolButton,
+    QSizePolicy,
+    QMdiArea,
 )
 from PySide6.QtCore import Qt, Signal, QEvent, QSize, QTimer
-from PySide6.QtGui import QAction, QIcon, QPainter, QColor, QPen, QPixmap
+from PySide6.QtGui import QAction, QIcon, QPainter, QColor, QPen, QPixmap, QPalette
 from .lq_styles import LqStyle, RibbonStyle, _coerce_style
 from .lq_ribbon_extras import (
     CallableList,
@@ -36,6 +38,12 @@ RIBBON_SIMPLIFIED_HEIGHT = RIBBON_COLLAPSED_HEIGHT + 48
 RIBBON_COLLAPSE_BUTTON_WIDTH = 32
 RIBBON_COLLAPSE_BUTTON_HEIGHT = 24
 RIBBON_QUICK_ACCESS_BELOW_HEIGHT = 28
+RIBBON_COMMAND_FRAME_INSET = 2
+RIBBON_MAXIMIZED_COMMAND_FRAME_INSET = 0
+RIBBON_COMMAND_FRAME_CORNER_RADIUS = 8
+RIBBON_COMMAND_FRAME_LINE_WIDTH = 2
+RIBBON_WINDOW_BUTTON_WIDTH = 46
+RIBBON_WINDOW_BUTTON_HEIGHT = 30
 
 
 class _RibbonCollapseButton(QToolButton):
@@ -75,6 +83,49 @@ class _RibbonCollapseButton(QToolButton):
         else:
             painter.drawLine(center_x - 6, center_y + 3, center_x, center_y - 3)
             painter.drawLine(center_x, center_y - 3, center_x + 6, center_y + 3)
+
+
+class _RibbonWindowButton(QToolButton):
+    """Flat Office-style window button used by the themed Ribbon frame."""
+
+    def __init__(self, kind, parent=None):
+        super().__init__(parent)
+        self._kind = kind
+        self.setAutoRaise(True)
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setFixedSize(RIBBON_WINDOW_BUTTON_WIDTH, RIBBON_WINDOW_BUTTON_HEIGHT)
+
+    def paintEvent(self, event):
+        palette = LqStyle.palette(getattr(self.parent(), "_ribbon_style", RibbonStyle.Office2016Blue))
+        painter = QPainter(self)
+        if not self.isDown() and not self.underMouse():
+            painter.fillRect(self.rect(), QColor(palette["caption_bg"]))
+        elif self.isDown():
+            color = "#8f1f15" if self._kind == "close" else "#244d80"
+            painter.fillRect(self.rect(), QColor(color))
+        elif self.underMouse():
+            color = "#c42b1c" if self._kind == "close" else palette["caption_hover"]
+            painter.fillRect(self.rect(), QColor(color))
+
+        pen = QPen(QColor(palette["status_text"]))
+        pen.setWidthF(1.3)
+        painter.setPen(pen)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        center_x = self.width() // 2
+        center_y = self.height() // 2
+        if self._kind == "minimize":
+            painter.drawLine(center_x - 6, center_y + 5, center_x + 6, center_y + 5)
+        elif self._kind == "maximize":
+            window = self.window()
+            if window and window.isMaximized():
+                painter.drawRect(center_x - 2, center_y - 7, 10, 10)
+                painter.drawRect(center_x - 6, center_y - 3, 10, 10)
+            else:
+                painter.drawRect(center_x - 6, center_y - 6, 12, 12)
+        elif self._kind == "close":
+            painter.drawLine(center_x - 5, center_y - 5, center_x + 5, center_y + 5)
+            painter.drawLine(center_x + 5, center_y - 5, center_x - 5, center_y + 5)
 
 
 class LqRibbonBar(QTabWidget):
@@ -144,15 +195,21 @@ class LqRibbonBar(QTabWidget):
         self._key_tips_complement = False
         self._key_tips_showing = False
         self._key_tips = {}
+        self._caption_drag_global_pos = None
+        self._caption_drag_window_pos = None
         self._collapse_button = _RibbonCollapseButton(self)
         self._collapse_button.clicked.connect(
             lambda: self.setRibbonMinimized(not self._ribbon_minimized)
         )
+        self._minimize_button = _RibbonWindowButton("minimize", self)
+        self._maximize_button = _RibbonWindowButton("maximize", self)
+        self._close_button = _RibbonWindowButton("close", self)
         self.init_ui()
 
     def init_ui(self):
         """Initialize the ribbon bar UI"""
         self.setObjectName("lqRibbonBar")
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         # Set tab position to North (top)
         self.setTabPosition(QTabWidget.TabPosition.North)
@@ -166,12 +223,17 @@ class LqRibbonBar(QTabWidget):
         self._search_bar.returnPressed.connect(self._accept_search_text)
         self.tabBar().setExpanding(False)
         self.tabBar().setUsesScrollButtons(True)
+        self.tabBar().setObjectName("lqRibbonTabBar")
         app = QApplication.instance()
         if app:
             app.installEventFilter(self)
 
         # Set height for ribbon area
         self.setFixedHeight(RIBBON_BAR_HEIGHT)
+        stack = self._command_area_stack()
+        if stack:
+            stack.setObjectName("lqRibbonCommandArea")
+            self._configure_command_area_stack(stack)
         self.setStyleSheet(self._style_sheet())
         self._search_bar.setObjectName("lqRibbonSearchEdit")
         self._quick_access_bar.hide()
@@ -184,6 +246,13 @@ class LqRibbonBar(QTabWidget):
         self._search_bar.hide()
         self._progress_bar.hide()
         self._collapse_button.hide()
+        self._minimize_button.setObjectName("lqRibbonWindowMinimizeButton")
+        self._maximize_button.setObjectName("lqRibbonWindowMaximizeButton")
+        self._close_button.setObjectName("lqRibbonWindowCloseButton")
+        self._minimize_button.clicked.connect(lambda: self.window().showMinimized())
+        self._maximize_button.clicked.connect(self._toggle_window_maximized)
+        self._close_button.clicked.connect(lambda: self.window().close())
+        self._update_window_controls()
         self._update_layout()
 
     def paintEvent(self, event):
@@ -199,6 +268,59 @@ class LqRibbonBar(QTabWidget):
             RIBBON_COLLAPSED_HEIGHT,
             QColor(palette["caption_bg"]),
         )
+        stack = self._command_area_stack()
+        if stack and stack.isVisible():
+            command_rect = stack.geometry()
+            outer_color = self._command_frame_outer_color()
+            corner_radius = self._command_frame_corner_radius()
+            corner_height = min(
+                command_rect.height(),
+                corner_radius + RIBBON_COMMAND_FRAME_LINE_WIDTH,
+            )
+            corner_top = command_rect.bottom() - corner_height + 1
+            if corner_height > 0 and command_rect.left() > 0:
+                painter.fillRect(
+                    0,
+                    corner_top,
+                    command_rect.left(),
+                    corner_height,
+                    outer_color,
+                )
+            if corner_height > 0 and command_rect.right() + 1 < self.width():
+                painter.fillRect(
+                    command_rect.right() + 1,
+                    corner_top,
+                    self.width() - command_rect.right() - 1,
+                    corner_height,
+                    outer_color,
+                )
+            if command_rect.bottom() + 1 < self.height():
+                painter.fillRect(
+                    0,
+                    command_rect.bottom() + 1,
+                    self.width(),
+                    self.height() - command_rect.bottom() - 1,
+                    outer_color,
+                )
+
+        if self._frame_theme_enabled and not self._search_bar.isVisible():
+            title_left = 12
+            title_right = max(0, self.width() - (RIBBON_WINDOW_BUTTON_WIDTH * 3) - 12)
+            title_width = max(0, title_right - title_left)
+            if title_width:
+                painter.setPen(QColor(palette["status_text"]))
+                painter.drawText(
+                    title_left,
+                    0,
+                    title_width,
+                    RIBBON_WINDOW_BUTTON_HEIGHT,
+                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                    self.fontMetrics().elidedText(
+                        self.window().windowTitle(),
+                        Qt.TextElideMode.ElideRight,
+                        title_width,
+                    ),
+                )
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -253,14 +375,98 @@ class LqRibbonBar(QTabWidget):
     def _style_sheet(self):
         return LqStyle.get_ribbon_style(self._ribbon_style)
 
+    def _command_area_stack(self):
+        stack = self.findChild(
+            QStackedWidget,
+            "lqRibbonCommandArea",
+            Qt.FindChildOption.FindDirectChildrenOnly,
+        )
+        if stack:
+            return stack
+        stacks = self.findChildren(
+            QStackedWidget,
+            options=Qt.FindChildOption.FindDirectChildrenOnly,
+        )
+        return stacks[0] if stacks else None
+
+    def _command_frame_outer_color(self):
+        window = self.window()
+        central_widget = None
+        central_widget_getter = getattr(window, "centralWidget", None)
+        if callable(central_widget_getter):
+            central_widget = central_widget_getter()
+        if central_widget:
+            mdi_area = (
+                central_widget
+                if isinstance(central_widget, QMdiArea)
+                else central_widget.findChild(QMdiArea)
+            )
+            if mdi_area:
+                mdi_color = mdi_area.background().color()
+                if mdi_color.isValid():
+                    return mdi_color
+                viewport = mdi_area.viewport()
+                if viewport:
+                    viewport_color = viewport.palette().color(QPalette.ColorRole.Window)
+                    if viewport_color.isValid():
+                        return viewport_color
+            central_color = central_widget.palette().color(QPalette.ColorRole.Window)
+            if central_color.isValid():
+                return central_color
+        if window:
+            window_color = window.palette().color(QPalette.ColorRole.Window)
+            if window_color.isValid():
+                return window_color
+        app = QApplication.instance()
+        return (
+            app.palette().color(QPalette.ColorRole.Window)
+            if app
+            else QColor(Qt.GlobalColor.transparent)
+        )
+
+    def _command_frame_inset(self):
+        window = self.window()
+        return (
+            RIBBON_MAXIMIZED_COMMAND_FRAME_INSET
+            if window and window.isMaximized()
+            else RIBBON_COMMAND_FRAME_INSET
+        )
+
+    def _command_frame_corner_radius(self):
+        window = self.window()
+        return 0 if window and window.isMaximized() else RIBBON_COMMAND_FRAME_CORNER_RADIUS
+
+    def _configure_command_area_stack(self, stack):
+        stack.setObjectName("lqRibbonCommandArea")
+        stack.setAutoFillBackground(True)
+        stack_palette = stack.palette()
+        stack_palette.setColor(
+            QPalette.ColorRole.Window,
+            self._command_frame_outer_color(),
+        )
+        stack.setPalette(stack_palette)
+        stack.setContentsMargins(
+            0,
+            0,
+            0,
+            RIBBON_COMMAND_FRAME_LINE_WIDTH,
+        )
+        stack_layout = stack.layout()
+        if stack_layout:
+            stack_layout.setContentsMargins(
+                0,
+                0,
+                0,
+                RIBBON_COMMAND_FRAME_LINE_WIDTH,
+            )
+
     def _update_layout(self):
         tab_bar = self.tabBar()
-        tab_width = min(self.width(), tab_bar.sizeHint().width())
-        tab_bar.setGeometry(0, RIBBON_CAPTION_HEIGHT, tab_width, RIBBON_TAB_HEIGHT)
+        tab_bar.setGeometry(0, RIBBON_CAPTION_HEIGHT, self.width(), RIBBON_TAB_HEIGHT)
         tab_bar.raise_()
         command_area_visible = self._is_command_area_visible()
 
-        stack = self.findChild(QStackedWidget)
+        stack = self._command_area_stack()
         quick_access_below = (
             command_area_visible
             and self._quick_access_position == 2
@@ -271,13 +477,21 @@ class LqRibbonBar(QTabWidget):
         )
 
         if stack:
+            self._configure_command_area_stack(stack)
             stack_top = RIBBON_COLLAPSED_HEIGHT
             stack_height = (
                 max(0, self.height() - stack_top - quick_access_reserve)
                 if command_area_visible
                 else 0
             )
-            stack.setGeometry(0, stack_top, self.width(), stack_height)
+            frame_x = self._command_frame_inset()
+            frame_width = max(0, self.width() - (frame_x * 2))
+            stack.setGeometry(
+                frame_x,
+                stack_top,
+                frame_width,
+                stack_height,
+            )
             stack.setVisible(command_area_visible)
 
         compact_search = self._search_bar_appearance == 2
@@ -290,14 +504,23 @@ class LqRibbonBar(QTabWidget):
         )
         self._search_bar.raise_()
 
+        window_control_reserve = (
+            RIBBON_WINDOW_BUTTON_WIDTH * 3 if self._frame_theme_enabled else 0
+        )
         title_bar_width = min(
             self._title_button_bar.sizeHint().width(),
-            max(0, self.width() - self._search_bar.geometry().right() - 48),
+            max(
+                0,
+                self.width()
+                - self._search_bar.geometry().right()
+                - window_control_reserve
+                - 12,
+            ),
         )
         if self._title_button_bar.actions() and title_bar_width > 0:
             title_bar_x = max(
                 self._search_bar.geometry().right() + 8,
-                self.width() - title_bar_width - 48,
+                self.width() - title_bar_width - window_control_reserve - 8,
             )
             self._title_button_bar.setGeometry(title_bar_x, 6, title_bar_width, 24)
             self._title_button_bar.show()
@@ -345,6 +568,80 @@ class LqRibbonBar(QTabWidget):
         self._collapse_button.setCollapsed(self._ribbon_minimized)
         self._collapse_button.setVisible(self._frame_theme_enabled and not self._ribbon_minimized)
         self._collapse_button.raise_()
+        self._update_window_controls()
+
+    def _update_window_controls(self):
+        buttons = [self._minimize_button, self._maximize_button, self._close_button]
+        x = max(0, self.width() - (RIBBON_WINDOW_BUTTON_WIDTH * len(buttons)))
+        for button in buttons:
+            button.setGeometry(x, 0, RIBBON_WINDOW_BUTTON_WIDTH, RIBBON_WINDOW_BUTTON_HEIGHT)
+            button.setVisible(self._frame_theme_enabled)
+            button.raise_()
+            x += RIBBON_WINDOW_BUTTON_WIDTH
+        self._maximize_button.update()
+
+    def _toggle_window_maximized(self):
+        window = self.window()
+        if window.isMaximized():
+            window.showNormal()
+        else:
+            window.showMaximized()
+        self._maximize_button.update()
+
+    def _caption_event_global_pos(self, event):
+        if hasattr(event, "globalPosition"):
+            return event.globalPosition().toPoint()
+        return event.globalPos()
+
+    def _is_caption_drag_point(self, point):
+        if not self._frame_theme_enabled or point.y() >= RIBBON_CAPTION_HEIGHT:
+            return False
+        for widget in (
+            self._search_bar,
+            self._title_button_bar,
+            self._minimize_button,
+            self._maximize_button,
+            self._close_button,
+        ):
+            if widget.isVisible() and widget.geometry().contains(point):
+                return False
+        return True
+
+    def mousePressEvent(self, event):
+        if (
+            event.button() == Qt.MouseButton.LeftButton
+            and self._is_caption_drag_point(event.position().toPoint())
+        ):
+            self._caption_drag_global_pos = self._caption_event_global_pos(event)
+            self._caption_drag_window_pos = self.window().pos()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._caption_drag_global_pos is not None:
+            self.window().move(
+                self._caption_drag_window_pos
+                + (self._caption_event_global_pos(event) - self._caption_drag_global_pos)
+            )
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._caption_drag_global_pos = None
+        self._caption_drag_window_pos = None
+        super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        if (
+            event.button() == Qt.MouseButton.LeftButton
+            and self._is_caption_drag_point(event.position().toPoint())
+        ):
+            self._toggle_window_maximized()
+            event.accept()
+            return
+        super().mouseDoubleClickEvent(event)
 
     def _is_command_area_visible(self):
         return not self._ribbon_minimized or self._ribbon_temporary_expanded
@@ -869,6 +1166,7 @@ class LqRibbonBar(QTabWidget):
         self._frame_theme_enabled = bool(enabled)
         self._search_bar.setVisible(enabled)
         self._update_layout()
+        self.update()
         self.frameThemeChanged.emit(self._frame_theme_enabled)
 
     def isFrameThemeEnabled(self):

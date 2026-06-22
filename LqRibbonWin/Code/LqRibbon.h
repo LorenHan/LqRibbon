@@ -36,6 +36,7 @@
 
 #include "LqRibbonControls.h"
 #include "LqRibbonGallery.h"
+#include "LqRibbonMessageBox.h"
 #include "LqRibbonStatusBar.h"
 #include "LqRibbonExtras.h"
 
@@ -984,6 +985,8 @@ private:
     bool canNativeMaximize() const;
     void updateNativeContentMargins();
     void updateNativeWindowStyle();
+    void connectRibbonContentSpacing();
+    void updateRibbonContentSpacing();
     void polishMdiObject(QObject *object);
     void polishMdiArea(QMdiArea *mdiArea);
     void polishMdiSubWindow(QMdiSubWindow *subWindow);
@@ -1048,6 +1051,7 @@ using LqOfficePopupWindow = OfficePopupWindow;
 using LqRibbonScrollArea = RibbonScrollArea;
 using LqRibbonWorkspace = RibbonWorkspace;
 using LqRibbonMdiArea = RibbonMdiArea;
+using LqRibbonMessageBox = RibbonMessageBox;
 using LqRibbonCustomizeManager = RibbonCustomizeManager;
 using LqRibbonCustomizeDialog = RibbonCustomizeDialog;
 using LqRibbonQuickAccessBarCustomizePage =
@@ -1106,6 +1110,7 @@ using OfficePopupWindow = LqRibbon::OfficePopupWindow;
 using RibbonScrollArea = LqRibbon::RibbonScrollArea;
 using RibbonWorkspace = LqRibbon::RibbonWorkspace;
 using RibbonMdiArea = LqRibbon::RibbonMdiArea;
+using RibbonMessageBox = LqRibbon::RibbonMessageBox;
 using RibbonCustomizeManager = LqRibbon::RibbonCustomizeManager;
 using RibbonCustomizeDialog = LqRibbon::RibbonCustomizeDialog;
 using RibbonQuickAccessBarCustomizePage =

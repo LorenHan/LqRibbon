@@ -21,7 +21,7 @@ not copied implementation.
 | Status bar | Permanent area, switch group, sliders, progress | Complete | `--grab-preview` status area |
 | Workspace | Scroll area, MDI-aware workspace, tab/subwindow polish | Implemented basic API | `--grab-mdi-preview`, `--grab-tab-preview` |
 | Customization | Customize manager/page/dialog, save and restore layout | Implemented basic API | Planned customization example |
-| Style | Office-like metrics, colors, theme hooks, high-DPI behavior | Basic style switching, system follow mode, live preview swatch, persisted theme choice, Fluent rounded tab geometry, softer Fluent border tokens, and Fluent hover/pressed timing preview implemented | `--grab-style-preview`, `--run-style-tests` |
+| Style | Office-like metrics, colors, theme hooks, high-DPI behavior | Basic style switching, system follow mode, live preview swatch, persisted theme choice, Fluent rounded tab geometry, softer Fluent border tokens, Fluent hover/pressed timing preview, and Ribbon-styled message boxes implemented | `--grab-style-preview`, `--grab-message-box-preview`, `--run-style-tests` |
 
 ## Current Gap Summary
 

@@ -57,10 +57,13 @@ _STYLE_PALETTES = {
         "group_pressed": "#c5ddfa",
         "quick_bg": "#2f63a3",
         "quick_border": "#6f9fd0",
+        "page_border": "#bdbdbd",
         "window_bg": "#f5f5f5",
         "status_text": "#ffffff",
         "tab_radius": "0px",
         "tab_border": "#c8c8c8",
+        "tab_top_border": "transparent",
+        "tab_indicator": "transparent",
         "control_border": "#b7cbe6",
         "command_hover_border": "#8cc8f7",
         "command_pressed_border": "#5f95d0",
@@ -85,10 +88,13 @@ _STYLE_PALETTES = {
         "group_pressed": "#c7e0f4",
         "quick_bg": "#2466b1",
         "quick_border": "#8fb9ec",
+        "page_border": "#bdbdbd",
         "window_bg": "#f5f5f5",
         "status_text": "#ffffff",
         "tab_radius": "0px",
         "tab_border": "#c8c8c8",
+        "tab_top_border": "transparent",
+        "tab_indicator": "transparent",
         "control_border": "#b7cbe6",
         "command_hover_border": "#deecf9",
         "command_pressed_border": "#5f95d0",
@@ -113,10 +119,13 @@ _STYLE_PALETTES = {
         "group_pressed": "#cfe4fa",
         "quick_bg": "#ffffff",
         "quick_border": "#e5e5e5",
+        "page_border": "#d0cecc",
         "window_bg": "#ffffff",
         "status_text": "#242424",
         "tab_radius": "6px 6px 0px 0px",
         "tab_border": "#e5e5e5",
+        "tab_top_border": "transparent",
+        "tab_indicator": "#0f6cbd",
         "control_border": "#e5e5e5",
         "command_hover_border": "#e5e5e5",
         "command_pressed_border": "#c7c7c7",
@@ -141,10 +150,13 @@ _STYLE_PALETTES = {
         "group_pressed": "#4a4a4a",
         "quick_bg": "#2d2d2d",
         "quick_border": "#3a3a3a",
+        "page_border": "#555555",
         "window_bg": "#1f1f1f",
         "status_text": "#f3f2f1",
         "tab_radius": "6px 6px 0px 0px",
         "tab_border": "#3a3a3a",
+        "tab_top_border": "transparent",
+        "tab_indicator": "#60cdff",
         "control_border": "#3a3a3a",
         "command_hover_border": "#3a3a3a",
         "command_pressed_border": "#5f5f5f",
@@ -179,15 +191,21 @@ class LqStyle:
     def get_ribbon_style(style=RibbonStyle.Office2016Blue):
         p = LqStyle.palette(style)
         return f"""
-        LqRibbonBar, QTabWidget::pane {{
+        LqRibbonBar, QTabWidget#lqRibbonBar {{
             background: {p["ribbon_bg"]};
             border: none;
         }}
-        QTabBar {{
+        QTabWidget#lqRibbonBar::pane {{
+            background: {p["ribbon_bg"]};
+            border: none;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }}
+        QTabBar#lqRibbonTabBar {{
             background: transparent;
             border: none;
         }}
-        QTabBar::tab {{
+        QTabBar#lqRibbonTabBar::tab {{
             min-width: 46px;
             min-height: 21px;
             padding: 2px 10px 1px 10px;
@@ -196,15 +214,16 @@ class LqStyle:
             border: none;
             font-size: 12px;
         }}
-        QTabBar::tab:selected {{
+        QTabBar#lqRibbonTabBar::tab:selected {{
             background: {p["selected_tab_bg"]};
             color: {p["selected_tab_text"]};
             border-left: 1px solid {p["tab_border"]};
             border-right: 1px solid {p["tab_border"]};
-            border-top: 1px solid {p["tab_border"]};
+            border-top: 1px solid {p["tab_top_border"]};
+            border-bottom: 2px solid {p["tab_indicator"]};
             border-radius: {p["tab_radius"]};
         }}
-        QTabBar::tab:hover:!selected {{
+        QTabBar#lqRibbonTabBar::tab:hover:!selected {{
             background: {p["caption_hover"]};
             border-radius: {p["tab_radius"]};
         }}
@@ -219,6 +238,11 @@ class LqStyle:
         }}
         QLineEdit#lqRibbonSearchEdit:focus {{
             border-color: {p["focus"]};
+        }}
+        QStackedWidget#lqRibbonCommandArea {{
+            border: none;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
         }}
         QWidget#ribbon_page {{
             background-color: {p["ribbon_bg"]};

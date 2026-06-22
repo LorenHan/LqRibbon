@@ -14,6 +14,7 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QHash>
+#include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -31,6 +32,7 @@
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QStyle>
 #include <QStackedWidget>
 #include <QStatusBar>
@@ -623,6 +625,11 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     mainWindow.show();
     processCollapseTestEvents();
 
+    auto contentGap = [&]() {
+        return content->geometry().top()
+            - (ribbonBar->geometry().top() + ribbonBar->height());
+    };
+
     auto reset = [&]() {
         hits.clear();
         firstActionSawCommandArea = false;
@@ -642,7 +649,10 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
         qInfo().noquote() << "PASS" << name;
         return true;
     };
-
+    if (!require(contentGap() == 0,
+                 QStringLiteral("expanded ribbon keeps content attached"))) {
+        return 1;
+    }
     if (!require(fontPicker
                      && fontPicker->objectName()
                          == QStringLiteral("fontPicker")
@@ -2851,7 +2861,8 @@ int runCollapseTests(LqRibbon::RibbonMainWindow &mainWindow,
     reset();
     ribbonBar->setRibbonMinimized(true);
     if (!require(ribbonBar->isRibbonMinimized()
-                     && !collapseTestCommandAreaVisible(ribbonBar),
+                     && !collapseTestCommandAreaVisible(ribbonBar)
+                     && contentGap() > 0,
                  QStringLiteral("programmatic collapse hides command area"))) {
         return 1;
     }
@@ -5198,6 +5209,60 @@ QString ribbonStyleChoiceFromComboIndex(const QComboBox *combo, int index)
         static_cast<LqRibbon::RibbonBar::RibbonStyle>(value));
 }
 
+QString ribbonStyleComboText(LqRibbon::RibbonBar::RibbonStyle style)
+{
+    switch (style) {
+    case LqRibbon::RibbonBar::Microsoft365Light:
+        return QStringLiteral("M365 Light");
+    case LqRibbon::RibbonBar::Microsoft365Dark:
+        return QStringLiteral("M365 Dark");
+    case LqRibbon::RibbonBar::Office2019Colorful:
+    case LqRibbon::RibbonBar::Office2016Blue:
+    default:
+        return LqRibbon::RibbonBar::ribbonStyleName(style);
+    }
+}
+
+void populateRibbonStyleCombo(QComboBox *combo)
+{
+    if (!combo) {
+        return;
+    }
+
+    combo->clear();
+    const LqRibbon::RibbonBar::RibbonStyle styleItems[] = {
+        LqRibbon::RibbonBar::Office2016Blue,
+        LqRibbon::RibbonBar::Office2019Colorful,
+        LqRibbon::RibbonBar::Microsoft365Light,
+        LqRibbon::RibbonBar::Microsoft365Dark
+    };
+    for (LqRibbon::RibbonBar::RibbonStyle style : styleItems) {
+        combo->addItem(ribbonStyleComboText(style), static_cast<int>(style));
+        combo->setItemData(combo->count() - 1,
+                           LqRibbon::RibbonBar::ribbonStyleName(style),
+                           Qt::ToolTipRole);
+    }
+    combo->addItem(QStringLiteral("System"), systemRibbonStyleComboValue);
+    combo->setItemData(combo->count() - 1,
+                       QObject::tr("Follow current system light/dark palette"),
+                       Qt::ToolTipRole);
+}
+
+void syncRibbonStyleComboValue(QComboBox *targetCombo, int value)
+{
+    if (!targetCombo) {
+        return;
+    }
+
+    const int targetIndex = targetCombo->findData(value);
+    if (targetIndex < 0 || targetCombo->currentIndex() == targetIndex) {
+        return;
+    }
+
+    const QSignalBlocker blocker(targetCombo);
+    targetCombo->setCurrentIndex(targetIndex);
+}
+
 QString savedRibbonStyleChoice(const QSettings &settings)
 {
     return settings.value(QString::fromLatin1(ribbonStyleSettingsKey))
@@ -5622,6 +5687,7 @@ void waitForStylePreviewTimer(int durationMs)
 
 int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                   QComboBox *styleCombo,
+                  QComboBox *titleStyleCombo,
                   QWidget *stylePreview,
                   FluentStateTimingPreview *stateTimingPreview,
                   QAction *highContrastStyleAction,
@@ -5636,6 +5702,155 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
         }
         qInfo().noquote() << "PASS" << name;
         return true;
+    };
+    auto closeColor = [](const QColor &sample, const QColor &expected) {
+        return qAbs(sample.red() - expected.red()) <= 4
+            && qAbs(sample.green() - expected.green()) <= 4
+            && qAbs(sample.blue() - expected.blue()) <= 4
+            && qAbs(sample.alpha() - expected.alpha()) <= 4;
+    };
+    auto pageFrameVisible = [&closeColor](QWidget *page,
+                                          const QColor &expected,
+                                          const QColor &expectedBackground,
+                                          const QColor &expectedOuter,
+                                          bool roundedCorners) {
+        if (!page || !expected.isValid() || !expectedBackground.isValid()
+            || !expectedOuter.isValid()) {
+            return false;
+        }
+        const QImage image = page->grab().toImage();
+        if (image.width() < 16 || image.height() < 16) {
+            return false;
+        }
+        const QList<QColor> samples = {
+            image.pixelColor(image.width() / 2, image.height() - 1),
+            image.pixelColor(image.width() / 2, image.height() - 2),
+            image.pixelColor(0, image.height() / 2),
+            image.pixelColor(1, image.height() / 2),
+            image.pixelColor(image.width() - 1, image.height() / 2),
+            image.pixelColor(image.width() - 2, image.height() / 2)
+        };
+        const QColor topSample = image.pixelColor(image.width() / 2, 0);
+        const QColor innerSample = image.pixelColor(image.width() - 12,
+                                                    image.height() / 2);
+        const QList<QColor> cornerSamples = {
+            image.pixelColor(0, image.height() - 1),
+            image.pixelColor(image.width() - 1, image.height() - 1)
+        };
+        if (closeColor(topSample, expected)) {
+            return false;
+        }
+        if (!closeColor(innerSample, expectedBackground)) {
+            return false;
+        }
+        for (const QColor &sample : samples) {
+            if (!closeColor(sample, expected)) {
+                return false;
+            }
+        }
+        const QColor expectedCorner =
+            roundedCorners ? expectedOuter : expected;
+        for (const QColor &sample : cornerSamples) {
+            if (!closeColor(sample, expectedCorner)) {
+                return false;
+            }
+        }
+        return true;
+    };
+    auto commandAreaOuterVisible = [&closeColor](QStackedWidget *commandArea,
+                                                 const QColor &expected) {
+        if (!commandArea || !expected.isValid()) {
+            return false;
+        }
+        const QImage image = commandArea->grab().toImage();
+        if (image.width() < 16 || image.height() < 16) {
+            return false;
+        }
+        const QList<QColor> samples = {
+            image.pixelColor(image.width() / 2, image.height() - 1),
+            image.pixelColor(image.width() / 2, image.height() - 2)
+        };
+        for (const QColor &sample : samples) {
+            if (!closeColor(sample, expected)) {
+                return false;
+            }
+        }
+        return true;
+    };
+    auto ribbonSideMaskMatches = [&closeColor](QWidget *ribbonBar,
+                                               QStackedWidget *commandArea,
+                                               int expectedInset,
+                                               const QColor &expectedBackground,
+                                               const QColor &expectedOuter) {
+        if (!ribbonBar || !commandArea || !expectedBackground.isValid()
+            || !expectedOuter.isValid()) {
+            return false;
+        }
+        if (commandArea->x() != expectedInset
+            || commandArea->width() != ribbonBar->width() - (expectedInset * 2)) {
+            return false;
+        }
+        if (expectedInset == 0) {
+            return true;
+        }
+        const QRect commandRect = commandArea->geometry();
+        const QImage image = ribbonBar->grab().toImage();
+        if (image.width() < 16 || image.height() < 16 || commandRect.height() < 2) {
+            return false;
+        }
+        const int leftX = qMax(0, commandRect.left() - 1);
+        const int rightX = qMin(image.width() - 1, commandRect.right() + 1);
+        const int midY = qMin(image.height() - 1,
+                              qMax(0, commandRect.top() + (commandRect.height() / 2)));
+        const int bottomY = qMin(image.height() - 1,
+                                 qMax(0, commandRect.bottom() - 1));
+        const QList<QColor> midSideSamples = {
+            image.pixelColor(leftX, midY),
+            image.pixelColor(rightX, midY)
+        };
+        const QList<QColor> bottomCornerSamples = {
+            image.pixelColor(leftX, bottomY),
+            image.pixelColor(rightX, bottomY)
+        };
+        for (const QColor &sample : midSideSamples) {
+            if (!closeColor(sample, expectedBackground)) {
+                return false;
+            }
+        }
+        for (const QColor &sample : bottomCornerSamples) {
+            if (!closeColor(sample, expectedOuter)) {
+                return false;
+            }
+        }
+        return true;
+    };
+    auto expectedCommandOuterColor = [&mainWindow]() {
+        QWidget *centralWidget = mainWindow.centralWidget();
+        if (centralWidget) {
+            QMdiArea *mdiArea = qobject_cast<QMdiArea *>(centralWidget);
+            if (!mdiArea) {
+                mdiArea = centralWidget->findChild<QMdiArea *>();
+            }
+            if (mdiArea) {
+                const QColor mdiBackground = mdiArea->background().color();
+                if (mdiBackground.isValid()) {
+                    return mdiBackground;
+                }
+                if (mdiArea->viewport()) {
+                    const QColor viewportColor =
+                        mdiArea->viewport()->palette().color(QPalette::Window);
+                    if (viewportColor.isValid()) {
+                        return viewportColor;
+                    }
+                }
+            }
+            const QColor centralColor =
+                centralWidget->palette().color(QPalette::Window);
+            if (centralColor.isValid()) {
+                return centralColor;
+            }
+        }
+        return mainWindow.palette().color(QPalette::Window);
     };
 
     if (!require(ribbonBar->ribbonStyle()
@@ -5833,6 +6048,102 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                          .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
             return 1;
         }
+        if (!require(ribbonBar->styleSheet().contains(
+                         QStringLiteral("border-top: 1px solid transparent;")),
+                     QStringLiteral("selected tab top border is transparent for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        const QString strExpectedPageBorder =
+            style == LqRibbon::RibbonBar::Microsoft365Dark
+                ? QStringLiteral("#555555")
+                : (style == LqRibbon::RibbonBar::Microsoft365Light
+                       ? QStringLiteral("#d0cecc")
+                       : QStringLiteral("#bdbdbd"));
+        const QString strExpectedRibbonBackground =
+            style == LqRibbon::RibbonBar::Microsoft365Dark
+                ? QStringLiteral("#1f1f1f")
+                : (style == LqRibbon::RibbonBar::Microsoft365Light
+                       ? QStringLiteral("#ffffff")
+                       : (style == LqRibbon::RibbonBar::Office2019Colorful
+                              ? QStringLiteral("#f3f2f1")
+                              : QStringLiteral("#f3f3f3")));
+        QCoreApplication::processEvents();
+        QStackedWidget *commandArea = ribbonBar->findChild<QStackedWidget *>(
+            QStringLiteral("lqRibbonCommandArea"),
+            Qt::FindDirectChildrenOnly);
+        const QColor expectedPageBorder(strExpectedPageBorder);
+        QRect commandRectInRibbonBar;
+        if (commandArea) {
+            commandRectInRibbonBar = QRect(
+                commandArea->mapTo(ribbonBar, QPoint(0, 0)),
+                commandArea->size());
+        }
+        const bool frameGeometryValid =
+            commandArea
+            && commandArea->isVisible()
+            && commandArea->geometry() == commandRectInRibbonBar
+            && commandArea->x() == 2
+            && commandArea->contentsMargins().left() == 0
+            && commandArea->contentsMargins().top() == 0
+            && commandArea->contentsMargins().right() == 0
+            && commandArea->contentsMargins().bottom() == 2
+            && commandArea->palette().color(QPalette::Window).isValid()
+            && expectedPageBorder.isValid();
+        if (!require(frameGeometryValid,
+                     QStringLiteral("command area reserves page frame for %1")
+                          .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        const QColor expectedOuterColor = expectedCommandOuterColor();
+        if (!require(ribbonSideMaskMatches(ribbonBar,
+                                           commandArea,
+                                           2,
+                                           QColor(strExpectedRibbonBackground),
+                                           expectedOuterColor),
+                     QStringLiteral("normal command area side mask matches Word for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        if (!require(commandAreaOuterVisible(commandArea, expectedOuterColor),
+                     QStringLiteral("command area outer frame is transparent for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        if (!require(pageFrameVisible(ribbonBar->currentWidget(),
+                                      expectedPageBorder,
+                                      QColor(strExpectedRibbonBackground),
+                                      expectedOuterColor,
+                                      true),
+                     QStringLiteral("page frame pixels visible for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        mainWindow.showMaximized();
+        QCoreApplication::processEvents();
+        if (!require(ribbonSideMaskMatches(ribbonBar,
+                                           commandArea,
+                                           0,
+                                           QColor(strExpectedRibbonBackground),
+                                           expectedOuterColor),
+                     QStringLiteral("maximized command area side mask matches Word for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        if (!require(pageFrameVisible(ribbonBar->currentWidget(),
+                                      expectedPageBorder,
+                                      QColor(strExpectedRibbonBackground),
+                                      expectedOuterColor,
+                                      false),
+                     QStringLiteral("maximized page frame pixels visible for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        if (!require(commandAreaOuterVisible(commandArea, expectedOuterColor),
+                     QStringLiteral("maximized command area outer frame is transparent for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
         const QString strExpectedCommandBorder =
             isMicrosoft365
                 ? strExpectedTabBorder
@@ -5899,6 +6210,48 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
     }
 
     if (styleCombo) {
+        QToolBar *titleButtonBar = ribbonBar->findChild<QToolBar *>(
+            QStringLiteral("lqRibbonTitleButtonBar"));
+        if (!require(titleStyleCombo
+                         && titleButtonBar
+                         && !titleButtonBar->actions().isEmpty()
+                         && titleStyleCombo->objectName()
+                             == QStringLiteral("lqRibbonTitleStyleCombo")
+                         && titleStyleCombo->isVisibleTo(titleButtonBar)
+                         && titleStyleCombo->count() == styleCombo->count()
+                         && titleStyleCombo->itemData(0)
+                             == styleCombo->itemData(0)
+                         && titleStyleCombo->toolTip().contains(
+                             QStringLiteral("Style"))
+                         && titleButtonBar->widgetForAction(
+                             titleButtonBar->actions().constFirst())
+                             == titleStyleCombo,
+                     QStringLiteral("title bar style combo is available"))) {
+            return 1;
+        }
+
+        const int titleLightIndex = titleStyleCombo->findData(
+            static_cast<int>(LqRibbon::RibbonBar::Microsoft365Light));
+        titleStyleCombo->setCurrentIndex(titleLightIndex);
+        if (!require(ribbonBar->ribbonStyle()
+                         == LqRibbon::RibbonBar::Microsoft365Light
+                     && styleCombo->itemData(styleCombo->currentIndex())
+                         == titleStyleCombo->itemData(
+                             titleStyleCombo->currentIndex()),
+                     QStringLiteral("title bar style combo switches style"))) {
+            return 1;
+        }
+
+        const int colorfulIndex = styleCombo->findData(
+            static_cast<int>(LqRibbon::RibbonBar::Office2019Colorful));
+        styleCombo->setCurrentIndex(colorfulIndex);
+        if (!require(titleStyleCombo->itemData(
+                         titleStyleCombo->currentIndex())
+                         == styleCombo->itemData(styleCombo->currentIndex()),
+                     QStringLiteral("title bar style combo tracks ribbon combo"))) {
+            return 1;
+        }
+
         const int darkIndex = styleCombo->findData(
             static_cast<int>(LqRibbon::RibbonBar::Microsoft365Dark));
         styleCombo->setCurrentIndex(darkIndex);
@@ -5933,6 +6286,35 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                      QStringLiteral("style preview tracks system style"))) {
             return 1;
         }
+    }
+
+    bool messageBoxShown = false;
+    bool messageBoxHasDefaultOk = false;
+    mainWindow.setRibbonStyle(LqRibbon::RibbonBar::Microsoft365Light);
+    QTimer::singleShot(0, &mainWindow, [&messageBoxShown, &messageBoxHasDefaultOk]() {
+        QWidget *dialog = QApplication::activeModalWidget();
+        messageBoxShown = dialog
+            && dialog->objectName() == QStringLiteral("lqRibbonMessageBox");
+        if (!dialog) {
+            return;
+        }
+        QPushButton *okButton = dialog->findChild<QPushButton *>(
+            QStringLiteral("lqRibbonMessageBoxOkButton"));
+        messageBoxHasDefaultOk = okButton && okButton->isDefault();
+        if (okButton) {
+            okButton->click();
+        }
+    });
+    const QMessageBox::StandardButton messageBoxResult =
+        LqRibbon::RibbonMessageBox::information(
+            &mainWindow,
+            QObject::tr("LqRibbon"),
+            QObject::tr("Styled message box test"));
+    if (!require(messageBoxShown
+                     && messageBoxHasDefaultOk
+                     && messageBoxResult == QMessageBox::Ok,
+                 QStringLiteral("Ribbon message box uses styled modal surface"))) {
+        return 1;
     }
 
     return 0;
@@ -6012,6 +6394,8 @@ int runLqRibbonExampleMainWindow(QApplication &application,
         argumentList.contains(QStringLiteral("--grab-qat-import-preview"));
     const bool stylePreviewRequested =
         argumentList.contains(QStringLiteral("--grab-style-preview"));
+    const bool messageBoxPreviewRequested =
+        argumentList.contains(QStringLiteral("--grab-message-box-preview"));
     const bool collapseTestsRequested =
         argumentList.contains(QStringLiteral("--run-collapse-tests"));
     const bool styleTestsRequested =
@@ -6074,7 +6458,8 @@ int runLqRibbonExampleMainWindow(QApplication &application,
         || relatedFileSearchPreviewRequested
         || searchPreviewRequested
         || temporaryPreviewRequested || doubleClickPreviewRequested
-        || stylePreviewRequested) {
+        || stylePreviewRequested
+        || messageBoxPreviewRequested) {
         mainWindow.resize(1180, 560);
     }
     if (widthStressPreviewRequested || quickAccessHiddenPreviewRequested
@@ -6123,28 +6508,7 @@ int runLqRibbonExampleMainWindow(QApplication &application,
     QComboBox *styleCombo = styleComboControl->widget();
     styleCombo->setObjectName(QStringLiteral("lqRibbonStyleCombo"));
     styleCombo->setMinimumWidth(220);
-    const LqRibbon::RibbonBar::RibbonStyle styleItems[] = {
-        LqRibbon::RibbonBar::Office2016Blue,
-        LqRibbon::RibbonBar::Office2019Colorful,
-        LqRibbon::RibbonBar::Microsoft365Light,
-        LqRibbon::RibbonBar::Microsoft365Dark
-    };
-    for (LqRibbon::RibbonBar::RibbonStyle style : styleItems) {
-        const QString strComboText =
-            style == LqRibbon::RibbonBar::Microsoft365Light
-                ? QStringLiteral("M365 Light")
-                : style == LqRibbon::RibbonBar::Microsoft365Dark
-                    ? QStringLiteral("M365 Dark")
-                    : LqRibbon::RibbonBar::ribbonStyleName(style);
-        styleCombo->addItem(strComboText, static_cast<int>(style));
-        styleCombo->setItemData(styleCombo->count() - 1,
-                                LqRibbon::RibbonBar::ribbonStyleName(style),
-                                Qt::ToolTipRole);
-    }
-    styleCombo->addItem(QStringLiteral("System"), systemRibbonStyleComboValue);
-    styleCombo->setItemData(styleCombo->count() - 1,
-                            QObject::tr("Follow current system light/dark palette"),
-                            Qt::ToolTipRole);
+    populateRibbonStyleCombo(styleCombo);
     styleSwitchGroup->addWidget(styleComboControl);
     QWidget *stylePreviewRow = new QWidget(styleSwitchGroup);
     stylePreviewRow->setObjectName(QStringLiteral("lqRibbonStylePreviewRow"));
@@ -6287,6 +6651,71 @@ int runLqRibbonExampleMainWindow(QApplication &application,
                                  touchSpacingAction->statusTip(), 2500);
                          }
                      });
+    QComboBox *titleStyleCombo = nullptr;
+    if (QToolBar *titleButtonBar = mainWindow.ribbonBar()->findChild<QToolBar *>(
+            QStringLiteral("lqRibbonTitleButtonBar"))) {
+        titleStyleCombo = new QComboBox(titleButtonBar);
+        titleStyleCombo->setObjectName(
+            QStringLiteral("lqRibbonTitleStyleCombo"));
+        titleStyleCombo->setFixedSize(128, 22);
+        titleStyleCombo->setSizePolicy(QSizePolicy::Fixed,
+                                       QSizePolicy::Fixed);
+        titleStyleCombo->setMinimumContentsLength(10);
+        titleStyleCombo->setSizeAdjustPolicy(
+            QComboBox::AdjustToMinimumContentsLengthWithIcon);
+        titleStyleCombo->setToolTip(
+            QObject::tr("Style: switch the Ribbon theme"));
+        titleStyleCombo->setAccessibleName(QObject::tr("Ribbon style"));
+        titleStyleCombo->setAccessibleDescription(
+            QObject::tr("Switch the Ribbon theme"));
+        titleStyleCombo->setStyleSheet(QStringLiteral(
+            "QComboBox#lqRibbonTitleStyleCombo {"
+            " min-height: 20px;"
+            " max-height: 20px;"
+            " padding: 0px 22px 0px 8px;"
+            " border: 1px solid rgba(96, 96, 96, 96);"
+            " border-radius: 2px;"
+            " background: rgba(255, 255, 255, 186);"
+            " color: #202020;"
+            "}"
+            "QComboBox#lqRibbonTitleStyleCombo:hover {"
+            " background: rgba(255, 255, 255, 232);"
+            " border-color: rgba(64, 64, 64, 128);"
+            "}"
+            "QComboBox#lqRibbonTitleStyleCombo::drop-down {"
+            " width: 18px;"
+            " border: 0px;"
+            "}"));
+        populateRibbonStyleCombo(titleStyleCombo);
+        syncRibbonStyleComboValue(
+            titleStyleCombo,
+            styleCombo->itemData(styleCombo->currentIndex()).toInt());
+        QAction *titleStyleComboAction =
+            titleButtonBar->addWidget(titleStyleCombo);
+        titleStyleComboAction->setObjectName(
+            QStringLiteral("lqRibbonTitleStyleComboAction"));
+        titleStyleComboAction->setToolTip(titleStyleCombo->toolTip());
+        titleButtonBar->show();
+
+        QObject::connect(titleStyleCombo,
+                         QOverload<int>::of(&QComboBox::currentIndexChanged),
+                         titleStyleCombo,
+                         [titleStyleCombo, styleCombo](int index) {
+                             const int targetIndex = styleCombo->findData(
+                                 titleStyleCombo->itemData(index).toInt());
+                             if (targetIndex >= 0) {
+                                 styleCombo->setCurrentIndex(targetIndex);
+                             }
+                         });
+        QObject::connect(styleCombo,
+                         QOverload<int>::of(&QComboBox::currentIndexChanged),
+                         titleStyleCombo,
+                         [styleCombo, titleStyleCombo](int index) {
+                             syncRibbonStyleComboValue(
+                                 titleStyleCombo,
+                                 styleCombo->itemData(index).toInt());
+                         });
+    }
     LqRibbon::RibbonGroup *voiceGroup =
         generalPage->addGroup(QObject::tr("Voice"));
     QAction *dictateMicrophoneAction = voiceGroup->addAction(
@@ -8966,27 +9395,27 @@ int runLqRibbonExampleMainWindow(QApplication &application,
     });
 
     QObject::connect(mdiAction, &QAction::triggered, [&mainWindow]() {
-        QMessageBox::information(&mainWindow,
-                                 QObject::tr("LqRibbon"),
-                                 QObject::tr("Mdi Mode"));
+        LqRibbon::RibbonMessageBox::information(&mainWindow,
+                                                QObject::tr("LqRibbon"),
+                                                QObject::tr("Mdi Mode"));
     });
 
     QObject::connect(tabAction, &QAction::triggered, [&mainWindow]() {
-        QMessageBox::information(&mainWindow,
-                                 QObject::tr("LqRibbon"),
-                                 QObject::tr("Tab Mode"));
+        LqRibbon::RibbonMessageBox::information(&mainWindow,
+                                                QObject::tr("LqRibbon"),
+                                                QObject::tr("Tab Mode"));
     });
 
     QObject::connect(settingsAction, &QAction::triggered, [&mainWindow]() {
-        QMessageBox::information(&mainWindow,
-                                 QObject::tr("LqRibbon"),
-                                 QObject::tr("Settings"));
+        LqRibbon::RibbonMessageBox::information(&mainWindow,
+                                                QObject::tr("LqRibbon"),
+                                                QObject::tr("Settings"));
     });
 
     QObject::connect(connectAction, &QAction::triggered, [&mainWindow]() {
-        QMessageBox::information(&mainWindow,
-                                 QObject::tr("LqRibbon"),
-                                 QObject::tr("Connect"));
+        LqRibbon::RibbonMessageBox::information(&mainWindow,
+                                                QObject::tr("LqRibbon"),
+                                                QObject::tr("Connect"));
     });
     QObject::connect(dictateMicrophoneAction,
                      &QAction::toggled,
@@ -10023,9 +10452,9 @@ int runLqRibbonExampleMainWindow(QApplication &application,
         }
     }
     QObject::connect(helpTitleAction, &QAction::triggered, [&mainWindow]() {
-        QMessageBox::information(&mainWindow,
-                                 QObject::tr("LqRibbon"),
-                                 QObject::tr("Help"));
+        LqRibbon::RibbonMessageBox::information(&mainWindow,
+                                                QObject::tr("LqRibbon"),
+                                                QObject::tr("Help"));
     });
     QObject::connect(accountTitleAction,
                      &QAction::triggered,
@@ -10835,7 +11264,7 @@ int runLqRibbonExampleMainWindow(QApplication &application,
         QObject::connect(mainWindow.ribbonBar(),
                          &LqRibbon::RibbonBar::searchAccepted,
                          [&mainWindow](const QString &strText) {
-                             QMessageBox::information(
+                             LqRibbon::RibbonMessageBox::information(
                                  &mainWindow,
                                  QObject::tr("Search"),
                                  QObject::tr("No command: %1").arg(strText));
@@ -11053,6 +11482,7 @@ int runLqRibbonExampleMainWindow(QApplication &application,
     if (styleTestsRequested) {
         return runStyleTests(mainWindow,
                              styleCombo,
+                             titleStyleCombo,
                              stylePreview,
                              stateTimingPreview,
                              highContrastStyleAction,
@@ -11065,12 +11495,25 @@ int runLqRibbonExampleMainWindow(QApplication &application,
                            &mainWindow,
                            [&mainWindow,
                             strPreviewPath,
+                            messageBoxPreviewRequested,
                             zeroQuerySearchPreviewRequested,
                             recentSearchPreviewRequested,
                             suggestedSearchPreviewRequested,
                             documentSearchPreviewRequested,
                             helpSearchPreviewRequested,
                             relatedFileSearchPreviewRequested]() {
+            if (messageBoxPreviewRequested) {
+                QWidget *dialog = QApplication::activeModalWidget();
+                if (dialog
+                    && dialog->objectName()
+                        == QStringLiteral("lqRibbonMessageBox")) {
+                    dialog->grab().save(strPreviewPath);
+                    dialog->close();
+                    qApp->quit();
+                    return;
+                }
+            }
+
             QPixmap preview = mainWindow.grab();
             if (zeroQuerySearchPreviewRequested
                 || recentSearchPreviewRequested
@@ -11091,6 +11534,12 @@ int runLqRibbonExampleMainWindow(QApplication &application,
 
             preview.save(strPreviewPath);
             qApp->quit();
+        });
+    }
+
+    if (messageBoxPreviewRequested && !strPreviewPath.isEmpty()) {
+        QTimer::singleShot(120, &mainWindow, [connectAction]() {
+            connectAction->trigger();
         });
     }
 

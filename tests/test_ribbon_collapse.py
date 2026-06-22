@@ -94,6 +94,11 @@ def _command_area_visible(ribbon):
     return stack is not None and stack.isVisible() and stack.height() > 0
 
 
+def _content_gap(window, ribbon):
+    content = window.centralWidget()
+    return content.geometry().top() - (ribbon.geometry().top() + ribbon.height())
+
+
 def _temporary_expanded(ribbon):
     return bool(getattr(ribbon, "_ribbon_temporary_expanded", False))
 
@@ -186,6 +191,24 @@ def test_collapse_button_collapses():
     _app().processEvents()
     assert ribbon.isRibbonMinimized()
     assert not _command_area_visible(ribbon)
+    window.close()
+
+
+def test_collapsed_window_leaves_content_gap():
+    window, ribbon, *_ = _window()
+    assert _content_gap(window, ribbon) == 0
+
+    ribbon.setRibbonMinimized(True)
+    _app().processEvents()
+    assert ribbon.isRibbonMinimized()
+    assert not _command_area_visible(ribbon)
+    assert _content_gap(window, ribbon) > 0
+
+    _click_tab(ribbon, 0)
+    assert ribbon.isRibbonMinimized()
+    assert ribbon.isRibbonTemporaryExpanded()
+    assert _command_area_visible(ribbon)
+    assert _content_gap(window, ribbon) == 0
     window.close()
 
 
@@ -3512,6 +3535,7 @@ def main():
         test_double_click_expanded_tab_collapses,
         test_double_click_collapsed_tab_restores,
         test_collapse_button_collapses,
+        test_collapsed_window_leaves_content_gap,
         test_simplified_mode_keeps_one_line_command_area,
         test_example_classic_action_restores_multi_line_ribbon,
         test_example_pin_unpin_actions_control_display_policy,

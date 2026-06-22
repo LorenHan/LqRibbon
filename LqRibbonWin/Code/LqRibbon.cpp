@@ -3,6 +3,7 @@
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QChildEvent>
+#include <QColor>
 #include <QComboBox>
 #include <QContextMenuEvent>
 #include <QCoreApplication>
@@ -11,11 +12,15 @@
 #include <QKeyEvent>
 #include <QLayout>
 #include <QListView>
+#include <QMainWindow>
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPaintEvent>
+#include <QPalette>
+#include <QPen>
 #include <QRegularExpression>
 #include <QScreen>
 #include <QSpinBox>
@@ -56,6 +61,11 @@ const int ribbonWindowButtonHeight = 30;
 const int ribbonCollapseButtonWidth = 32;
 const int ribbonCollapseButtonHeight = 24;
 const int ribbonQuickAccessBelowHeight = 28;
+const int ribbonCommandFrameInset = 2;
+const int ribbonMaximizedCommandFrameInset = 0;
+const int ribbonCommandFrameCornerRadius = 8;
+const int ribbonCommandFrameLineWidth = 2;
+const int ribbonCollapsedContentSpacing = 4;
 const int ribbonMaximizedContentMargin = 3;
 const int ribbonMdiTitleHeight = 28;
 const int ribbonMdiTitleBottomOverlap = 2;
@@ -65,6 +75,9 @@ const int ribbonSearchPopupScreenMargin = 8;
 const int ribbonSearchPopupRowHeight = 24;
 const int ribbonSearchPopupKindRole = Qt::UserRole + 1;
 const int ribbonSearchPopupActionRole = Qt::UserRole + 2;
+const char ribbonBarObjectName[] = "lqRibbonBar";
+const char ribbonTabBarObjectName[] = "lqRibbonTabBar";
+const char ribbonCommandAreaObjectName[] = "lqRibbonCommandArea";
 
 enum RibbonSearchPopupKind
 {
@@ -301,6 +314,100 @@ private:
     QPoint m_dragWindowPos;
     bool m_dragging;
 };
+
+QStackedWidget *commandAreaStack(QWidget *parent)
+{
+    QStackedWidget *stack = parent->findChild<QStackedWidget *>(
+        QString::fromLatin1(ribbonCommandAreaObjectName),
+        Qt::FindDirectChildrenOnly);
+    if (stack) {
+        return stack;
+    }
+
+    return parent->findChild<QStackedWidget *>(
+        QString(),
+        Qt::FindDirectChildrenOnly);
+}
+
+QColor commandFrameOuterColor(const QWidget *widget)
+{
+    const QWidget *topLevelWidget = widget ? widget->window() : nullptr;
+    const QMainWindow *mainWindow = qobject_cast<const QMainWindow *>(topLevelWidget);
+    if (mainWindow && mainWindow->centralWidget()) {
+        const QWidget *centralWidget = mainWindow->centralWidget();
+        const QMdiArea *mdiArea = qobject_cast<const QMdiArea *>(centralWidget);
+        if (!mdiArea) {
+            mdiArea = centralWidget->findChild<QMdiArea *>();
+        }
+        if (mdiArea) {
+            const QColor mdiBackground = mdiArea->background().color();
+            if (mdiBackground.isValid()) {
+                return mdiBackground;
+            }
+            if (mdiArea->viewport()) {
+                const QColor viewportColor =
+                    mdiArea->viewport()->palette().color(QPalette::Window);
+                if (viewportColor.isValid()) {
+                    return viewportColor;
+                }
+            }
+        }
+
+        const QPalette centralPalette = mainWindow->centralWidget()->palette();
+        QColor centralColor = centralPalette.color(QPalette::Window);
+        if (centralColor.isValid()) {
+            return centralColor;
+        }
+    }
+
+    if (topLevelWidget) {
+        const QColor windowColor = topLevelWidget->palette().color(QPalette::Window);
+        if (windowColor.isValid()) {
+            return windowColor;
+        }
+    }
+
+    return qApp ? qApp->palette().color(QPalette::Window) : QColor(Qt::transparent);
+}
+
+int commandFrameInset(const QWidget *widget)
+{
+    const QWidget *topLevel = widget ? widget->window() : nullptr;
+    return topLevel && topLevel->isMaximized()
+        ? ribbonMaximizedCommandFrameInset
+        : ribbonCommandFrameInset;
+}
+
+int commandFrameCornerRadius(const QWidget *widget)
+{
+    const QWidget *topLevel = widget ? widget->window() : nullptr;
+    return topLevel && topLevel->isMaximized()
+        ? 0
+        : ribbonCommandFrameCornerRadius;
+}
+
+void configureCommandAreaStack(QStackedWidget *stack)
+{
+    if (!stack) {
+        return;
+    }
+
+    stack->setObjectName(QString::fromLatin1(ribbonCommandAreaObjectName));
+    stack->setAutoFillBackground(true);
+    QPalette stackPalette = stack->palette();
+    stackPalette.setColor(QPalette::Window, commandFrameOuterColor(stack));
+    stack->setPalette(stackPalette);
+    stack->setContentsMargins(0,
+                              0,
+                              0,
+                              ribbonCommandFrameLineWidth);
+    if (QLayout *stackLayout = stack->layout()) {
+        stackLayout->setContentsMargins(0,
+                                        0,
+                                        0,
+                                        ribbonCommandFrameLineWidth);
+    }
+}
 
 ///
 /// \brief RibbonWindowButton::RibbonWindowButton
@@ -834,16 +941,29 @@ void RibbonMdiTitleBar::updateButtonGeometry()
 
 const char ribbonStyleSheetTemplate[] =
     "LqRibbon--RibbonBar {"
-    "    background: $ribbonBg;"
-    "}"
-    "QTabWidget::pane {"
     "    border: none;"
     "    background: $ribbonBg;"
     "}"
-    "QTabBar {"
-    "    background: transparent;"
+    "QTabWidget#lqRibbonBar {"
+    "    border: none;"
+    "    background: $ribbonBg;"
     "}"
-    "QTabBar::tab {"
+    "QTabWidget#lqRibbonBar::pane {"
+    "    background: $ribbonBg;"
+    "    border: none;"
+    "    border-bottom-left-radius: 8px;"
+    "    border-bottom-right-radius: 8px;"
+    "}"
+    "QStackedWidget#lqRibbonCommandArea {"
+    "    border: none;"
+    "    border-bottom-left-radius: 8px;"
+    "    border-bottom-right-radius: 8px;"
+    "}"
+    "QTabBar#lqRibbonTabBar {"
+    "    background: transparent;"
+    "    border: none;"
+    "}"
+    "QTabBar#lqRibbonTabBar::tab {"
     "    min-width: 46px;"
     "    min-height: 21px;"
     "    padding: 2px 10px 1px 10px;"
@@ -851,15 +971,16 @@ const char ribbonStyleSheetTemplate[] =
     "    background: transparent;"
     "    border: none;"
     "}"
-    "QTabBar::tab:selected {"
+    "QTabBar#lqRibbonTabBar::tab:selected {"
     "    background: $selectedTabBg;"
     "    color: $selectedTabText;"
     "    border-left: 1px solid $selectedTabBorder;"
     "    border-right: 1px solid $selectedTabBorder;"
-    "    border-top: 1px solid $selectedTabBorder;"
+    "    border-top: 1px solid $selectedTabTopBorder;"
+    "    border-bottom: 2px solid $selectedTabIndicator;"
     "    border-radius: $tabRadius;"
     "}"
-    "QTabBar::tab:hover:!selected {"
+    "QTabBar#lqRibbonTabBar::tab:hover:!selected {"
     "    background: $captionHover;"
     "    border-radius: $tabRadius;"
     "}"
@@ -991,8 +1112,11 @@ struct RibbonStylePalette
     QString groupPressed;
     QString quickBackground;
     QString quickBorder;
+    QString pageBorder;
     QString tabRadius;
     QString selectedTabBorder;
+    QString selectedTabTopBorder;
+    QString selectedTabIndicator;
     QString controlBorder;
     QString commandHoverBorder;
     QString commandPressedBorder;
@@ -1022,8 +1146,11 @@ RibbonStylePalette ribbonStylePalette(LqRibbon::RibbonBar::RibbonStyle style)
             QStringLiteral("#c7e0f4"),
             QStringLiteral("#2466b1"),
             QStringLiteral("#8fb9ec"),
+            QStringLiteral("#bdbdbd"),
             QStringLiteral("0px"),
             QStringLiteral("#c8c8c8"),
+            QStringLiteral("transparent"),
+            QStringLiteral("transparent"),
             QStringLiteral("#b7cbe6"),
             QStringLiteral("#deecf9"),
             QStringLiteral("#5f95d0")
@@ -1049,8 +1176,11 @@ RibbonStylePalette ribbonStylePalette(LqRibbon::RibbonBar::RibbonStyle style)
             QStringLiteral("#cfe4fa"),
             QStringLiteral("#ffffff"),
             QStringLiteral("#e5e5e5"),
+            QStringLiteral("#d0cecc"),
             QStringLiteral("6px 6px 0px 0px"),
             QStringLiteral("#e5e5e5"),
+            QStringLiteral("transparent"),
+            QStringLiteral("#0f6cbd"),
             QStringLiteral("#e5e5e5"),
             QStringLiteral("#e5e5e5"),
             QStringLiteral("#c7c7c7")
@@ -1076,8 +1206,11 @@ RibbonStylePalette ribbonStylePalette(LqRibbon::RibbonBar::RibbonStyle style)
             QStringLiteral("#4a4a4a"),
             QStringLiteral("#2d2d2d"),
             QStringLiteral("#3a3a3a"),
+            QStringLiteral("#555555"),
             QStringLiteral("6px 6px 0px 0px"),
             QStringLiteral("#3a3a3a"),
+            QStringLiteral("transparent"),
+            QStringLiteral("#60cdff"),
             QStringLiteral("#3a3a3a"),
             QStringLiteral("#3a3a3a"),
             QStringLiteral("#5f5f5f")
@@ -1104,8 +1237,11 @@ RibbonStylePalette ribbonStylePalette(LqRibbon::RibbonBar::RibbonStyle style)
             QStringLiteral("#c5ddfa"),
             QStringLiteral("#2f63a3"),
             QStringLiteral("#6f9fd0"),
+            QStringLiteral("#bdbdbd"),
             QStringLiteral("0px"),
             QStringLiteral("#c8c8c8"),
+            QStringLiteral("transparent"),
+            QStringLiteral("transparent"),
             QStringLiteral("#b7cbe6"),
             QStringLiteral("#8cc8f7"),
             QStringLiteral("#5f95d0")
@@ -1138,8 +1274,11 @@ QString buildRibbonStyleSheet(const RibbonStylePalette &palette)
         {"$groupPressed", &palette.groupPressed},
         {"$quickBg", &palette.quickBackground},
         {"$quickBorder", &palette.quickBorder},
+        {"$pageBorder", &palette.pageBorder},
         {"$tabRadius", &palette.tabRadius},
         {"$selectedTabBorder", &palette.selectedTabBorder},
+        {"$selectedTabTopBorder", &palette.selectedTabTopBorder},
+        {"$selectedTabIndicator", &palette.selectedTabIndicator},
         {"$controlBorder", &palette.controlBorder},
         {"$commandHoverBorder", &palette.commandHoverBorder},
         {"$commandPressedBorder", &palette.commandPressedBorder},
@@ -2228,12 +2367,18 @@ RibbonPage::RibbonPage(const QString &strTitle, QWidget *parent)
     , m_defaultAction(new QAction(strTitle, this))
     , m_contextColor()
 {
+    setObjectName(QStringLiteral("lqRibbonPage"));
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
     m_groupLayout->setContentsMargins(0, 0, 0, 0);
     m_groupLayout->setSpacing(4);
     m_groupLayout->addStretch(1);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setContentsMargins(ribbonCommandFrameLineWidth,
+                                   0,
+                                   ribbonCommandFrameLineWidth,
+                                   ribbonCommandFrameLineWidth);
     mainLayout->addLayout(m_groupLayout);
 }
 
@@ -2384,11 +2529,33 @@ void RibbonPage::paintEvent(QPaintEvent *event)
 {
     QWidget::paintEvent(event);
 
+    const RibbonBar *bar = ribbonBar();
+    const RibbonStylePalette palette = ribbonStylePalette(
+        bar ? bar->ribbonStyle() : RibbonBar::Office2016Blue);
+
     QPainter painter(this);
+    const QColor surfaceColor(palette.ribbonBackground);
+    const int cornerRadius = commandFrameCornerRadius(this);
+    const qreal radius = qMin<qreal>(cornerRadius,
+                                     qMin(width() / 2.0, height() / 2.0));
+    QPainterPath surfacePath;
+    surfacePath.moveTo(0.0, 0.0);
+    surfacePath.lineTo(width(), 0.0);
+    surfacePath.lineTo(width(), height() - radius);
+    surfacePath.quadTo(width(), height(), width() - radius, height());
+    surfacePath.lineTo(radius, height());
+    surfacePath.quadTo(0.0, height(), 0.0, height() - radius);
+    surfacePath.closeSubpath();
+
     painter.setRenderHint(QPainter::Antialiasing, false);
+    painter.fillRect(rect(), commandFrameOuterColor(this));
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.fillPath(surfacePath, surfaceColor);
 
     const int top = 5;
     const int bottom = qMax(top, height() - 4);
+    painter.save();
+    painter.setClipPath(surfacePath);
     for (int index = 0; index < m_groupList.count(); ++index) {
         RibbonGroup *group = m_groupList.at(index);
         if (!group || !group->isVisible()) {
@@ -2402,6 +2569,41 @@ void RibbonPage::paintEvent(QPaintEvent *event)
         painter.setPen(QColor(QStringLiteral("#f4f4f4")));
         painter.drawLine(x + 1, top, x + 1, bottom);
     }
+    painter.restore();
+
+    const QColor frameColor(palette.pageBorder);
+    if (!frameColor.isValid() || width() <= 1 || height() <= 1) {
+        return;
+    }
+
+    painter.setRenderHint(QPainter::Antialiasing, false);
+    painter.fillRect(QRect(0,
+                           0,
+                           ribbonCommandFrameLineWidth,
+                           qMax(1, height() - cornerRadius)),
+                     frameColor);
+    painter.fillRect(QRect(width() - ribbonCommandFrameLineWidth,
+                           0,
+                           ribbonCommandFrameLineWidth,
+                           qMax(1, height() - cornerRadius)),
+                     frameColor);
+    painter.fillRect(QRect(cornerRadius,
+                           height() - ribbonCommandFrameLineWidth,
+                           qMax(1, width() - (cornerRadius * 2)),
+                           ribbonCommandFrameLineWidth),
+                     frameColor);
+
+    painter.setPen(frameColor);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    QPainterPath cornerPath;
+    const qreal left = 0.5;
+    const qreal right = width() - 1.5;
+    const qreal bottomEdge = height() - 1.5;
+    cornerPath.moveTo(left, bottomEdge - radius);
+    cornerPath.quadTo(left, bottomEdge, left + radius, bottomEdge);
+    cornerPath.moveTo(right - radius, bottomEdge);
+    cornerPath.quadTo(right, bottomEdge, right, bottomEdge - radius);
+    painter.drawPath(cornerPath);
 }
 
 ///
@@ -2525,12 +2727,16 @@ RibbonBar::RibbonBar(QWidget *parent)
     , m_expandDirection(Qt::LeftToRight)
     , m_updateLockCount(0)
 {
+    setObjectName(QString::fromLatin1(ribbonBarObjectName));
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     setDocumentMode(false);
     setMovable(false);
     setTabPosition(QTabWidget::North);
     updateRibbonMetrics();
     tabBar()->setExpanding(false);
     tabBar()->setUsesScrollButtons(true);
+    tabBar()->setObjectName(QString::fromLatin1(ribbonTabBarObjectName));
+    configureCommandAreaStack(commandAreaStack(this));
     if (qApp) {
         qApp->installEventFilter(this);
     }
@@ -4059,6 +4265,39 @@ void RibbonBar::paintEvent(QPaintEvent *event)
     updateRibbonTabGeometry();
     QTabWidget::paintEvent(event);
 
+    if (QStackedWidget *commandArea = commandAreaStack(this)) {
+        if (commandArea->isVisible()) {
+            const QRect commandRect = commandArea->geometry();
+            const QColor outerColor = commandFrameOuterColor(this);
+            const int cornerRadius = commandFrameCornerRadius(this);
+            const int cornerHeight =
+                qMin(commandRect.height(), cornerRadius + ribbonCommandFrameLineWidth);
+            const int cornerTop = commandRect.bottom() - cornerHeight + 1;
+            QPainter outerPainter(this);
+            if (cornerHeight > 0 && commandRect.left() > 0) {
+                outerPainter.fillRect(QRect(0,
+                                            cornerTop,
+                                            commandRect.left(),
+                                            cornerHeight),
+                                      outerColor);
+            }
+            if (cornerHeight > 0 && commandRect.right() + 1 < width()) {
+                outerPainter.fillRect(QRect(commandRect.right() + 1,
+                                            cornerTop,
+                                            width() - commandRect.right() - 1,
+                                            cornerHeight),
+                                      outerColor);
+            }
+            if (commandRect.bottom() + 1 < height()) {
+                outerPainter.fillRect(QRect(0,
+                                            commandRect.bottom() + 1,
+                                            width(),
+                                            height() - commandRect.bottom() - 1),
+                                      outerColor);
+            }
+        }
+    }
+
     if (!m_frameThemeEnabled) {
         return;
     }
@@ -4081,7 +4320,7 @@ void RibbonBar::paintEvent(QPaintEvent *event)
     const bool captionTitleVisible = !m_searchEdit->isVisible();
     const int iconLeft = 7;
     const int iconSize = 16;
-    const int titleIconGap = 20;
+    const int titleIconGap = 4;
     const int iconTop = ribbonCaptionTopMargin
         + ((ribbonWindowButtonHeight - iconSize) / 2);
     if (captionTitleVisible && !windowIcon.isNull()) {
@@ -4192,15 +4431,14 @@ void RibbonBar::updateRibbonTabGeometry()
         : ribbonTabBar->sizeHint().height();
     const int stackTop = titleHeight + tabHeight;
     const int availableTabWidth = width();
-    const int tabWidth = qMin(availableTabWidth,
-                              ribbonTabBar->sizeHint().width());
-    ribbonTabBar->setGeometry(0, titleHeight, tabWidth, tabHeight);
+    ribbonTabBar->setGeometry(0, titleHeight, availableTabWidth, tabHeight);
     ribbonTabBar->raise();
 
-    QStackedWidget *stackedWidget = findChild<QStackedWidget *>();
+    QStackedWidget *stackedWidget = commandAreaStack(this);
     if (!stackedWidget) {
         return;
     }
+    configureCommandAreaStack(stackedWidget);
 
     const bool commandAreaVisible = isRibbonCommandAreaVisible();
     const int quickAccessReserve =
@@ -4212,8 +4450,14 @@ void RibbonBar::updateRibbonTabGeometry()
     const int stackHeight = commandAreaVisible
         ? qMax(0, height() - stackTop - quickAccessReserve)
         : 0;
-    stackedWidget->setGeometry(0, stackTop, width(), stackHeight);
+    const int frameInset = commandFrameInset(this);
+    const QRect frameRect(frameInset,
+                          stackTop,
+                          qMax(0, width() - (frameInset * 2)),
+                          stackHeight);
+    stackedWidget->setGeometry(frameRect);
     stackedWidget->setVisible(commandAreaVisible);
+
 }
 
 ///
@@ -5395,6 +5639,8 @@ RibbonMainWindow::RibbonMainWindow(QWidget *parent, Qt::WindowFlags flags)
     m_rootLayout->setSpacing(0);
     m_rootLayout->addWidget(m_ribbonBar);
     QMainWindow::setCentralWidget(m_rootWidget);
+    connectRibbonContentSpacing();
+    updateRibbonContentSpacing();
     updateNativeContentMargins();
     m_rootWidget->setMouseTracking(true);
     m_ribbonBar->setMouseTracking(true);
@@ -5438,6 +5684,8 @@ void RibbonMainWindow::setRibbonBar(RibbonBar *ribbonBar)
     m_ribbonBar = ribbonBar;
     m_ribbonBar->setParent(m_rootWidget);
     m_rootLayout->insertWidget(qMax(0, oldIndex), m_ribbonBar);
+    connectRibbonContentSpacing();
+    updateRibbonContentSpacing();
 }
 
 ///
@@ -5460,7 +5708,39 @@ void RibbonMainWindow::setCentralWidget(QWidget *widget)
     widget->setParent(m_rootWidget);
     widget->setMouseTracking(true);
     m_rootLayout->addWidget(widget, 1);
+    updateRibbonContentSpacing();
     polishMdiObject(widget);
+}
+
+void RibbonMainWindow::connectRibbonContentSpacing()
+{
+    if (!m_ribbonBar) {
+        return;
+    }
+
+    connect(m_ribbonBar,
+            &RibbonBar::ribbonMinimizedChanged,
+            this,
+            [this](bool) {
+                updateRibbonContentSpacing();
+            });
+    connect(m_ribbonBar,
+            &RibbonBar::ribbonTemporaryExpandedChanged,
+            this,
+            [this](bool) {
+                updateRibbonContentSpacing();
+            });
+}
+
+void RibbonMainWindow::updateRibbonContentSpacing()
+{
+    const bool tabsOnly = m_ribbonBar
+        && m_ribbonBar->isRibbonMinimized()
+        && !m_ribbonBar->isRibbonTemporaryExpanded();
+    const int targetSpacing = tabsOnly ? ribbonCollapsedContentSpacing : 0;
+    if (m_rootLayout && m_rootLayout->spacing() != targetSpacing) {
+        m_rootLayout->setSpacing(targetSpacing);
+    }
 }
 
 void RibbonMainWindow::setCentralWidget(QStyle *style)

@@ -4,8 +4,12 @@ LqRibbonPage - Ribbon page that contains ribbon groups
 
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QScrollArea
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction, QColor, QIcon, QPainter
+from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPalette
 from .lq_ribbon_extras import CallableString, CallableList, ContextColor
+
+
+RIBBON_COMMAND_FRAME_LINE_WIDTH = 2
+RIBBON_COMMAND_FRAME_CORNER_RADIUS = 8
 
 
 class _RibbonGroupsContainer(QWidget):
@@ -56,7 +60,12 @@ class LqRibbonPage(QWidget):
 
         # Create main layout
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setContentsMargins(
+            RIBBON_COMMAND_FRAME_LINE_WIDTH,
+            0,
+            RIBBON_COMMAND_FRAME_LINE_WIDTH,
+            RIBBON_COMMAND_FRAME_LINE_WIDTH,
+        )
         main_layout.setSpacing(0)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -66,9 +75,11 @@ class LqRibbonPage(QWidget):
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
+        self.scroll_area.setAutoFillBackground(True)
 
         # Create container widget for groups
         self.groups_container = _RibbonGroupsContainer(self)
+        self.groups_container.setAutoFillBackground(True)
         self.groups_layout = QHBoxLayout(self.groups_container)
         self.groups_layout.setContentsMargins(0, 0, 0, 0)
         self.groups_layout.setSpacing(4)
@@ -76,6 +87,90 @@ class LqRibbonPage(QWidget):
 
         self.scroll_area.setWidget(self.groups_container)
         main_layout.addWidget(self.scroll_area)
+
+    def _apply_surface_palette(self, background_color):
+        for widget in (self, self.scroll_area, self.scroll_area.viewport(), self.groups_container):
+            widget.setAutoFillBackground(True)
+            palette = widget.palette()
+            palette.setColor(QPalette.ColorRole.Window, background_color)
+            palette.setColor(QPalette.ColorRole.Base, background_color)
+            widget.setPalette(palette)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+
+        from .lq_styles import LqStyle, RibbonStyle
+
+        ribbon_bar = self.ribbonBar()
+        style = (
+            ribbon_bar.ribbonStyle()
+            if ribbon_bar and hasattr(ribbon_bar, "ribbonStyle")
+            else RibbonStyle.Office2016Blue
+        )
+        palette = LqStyle.palette(style)
+        frame_color = QColor(palette["page_border"])
+        if not frame_color.isValid() or self.width() <= 1 or self.height() <= 1:
+            return
+
+        background_color = QColor(palette["ribbon_bg"])
+        self._apply_surface_palette(background_color)
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        line_width = RIBBON_COMMAND_FRAME_LINE_WIDTH
+        window = self.window()
+        radius_px = 0 if window and window.isMaximized() else RIBBON_COMMAND_FRAME_CORNER_RADIUS
+        radius = min(float(radius_px), self.width() / 2.0, self.height() / 2.0)
+        outer_color = (
+            self.parentWidget().palette().color(QPalette.ColorRole.Window)
+            if self.parentWidget()
+            else QColor(Qt.GlobalColor.transparent)
+        )
+        surface_path = QPainterPath()
+        surface_path.moveTo(0.0, 0.0)
+        surface_path.lineTo(float(self.width()), 0.0)
+        surface_path.lineTo(float(self.width()), float(self.height()) - radius)
+        surface_path.quadTo(
+            float(self.width()),
+            float(self.height()),
+            float(self.width()) - radius,
+            float(self.height()),
+        )
+        surface_path.lineTo(radius, float(self.height()))
+        surface_path.quadTo(0.0, float(self.height()), 0.0, float(self.height()) - radius)
+        surface_path.closeSubpath()
+        painter.fillRect(self.rect(), outer_color)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.fillPath(surface_path, background_color)
+
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        painter.fillRect(0, 0, line_width, max(1, self.height() - radius_px), frame_color)
+        painter.fillRect(
+            self.width() - line_width,
+            0,
+            line_width,
+            max(1, self.height() - radius_px),
+            frame_color,
+        )
+        painter.fillRect(
+            radius_px,
+            self.height() - line_width,
+            max(1, self.width() - (radius_px * 2)),
+            line_width,
+            frame_color,
+        )
+
+        painter.setPen(frame_color)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        left = 0.5
+        right = self.width() - 1.5
+        bottom = self.height() - 1.5
+        corner_path = QPainterPath()
+        corner_path.moveTo(left, bottom - radius)
+        corner_path.quadTo(left, bottom, left + radius, bottom)
+        corner_path.moveTo(right - radius, bottom)
+        corner_path.quadTo(right, bottom, right, bottom - radius)
+        painter.drawPath(corner_path)
 
     def add_group(self, title):
         """Add a new ribbon group to the page

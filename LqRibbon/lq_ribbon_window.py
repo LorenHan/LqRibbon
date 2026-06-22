@@ -14,6 +14,9 @@ from .lq_ribbon_bar import LqRibbonBar
 from .lq_styles import LqStyle, _coerce_style
 
 
+RIBBON_COLLAPSED_CONTENT_SPACING = 4
+
+
 class LqRibbonWindow(QMainWindow):
     """Main window with ribbon interface"""
 
@@ -30,8 +33,9 @@ class LqRibbonWindow(QMainWindow):
         self.setWindowTitle("LqRibbon Application")
         self.setGeometry(100, 100, 1200, 700)
 
-        # Use default title bar (remove frameless window)
-        # self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        self._native_frame_enabled = False
+        self._native_caption_height = 36
+        self._native_resize_border_width = 5
 
         # Create central widget
         central_widget = QWidget()
@@ -44,13 +48,11 @@ class LqRibbonWindow(QMainWindow):
         main_layout.setSpacing(0)
         self._root_layout = main_layout
 
-        # Don't create custom title bar
-        # self.title_bar = self.create_title_bar()
-        # main_layout.addWidget(self.title_bar)
-
         # Create ribbon bar
         self.ribbon_bar = LqRibbonBar(self)
         main_layout.addWidget(self.ribbon_bar)
+        self._connect_ribbon_content_spacing()
+        self._update_ribbon_content_spacing()
 
         # Create display area
         self.display_area = QTextEdit()
@@ -151,6 +153,8 @@ class LqRibbonWindow(QMainWindow):
         self.ribbon_bar.deleteLater()
         self.ribbon_bar = ribbon_bar
         parent_layout.insertWidget(0, self.ribbon_bar)
+        self._connect_ribbon_content_spacing()
+        self._update_ribbon_content_spacing()
 
     def setCentralWidget(self, widget):
         """Set the content widget below the Ribbon, matching C++ RibbonMainWindow."""
@@ -164,13 +168,34 @@ class LqRibbonWindow(QMainWindow):
             self._content_widget.setParent(None)
         self._content_widget = widget
         self._root_layout.addWidget(widget, 1)
+        self._update_ribbon_content_spacing()
 
     def centralWidget(self):
         """Return the content widget below the Ribbon."""
         return getattr(self, "_content_widget", QMainWindow.centralWidget(self))
 
+    def _connect_ribbon_content_spacing(self):
+        self.ribbon_bar.ribbonMinimizedChanged.connect(
+            lambda _minimized: self._update_ribbon_content_spacing()
+        )
+        self.ribbon_bar.ribbonTemporaryExpandedChanged.connect(
+            lambda _expanded: self._update_ribbon_content_spacing()
+        )
+
+    def _update_ribbon_content_spacing(self):
+        if not hasattr(self, "_root_layout"):
+            return
+        tabs_only = (
+            self.ribbon_bar.isRibbonMinimized()
+            and not self.ribbon_bar.isRibbonTemporaryExpanded()
+        )
+        spacing = RIBBON_COLLAPSED_CONTENT_SPACING if tabs_only else 0
+        if self._root_layout.spacing() != spacing:
+            self._root_layout.setSpacing(spacing)
+
     def setFrameThemeEnabled(self, enabled):
         self.ribbon_bar.setFrameThemeEnabled(enabled)
+        self.setNativeFrameEnabled(enabled)
 
     def isFrameThemeEnabled(self):
         return self.ribbon_bar.isFrameThemeEnabled()
@@ -184,22 +209,36 @@ class LqRibbonWindow(QMainWindow):
         return self.ribbon_bar.ribbonStyle()
 
     def setNativeFrameEnabled(self, enabled):
-        self._native_frame_enabled = bool(enabled)
+        enabled = bool(enabled)
+        if self._native_frame_enabled == enabled:
+            return
+
+        was_visible = self.isVisible()
+        self._native_frame_enabled = enabled
+        flags = self.windowFlags()
+        if enabled:
+            flags |= Qt.WindowType.FramelessWindowHint
+        else:
+            flags &= ~Qt.WindowType.FramelessWindowHint
+        self.setWindowFlags(flags)
+        self.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, enabled)
+        if was_visible:
+            self.show()
 
     def isNativeFrameEnabled(self):
-        return getattr(self, "_native_frame_enabled", False)
+        return self._native_frame_enabled
 
     def setNativeCaptionHeight(self, height):
         self._native_caption_height = int(height)
 
     def nativeCaptionHeight(self):
-        return getattr(self, "_native_caption_height", 36)
+        return self._native_caption_height
 
     def setNativeResizeBorderWidth(self, width):
         self._native_resize_border_width = int(width)
 
     def nativeResizeBorderWidth(self):
-        return getattr(self, "_native_resize_border_width", 5)
+        return self._native_resize_border_width
 
     def set_display_text(self, text):
         """Set text in the display area"""

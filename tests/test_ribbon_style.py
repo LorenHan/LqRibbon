@@ -15,9 +15,10 @@ sys.path.insert(
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "LqRibbon", "example"),
 )
 
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QSettings, Qt
+from PySide6.QtGui import QColor, QPalette
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QFrame
+from PySide6.QtWidgets import QApplication, QFrame, QStackedWidget, QWidget, QMdiArea, QVBoxLayout
 
 from LqRibbon import LqStyle, RibbonMainWindow, RibbonStyle
 from main_window import (
@@ -101,6 +102,210 @@ def test_fluent_soft_borders_apply_to_m365_only():
     assert "border-left: 1px solid #3a3a3a;" in dark_style
     assert "border: 1px solid #3a3a3a;" in dark_style
     assert "border-color: #3a3a3a;" in dark_style
+
+
+def _close_color(actual, expected, tolerance=3):
+    return (
+        abs(actual.red() - expected.red()) <= tolerance
+        and abs(actual.green() - expected.green()) <= tolerance
+        and abs(actual.blue() - expected.blue()) <= tolerance
+    )
+
+
+def _style_block(style_sheet, selector):
+    start = style_sheet.index(selector)
+    end = style_sheet.index("}", start)
+    return style_sheet[start:end]
+
+
+def test_selected_tab_lines_match_office_generation():
+    blue_block = _style_block(
+        LqStyle.get_ribbon_style(RibbonStyle.Office2016Blue),
+        "QTabBar#lqRibbonTabBar::tab:selected {",
+    )
+    office_2019_block = _style_block(
+        LqStyle.get_ribbon_style(RibbonStyle.Office2019Colorful),
+        "QTabBar#lqRibbonTabBar::tab:selected {",
+    )
+    light_block = _style_block(
+        LqStyle.get_ribbon_style(RibbonStyle.Microsoft365Light),
+        "QTabBar#lqRibbonTabBar::tab:selected {",
+    )
+    dark_block = _style_block(
+        LqStyle.get_ribbon_style(RibbonStyle.Microsoft365Dark),
+        "QTabBar#lqRibbonTabBar::tab:selected {",
+    )
+
+    assert "border-top: 1px solid transparent;" in blue_block
+    assert "border-bottom: 2px solid transparent;" in blue_block
+    assert "border-top: 1px solid transparent;" in office_2019_block
+    assert "border-bottom: 2px solid transparent;" in office_2019_block
+    assert "border-top: 1px solid transparent;" in light_block
+    assert "border-bottom: 2px solid #0f6cbd;" in light_block
+    assert "border-top: 1px solid transparent;" in dark_block
+    assert "border-bottom: 2px solid #60cdff;" in dark_block
+
+
+def test_page_command_area_border_style_tokens_apply_to_all_styles():
+    for style in RibbonStyle:
+        palette = LqStyle.palette(style)
+        full_style = LqStyle.get_full_style(style)
+        pane_block = _style_block(
+            full_style, "QTabWidget#lqRibbonBar::pane {"
+        )
+        command_area_block = _style_block(
+            full_style, "QStackedWidget#lqRibbonCommandArea {"
+        )
+        group_block = _style_block(full_style, "QGroupBox#lqRibbonGroup {")
+        assert "page_border" in palette
+        assert "border-left:" not in pane_block
+        assert "border-right:" not in pane_block
+        assert "border-bottom:" not in pane_block
+        assert "border-top:" not in pane_block
+        assert "border-bottom-left-radius: 8px;" in pane_block
+        assert "border-bottom-right-radius: 8px;" in pane_block
+        assert "border: none;" in command_area_block
+        assert "border-left:" not in command_area_block
+        assert "border-right:" not in command_area_block
+        assert "border-bottom:" not in command_area_block
+        assert "border-top:" not in command_area_block
+        assert "border-bottom-left-radius: 8px;" in command_area_block
+        assert "border-bottom-right-radius: 8px;" in command_area_block
+        assert "border: none;" in group_block
+
+
+def test_page_command_area_three_sided_border_is_rendered():
+    window = RibbonMainWindow()
+    outer_color = QColor("#8a8a8a")
+    central = QWidget()
+    central.setAutoFillBackground(True)
+    central_palette = central.palette()
+    central_palette.setColor(QPalette.ColorRole.Window, QColor("#f3f3f3"))
+    central.setPalette(central_palette)
+    central_layout = QVBoxLayout(central)
+    central_layout.setContentsMargins(0, 0, 0, 0)
+    mdi_area = QMdiArea(central)
+    mdi_area.setBackground(outer_color)
+    central_layout.addWidget(mdi_area)
+    window.setCentralWidget(central)
+    ribbon = window.ribbonBar()
+    page = ribbon.addPage("General")
+    group = page.addGroup("Actions")
+    group.addAction(
+        window.style().standardIcon(
+            window.style().StandardPixmap.SP_DialogApplyButton
+        ),
+        "Apply",
+        Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+    )
+    window.resize(640, 260)
+    window.show()
+    _app().processEvents()
+
+    stack = ribbon.findChild(QStackedWidget, "lqRibbonCommandArea")
+    assert stack is not None
+    assert ribbon.tabBar().objectName() == "lqRibbonTabBar"
+    expected = QColor(LqStyle.palette(ribbon.ribbonStyle())["page_border"])
+    expected_ribbon_bg = QColor(LqStyle.palette(ribbon.ribbonStyle())["ribbon_bg"])
+    stack_margins = stack.contentsMargins()
+    assert (stack_margins.left(), stack_margins.top()) == (0, 0)
+    assert (stack_margins.right(), stack_margins.bottom()) == (0, 2)
+
+    def assert_ribbon_side_mask(expected_inset):
+        assert stack.x() == expected_inset
+        assert stack.width() == ribbon.width() - (expected_inset * 2)
+        if expected_inset == 0:
+            return
+
+        command_rect = stack.geometry()
+        ribbon_image = ribbon.grab().toImage()
+        left_x = max(0, command_rect.left() - 1)
+        right_x = min(ribbon_image.width() - 1, command_rect.right() + 1)
+        mid_y = command_rect.top() + (command_rect.height() // 2)
+        bottom_y = max(command_rect.top(), command_rect.bottom() - 1)
+
+        mid_side_samples = [
+            ribbon_image.pixelColor(left_x, mid_y),
+            ribbon_image.pixelColor(right_x, mid_y),
+        ]
+        bottom_corner_samples = [
+            ribbon_image.pixelColor(left_x, bottom_y),
+            ribbon_image.pixelColor(right_x, bottom_y),
+        ]
+        assert all(_close_color(sampled, expected_ribbon_bg) for sampled in mid_side_samples)
+        assert all(_close_color(sampled, outer_color) for sampled in bottom_corner_samples)
+
+    def assert_stack_outer_frame_is_transparent():
+        stack_image = stack.grab().toImage()
+        outer_samples = [
+            stack_image.pixelColor(stack_image.width() // 2, stack_image.height() - 1),
+            stack_image.pixelColor(stack_image.width() // 2, stack_image.height() - 2),
+        ]
+        assert all(_close_color(sampled, outer_color) for sampled in outer_samples)
+
+    def assert_page_frame_visible(rounded_corners=True):
+        page_image = page.grab().toImage()
+        page_border_samples = [
+            page_image.pixelColor(page_image.width() // 2, page_image.height() - 1),
+            page_image.pixelColor(page_image.width() // 2, page_image.height() - 2),
+            page_image.pixelColor(0, page_image.height() // 2),
+            page_image.pixelColor(1, page_image.height() // 2),
+            page_image.pixelColor(page_image.width() - 1, page_image.height() // 2),
+            page_image.pixelColor(page_image.width() - 2, page_image.height() // 2),
+        ]
+        top_sample = page_image.pixelColor(page_image.width() // 2, 0)
+        inner_sample = page_image.pixelColor(page_image.width() - 12, page_image.height() // 2)
+        bottom_corner_samples = [
+            page_image.pixelColor(0, page_image.height() - 1),
+            page_image.pixelColor(page_image.width() - 1, page_image.height() - 1),
+        ]
+        assert not _close_color(top_sample, expected)
+        assert _close_color(inner_sample, expected_ribbon_bg)
+        assert all(_close_color(sampled, expected) for sampled in page_border_samples)
+        expected_corner = outer_color if rounded_corners else expected
+        assert all(_close_color(sampled, expected_corner) for sampled in bottom_corner_samples)
+
+    assert_ribbon_side_mask(2)
+    assert_stack_outer_frame_is_transparent()
+    assert_page_frame_visible(rounded_corners=True)
+    window.showMaximized()
+    _app().processEvents()
+    assert_ribbon_side_mask(0)
+    assert_stack_outer_frame_is_transparent()
+    assert_page_frame_visible(rounded_corners=False)
+    window.close()
+
+
+def test_python_frame_theme_uses_frameless_window_and_buttons():
+    window = MainWindow()
+    window.show()
+    _app().processEvents()
+
+    assert window.isFrameThemeEnabled()
+    assert window.isNativeFrameEnabled()
+    assert bool(window.windowFlags() & Qt.WindowType.FramelessWindowHint)
+    ribbon = window.ribbonBar()
+    title_button_bar = ribbon._title_button_bar
+    minimize_button = ribbon.findChild(
+        type(ribbon._close_button), "lqRibbonWindowMinimizeButton"
+    )
+    assert minimize_button is not None
+    if title_button_bar.isVisible():
+        assert title_button_bar.geometry().right() < minimize_button.geometry().left()
+    for name in (
+        "lqRibbonWindowMinimizeButton",
+        "lqRibbonWindowMaximizeButton",
+        "lqRibbonWindowCloseButton",
+    ):
+        button = ribbon.findChild(type(ribbon._close_button), name)
+        assert button is not None
+        assert button.isVisible()
+
+    window.setFrameThemeEnabled(False)
+    _app().processEvents()
+    assert not window.isNativeFrameEnabled()
+    assert not bool(window.windowFlags() & Qt.WindowType.FramelessWindowHint)
+    window.close()
 
 
 def test_fluent_state_timing_tokens_apply_to_m365_only():
@@ -289,6 +494,10 @@ def main():
         test_window_style_pass_through_updates_full_stylesheet,
         test_fluent_tab_radius_applies_to_m365_only,
         test_fluent_soft_borders_apply_to_m365_only,
+        test_selected_tab_lines_match_office_generation,
+        test_page_command_area_border_style_tokens_apply_to_all_styles,
+        test_page_command_area_three_sided_border_is_rendered,
+        test_python_frame_theme_uses_frameless_window_and_buttons,
         test_fluent_state_timing_tokens_apply_to_m365_only,
         test_example_combo_switches_style,
         test_example_system_combo_follows_palette,
