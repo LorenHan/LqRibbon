@@ -2,6 +2,8 @@
 LqRibbonBar - Ribbon bar container that holds ribbon pages
 """
 
+import sys
+
 from PySide6.QtWidgets import (
     QApplication,
     QTabWidget,
@@ -16,7 +18,13 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, QEvent, QSize, QTimer
 from PySide6.QtGui import QAction, QIcon, QPainter, QColor, QPen, QPixmap, QPalette
-from .lq_styles import LqStyle, RibbonStyle, _coerce_style
+from .lq_styles import (
+    LqStyle,
+    RibbonPlatformLayout,
+    RibbonStyle,
+    _coerce_platform_layout,
+    _coerce_style,
+)
 from .lq_ribbon_extras import (
     CallableList,
     LqRibbonCustomizeDialog,
@@ -44,6 +52,12 @@ RIBBON_COMMAND_FRAME_CORNER_RADIUS = 8
 RIBBON_COMMAND_FRAME_LINE_WIDTH = 2
 RIBBON_WINDOW_BUTTON_WIDTH = 46
 RIBBON_WINDOW_BUTTON_HEIGHT = 30
+RIBBON_MAC_TITLE_HEIGHT = 38
+RIBBON_MAC_TAB_HEIGHT = 32
+RIBBON_MAC_BAR_HEIGHT = 160
+RIBBON_MAC_SIMPLIFIED_HEIGHT = 116
+RIBBON_MAC_WINDOW_BUTTON_SIZE = 12
+RIBBON_MAC_WINDOW_BUTTON_SPACING = 8
 
 
 class _RibbonCollapseButton(QToolButton):
@@ -98,7 +112,42 @@ class _RibbonWindowButton(QToolButton):
 
     def paintEvent(self, event):
         palette = LqStyle.palette(getattr(self.parent(), "_ribbon_style", RibbonStyle.Office2016Blue))
+        mac_layout = bool(
+            getattr(self.parent(), "_platform_layout", None)
+            == RibbonPlatformLayout.MacOS
+        )
         painter = QPainter(self)
+        if mac_layout:
+            colors = {
+                "close": "#ff5f57",
+                "minimize": "#febc2e",
+                "maximize": "#28c840",
+            }
+            border = {
+                "close": "#e0443e",
+                "minimize": "#dea123",
+                "maximize": "#1dad35",
+            }
+            rect_size = min(self.width(), self.height(), RIBBON_MAC_WINDOW_BUTTON_SIZE)
+            x = (self.width() - rect_size) // 2
+            y = (self.height() - rect_size) // 2
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setBrush(QColor(colors.get(self._kind, "#d0d0d0")))
+            painter.setPen(QPen(QColor(border.get(self._kind, "#b0b0b0")), 1))
+            painter.drawEllipse(x, y, rect_size, rect_size)
+            if self.underMouse():
+                painter.setPen(QPen(QColor("#4b4b4b"), 1.1))
+                center_x = self.width() // 2
+                center_y = self.height() // 2
+                if self._kind == "close":
+                    painter.drawLine(center_x - 3, center_y - 3, center_x + 3, center_y + 3)
+                    painter.drawLine(center_x + 3, center_y - 3, center_x - 3, center_y + 3)
+                elif self._kind == "minimize":
+                    painter.drawLine(center_x - 3, center_y, center_x + 3, center_y)
+                elif self._kind == "maximize":
+                    painter.drawLine(center_x - 3, center_y + 2, center_x + 2, center_y - 3)
+                    painter.drawLine(center_x + 2, center_y - 3, center_x + 2, center_y + 2)
+            return
         if not self.isDown() and not self.underMouse():
             painter.fillRect(self.rect(), QColor(palette["caption_bg"]))
         elif self.isDown():
@@ -178,6 +227,11 @@ class LqRibbonBar(QTabWidget):
         self._tab_bar_position = 1
         self._search_bar_appearance = 1
         self._ribbon_style = RibbonStyle.Office2016Blue
+        self._platform_layout = (
+            RibbonPlatformLayout.MacOS
+            if sys.platform == "darwin"
+            else RibbonPlatformLayout.Classic
+        )
         self._title_background = QPixmap()
         self._logo_pixmap = QPixmap()
         self._logo_alignment = Qt.AlignmentFlag.AlignLeft
@@ -229,7 +283,7 @@ class LqRibbonBar(QTabWidget):
             app.installEventFilter(self)
 
         # Set height for ribbon area
-        self.setFixedHeight(RIBBON_BAR_HEIGHT)
+        self.setFixedHeight(self._expanded_height())
         stack = self._command_area_stack()
         if stack:
             stack.setObjectName("lqRibbonCommandArea")
@@ -261,11 +315,37 @@ class LqRibbonBar(QTabWidget):
 
         palette = LqStyle.palette(self._ribbon_style)
         painter = QPainter(self)
+        if self._is_macos_layout():
+            title_bg = QColor("#202020" if self._ribbon_style == RibbonStyle.Microsoft365Dark else "#f7f7f7")
+            line_color = QColor("#3a3a3a" if self._ribbon_style == RibbonStyle.Microsoft365Dark else "#d8d8d8")
+            painter.fillRect(0, 0, self.width(), self.height(), QColor(palette["ribbon_bg"]))
+            painter.fillRect(0, 0, self.width(), RIBBON_MAC_TITLE_HEIGHT, title_bg)
+            painter.fillRect(0, RIBBON_MAC_TITLE_HEIGHT, self.width(), RIBBON_MAC_TAB_HEIGHT, title_bg)
+            painter.setPen(line_color)
+            painter.drawLine(0, RIBBON_MAC_TITLE_HEIGHT - 1, self.width(), RIBBON_MAC_TITLE_HEIGHT - 1)
+            painter.drawLine(0, self._collapsed_height() - 1, self.width(), self._collapsed_height() - 1)
+            title_left = 170
+            title_width = max(0, self.width() - 560)
+            if title_width:
+                painter.setPen(QColor(palette["text"]))
+                painter.drawText(
+                    title_left,
+                    0,
+                    title_width,
+                    RIBBON_MAC_TITLE_HEIGHT,
+                    Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter,
+                    self.fontMetrics().elidedText(
+                        self.window().windowTitle(),
+                        Qt.TextElideMode.ElideMiddle,
+                        title_width,
+                    ),
+                )
+            return
         painter.fillRect(
             0,
             0,
             self.width(),
-            RIBBON_COLLAPSED_HEIGHT,
+            self._collapsed_height(),
             QColor(palette["caption_bg"]),
         )
         stack = self._command_area_stack()
@@ -373,7 +453,37 @@ class LqRibbonBar(QTabWidget):
         return super().eventFilter(obj, event)
 
     def _style_sheet(self):
-        return LqStyle.get_ribbon_style(self._ribbon_style)
+        return LqStyle.get_ribbon_style(self._ribbon_style, self._platform_layout)
+
+    def _is_macos_layout(self):
+        return self._platform_layout == RibbonPlatformLayout.MacOS
+
+    def platformLayout(self):
+        return self._platform_layout
+
+    def setPlatformLayout(self, layout):
+        layout = _coerce_platform_layout(layout)
+        if self._platform_layout == layout:
+            return
+        self._platform_layout = layout
+        self.setStyleSheet(self._style_sheet())
+        self._apply_ribbon_height()
+        self.update()
+
+    def _caption_height(self):
+        return RIBBON_MAC_TITLE_HEIGHT if self._is_macos_layout() else RIBBON_CAPTION_HEIGHT
+
+    def _tab_height(self):
+        return RIBBON_MAC_TAB_HEIGHT if self._is_macos_layout() else RIBBON_TAB_HEIGHT
+
+    def _collapsed_height(self):
+        return self._caption_height() + self._tab_height()
+
+    def _expanded_height(self):
+        return RIBBON_MAC_BAR_HEIGHT if self._is_macos_layout() else RIBBON_BAR_HEIGHT
+
+    def _simplified_height(self):
+        return RIBBON_MAC_SIMPLIFIED_HEIGHT if self._is_macos_layout() else RIBBON_SIMPLIFIED_HEIGHT
 
     def _command_area_stack(self):
         stack = self.findChild(
@@ -425,6 +535,8 @@ class LqRibbonBar(QTabWidget):
         )
 
     def _command_frame_inset(self):
+        if self._is_macos_layout():
+            return 0
         window = self.window()
         return (
             RIBBON_MAXIMIZED_COMMAND_FRAME_INSET
@@ -433,6 +545,8 @@ class LqRibbonBar(QTabWidget):
         )
 
     def _command_frame_corner_radius(self):
+        if self._is_macos_layout():
+            return 0
         window = self.window()
         return 0 if window and window.isMaximized() else RIBBON_COMMAND_FRAME_CORNER_RADIUS
 
@@ -461,9 +575,13 @@ class LqRibbonBar(QTabWidget):
             )
 
     def _update_layout(self):
+        if self._is_macos_layout():
+            self._update_macos_layout()
+            return
         tab_bar = self.tabBar()
-        tab_bar.setGeometry(0, RIBBON_CAPTION_HEIGHT, self.width(), RIBBON_TAB_HEIGHT)
+        tab_bar.setGeometry(0, self._caption_height(), self.width(), self._tab_height())
         tab_bar.raise_()
+        self._quick_access_bar.actionCustomizeButton().setVisible(True)
         command_area_visible = self._is_command_area_visible()
 
         stack = self._command_area_stack()
@@ -478,7 +596,7 @@ class LqRibbonBar(QTabWidget):
 
         if stack:
             self._configure_command_area_stack(stack)
-            stack_top = RIBBON_COLLAPSED_HEIGHT
+            stack_top = self._collapsed_height()
             stack_height = (
                 max(0, self.height() - stack_top - quick_access_reserve)
                 if command_area_visible
@@ -528,7 +646,7 @@ class LqRibbonBar(QTabWidget):
         else:
             self._title_button_bar.hide()
 
-        if not self._quick_access_bar.isHidden():
+        if not self._quick_access_bar.isHidden() and not quick_access_below:
             quick_height = 24
             if quick_access_below:
                 quick_x = 8
@@ -570,10 +688,110 @@ class LqRibbonBar(QTabWidget):
         self._collapse_button.raise_()
         self._update_window_controls()
 
+    def _update_macos_layout(self):
+        tab_bar = self.tabBar()
+        tab_bar.setGeometry(6, RIBBON_MAC_TITLE_HEIGHT, max(0, self.width() - 12), RIBBON_MAC_TAB_HEIGHT)
+        tab_bar.raise_()
+        command_area_visible = self._is_command_area_visible()
+
+        stack = self._command_area_stack()
+        quick_access_below = (
+            command_area_visible
+            and self._quick_access_position == 2
+            and not self._quick_access_bar.isHidden()
+        )
+        quick_access_reserve = (
+            RIBBON_QUICK_ACCESS_BELOW_HEIGHT if quick_access_below else 0
+        )
+        if stack:
+            self._configure_command_area_stack(stack)
+            stack_top = self._collapsed_height()
+            stack_height = (
+                max(0, self.height() - stack_top - quick_access_reserve)
+                if command_area_visible
+                else 0
+            )
+            stack.setGeometry(0, stack_top, self.width(), stack_height)
+            stack.setVisible(command_area_visible)
+
+        compact_search = self._search_bar_appearance == 2
+        search_width = 34 if compact_search else min(300, max(170, self.width() // 4))
+        search_x = max(120, self.width() - search_width - 18)
+        self._search_bar.setGeometry(search_x, 7, search_width, 24)
+        self._search_bar.raise_()
+
+        title_left = 84
+        if not self._quick_access_bar.isHidden():
+            self._quick_access_bar.actionCustomizeButton().setVisible(False)
+            quick_width = min(
+                self._quick_access_bar.sizeHint().width(),
+                max(0, search_x - title_left - 20),
+            )
+            self._quick_access_bar.setGeometry(title_left, 7, quick_width, 24)
+            self._quick_access_bar.raise_()
+            title_left = self._quick_access_bar.geometry().right() + 8
+
+        title_right = max(title_left, search_x - 14)
+        title_bar_width = min(
+            self._title_button_bar.sizeHint().width(),
+            max(0, title_right - title_left),
+        )
+        if self._title_button_bar.actions() and title_bar_width > 0:
+            self._title_button_bar.setGeometry(title_left, 7, title_bar_width, 24)
+            self._title_button_bar.show()
+            self._title_button_bar.raise_()
+        else:
+            self._title_button_bar.hide()
+
+        if not self._quick_access_bar.isHidden() and quick_access_below:
+            quick_height = 24
+            quick_x = 8
+            quick_y = max(
+                0,
+                self.height()
+                - RIBBON_QUICK_ACCESS_BELOW_HEIGHT
+                + ((RIBBON_QUICK_ACCESS_BELOW_HEIGHT - quick_height) // 2),
+            )
+            quick_width = min(
+                self._quick_access_bar.sizeHint().width(),
+                max(0, self.width() - RIBBON_COLLAPSE_BUTTON_WIDTH - 20),
+            )
+            self._quick_access_bar.setGeometry(quick_x, quick_y, quick_width, quick_height)
+            self._quick_access_bar.raise_()
+
+        self._collapse_button.setGeometry(
+            max(0, self.width() - RIBBON_COLLAPSE_BUTTON_WIDTH - 4),
+            self._collapsed_height() + 2,
+            RIBBON_COLLAPSE_BUTTON_WIDTH,
+            RIBBON_COLLAPSE_BUTTON_HEIGHT,
+        )
+        self._collapse_button.setCollapsed(self._ribbon_minimized)
+        self._collapse_button.setVisible(self._frame_theme_enabled and not self._ribbon_minimized)
+        self._collapse_button.raise_()
+        self._update_window_controls()
+
     def _update_window_controls(self):
         buttons = [self._minimize_button, self._maximize_button, self._close_button]
+        if self._is_macos_layout():
+            buttons = [self._close_button, self._minimize_button, self._maximize_button]
+            x = 14
+            y = 12
+            cell = RIBBON_MAC_WINDOW_BUTTON_SIZE + RIBBON_MAC_WINDOW_BUTTON_SPACING
+            if self._system_button is not None:
+                self._system_button.hide()
+            for button in buttons:
+                button.setFixedSize(RIBBON_MAC_WINDOW_BUTTON_SIZE, RIBBON_MAC_WINDOW_BUTTON_SIZE)
+                button.setGeometry(x, y, RIBBON_MAC_WINDOW_BUTTON_SIZE, RIBBON_MAC_WINDOW_BUTTON_SIZE)
+                button.setVisible(self._frame_theme_enabled)
+                button.raise_()
+                x += cell
+            self._maximize_button.update()
+            return
         x = max(0, self.width() - (RIBBON_WINDOW_BUTTON_WIDTH * len(buttons)))
+        if self._system_button is not None:
+            self._system_button.show()
         for button in buttons:
+            button.setFixedSize(RIBBON_WINDOW_BUTTON_WIDTH, RIBBON_WINDOW_BUTTON_HEIGHT)
             button.setGeometry(x, 0, RIBBON_WINDOW_BUTTON_WIDTH, RIBBON_WINDOW_BUTTON_HEIGHT)
             button.setVisible(self._frame_theme_enabled)
             button.raise_()
@@ -594,7 +812,7 @@ class LqRibbonBar(QTabWidget):
         return event.globalPos()
 
     def _is_caption_drag_point(self, point):
-        if not self._frame_theme_enabled or point.y() >= RIBBON_CAPTION_HEIGHT:
+        if not self._frame_theme_enabled or point.y() >= self._caption_height():
             return False
         for widget in (
             self._search_bar,
@@ -648,9 +866,9 @@ class LqRibbonBar(QTabWidget):
 
     def _apply_ribbon_height(self):
         if self._is_command_area_visible():
-            height = RIBBON_SIMPLIFIED_HEIGHT if self._simplified_mode else RIBBON_BAR_HEIGHT
+            height = self._simplified_height() if self._simplified_mode else self._expanded_height()
         else:
-            height = RIBBON_COLLAPSED_HEIGHT
+            height = self._collapsed_height()
         if (
             self._is_command_area_visible()
             and self._quick_access_position == 2

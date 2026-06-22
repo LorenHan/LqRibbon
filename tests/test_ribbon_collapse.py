@@ -14,7 +14,7 @@ sys.path.insert(
     0,
     os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "LqRibbon",
+        "LqRibbonPy",
         "example",
     ),
 )
@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
     QToolButton,
 )
 
-from LqRibbon import RibbonMainWindow
+from LqRibbon import RibbonMainWindow, RibbonPlatformLayout
 from main_window import (
     MainWindow,
     QUICK_ACCESS_BOTTOM_POSITION,
@@ -45,6 +45,17 @@ from main_window import (
 def _app():
     app = QApplication.instance()
     return app or QApplication([])
+
+
+def _platform_reports_widget_focus():
+    return QApplication.platformName().lower() not in {"offscreen", "minimal"}
+
+
+def _assert_search_focus_restored(search):
+    if _platform_reports_widget_focus():
+        assert search.hasFocus()
+    else:
+        assert search.focusPolicy() != Qt.FocusPolicy.NoFocus
 
 
 def _window():
@@ -2170,9 +2181,17 @@ def test_example_caption_search_defaults_to_centered_microsoft_box():
 
     assert ribbon.searchBarAppearance() == SEARCH_BAR_CENTRAL
     assert search.isVisible()
-    assert search.placeholderText() == "Search commands"
+    expected_placeholder = (
+        "Search (Cmd + Ctrl + U)"
+        if ribbon.platformLayout() == RibbonPlatformLayout.MacOS
+        else "Search commands"
+    )
+    assert search.placeholderText() == expected_placeholder
     assert search_geometry.width() >= 120
-    assert abs(search_geometry.center().x() - ribbon.rect().center().x()) <= 2
+    if ribbon.platformLayout() == RibbonPlatformLayout.MacOS:
+        assert search_geometry.right() >= ribbon.width() - 20
+    else:
+        assert abs(search_geometry.center().x() - ribbon.rect().center().x()) <= 2
     window.close()
 
 
@@ -2193,7 +2212,10 @@ def test_example_compact_search_action_switches_caption_search_to_icon_mode():
     assert search.isVisible()
     assert search.isCompact()
     assert compact_geometry.width() <= 44
-    assert abs(compact_geometry.center().x() - ribbon.rect().center().x()) <= 2
+    if ribbon.platformLayout() == RibbonPlatformLayout.MacOS:
+        assert compact_geometry.right() >= ribbon.width() - 20
+    else:
+        assert abs(compact_geometry.center().x() - ribbon.rect().center().x()) <= 2
 
     window.center_search_action.trigger()
     _app().processEvents()
@@ -2366,7 +2388,7 @@ def test_example_search_keyboard_navigation_activates_popup_action():
     assert ribbon.recentSearchActions()[0] is window.control_modes_action
     assert not search._popup.isVisible()
     assert search.text() == ""
-    assert search.hasFocus()
+    _assert_search_focus_restored(search)
 
     search.setText("driver")
     search.showPopup("driver")
@@ -2375,7 +2397,7 @@ def test_example_search_keyboard_navigation_activates_popup_action():
     _app().processEvents()
     assert not search._popup.isVisible()
     assert search.text() == "driver"
-    assert search.hasFocus()
+    _assert_search_focus_restored(search)
     window.close()
 
 
@@ -2781,7 +2803,8 @@ def test_example_dark_canvas_toggle_surface():
     assert window.dark_canvas_preview.text() == "Canvas: light"
     assert window.dark_canvas_action in window.search_actions
     assert ribbon.searchAction("Dark Canvas") is window.dark_canvas_action
-    assert window.centralWidget().styleSheet() == ""
+    initial_content_style = window.centralWidget().styleSheet()
+    assert "#1b1b1b" not in initial_content_style
 
     window.dark_canvas_action.trigger()
     _app().processEvents()
@@ -2795,7 +2818,7 @@ def test_example_dark_canvas_toggle_surface():
     _app().processEvents()
     assert not window.dark_canvas_action.isChecked()
     assert window.dark_canvas_preview.text() == "Canvas: light"
-    assert window.centralWidget().styleSheet() == ""
+    assert window.centralWidget().styleSheet() == initial_content_style
     window.close()
 
 

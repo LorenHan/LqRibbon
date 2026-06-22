@@ -978,8 +978,13 @@ class LqRibbonSearchBar(QLineEdit):
 
     def _focus_without_popup(self):
         self._suppress_next_focus_popup = True
-        self.setFocus()
-        QTimer.singleShot(0, lambda: setattr(self, "_suppress_next_focus_popup", False))
+        self.setFocus(Qt.FocusReason.OtherFocusReason)
+
+        def restore_focus():
+            self.setFocus(Qt.FocusReason.OtherFocusReason)
+            self._suppress_next_focus_popup = False
+
+        QTimer.singleShot(0, restore_focus)
 
     def _activate_popup_action(self, action):
         if not action or action.isSeparator() or not action.isEnabled():

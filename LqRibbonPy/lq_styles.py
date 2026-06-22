@@ -14,6 +14,13 @@ class RibbonStyle(IntEnum):
     Microsoft365Dark = 4
 
 
+class RibbonPlatformLayout(IntEnum):
+    """Platform layout variants independent from color/style choices."""
+
+    Classic = 1
+    MacOS = 2
+
+
 def _coerce_style(style):
     if isinstance(style, RibbonStyle):
         return style
@@ -36,6 +43,26 @@ def _coerce_style(style):
         return RibbonStyle(int(style))
     except (TypeError, ValueError):
         return RibbonStyle.Office2016Blue
+
+
+def _coerce_platform_layout(layout):
+    if isinstance(layout, RibbonPlatformLayout):
+        return layout
+    if isinstance(layout, str):
+        key = layout.strip().lower().replace("-", "").replace("_", "").replace(" ", "")
+        aliases = {
+            "classic": RibbonPlatformLayout.Classic,
+            "windows": RibbonPlatformLayout.Classic,
+            "win": RibbonPlatformLayout.Classic,
+            "mac": RibbonPlatformLayout.MacOS,
+            "macos": RibbonPlatformLayout.MacOS,
+            "darwin": RibbonPlatformLayout.MacOS,
+        }
+        return aliases.get(key, RibbonPlatformLayout.Classic)
+    try:
+        return RibbonPlatformLayout(int(layout))
+    except (TypeError, ValueError):
+        return RibbonPlatformLayout.Classic
 
 
 _STYLE_PALETTES = {
@@ -188,8 +215,78 @@ class LqStyle:
         return names[_coerce_style(style)]
 
     @staticmethod
-    def get_ribbon_style(style=RibbonStyle.Office2016Blue):
+    def get_ribbon_style(style=RibbonStyle.Office2016Blue, platform_layout=RibbonPlatformLayout.Classic):
         p = LqStyle.palette(style)
+        platform_layout = _coerce_platform_layout(platform_layout)
+        if platform_layout == RibbonPlatformLayout.MacOS:
+            is_dark = _coerce_style(style) == RibbonStyle.Microsoft365Dark
+            title_bg = "#202020" if is_dark else "#f7f7f7"
+            title_text = p["text"]
+            tab_hover = "#363636" if is_dark else "#ececec"
+            return f"""
+            LqRibbonBar, QTabWidget#lqRibbonBar {{
+                background: {p["ribbon_bg"]};
+                border: none;
+            }}
+            QTabWidget#lqRibbonBar::pane {{
+                background: {p["ribbon_bg"]};
+                border: none;
+                border-bottom-left-radius: 0px;
+                border-bottom-right-radius: 0px;
+            }}
+            QTabBar#lqRibbonTabBar {{
+                background: {title_bg};
+                border: none;
+            }}
+            QTabBar#lqRibbonTabBar::tab {{
+                min-width: 48px;
+                min-height: 25px;
+                padding: 3px 9px 2px 9px;
+                color: {title_text};
+                background: transparent;
+                border: none;
+                font-size: 12px;
+            }}
+            QTabBar#lqRibbonTabBar::tab:selected {{
+                background: transparent;
+                color: {p["selected_tab_text"]};
+                border-left: none;
+                border-right: none;
+                border-top: none;
+                border-bottom: 2px solid {p["accent"]};
+                border-radius: 0px;
+                font-weight: 600;
+            }}
+            QTabBar#lqRibbonTabBar::tab:hover:!selected {{
+                background: {tab_hover};
+                border-radius: 4px;
+            }}
+            QLineEdit#lqRibbonSearchEdit {{
+                min-height: 22px;
+                padding: 0px 24px 0px 10px;
+                border: 1px solid {p["control_border"]};
+                border-radius: 12px;
+                background: {p["field_bg"]};
+                color: {p["text"]};
+                selection-background-color: {p["accent"]};
+            }}
+            QLineEdit#lqRibbonSearchEdit:focus {{
+                border-color: {p["focus"]};
+            }}
+            QToolBar#lqRibbonTitleButtonBar {{
+                background: transparent;
+                border: none;
+                spacing: 2px;
+            }}
+            QStackedWidget#lqRibbonCommandArea {{
+                border: none;
+                border-radius: 0px;
+            }}
+            QWidget#ribbon_page {{
+                background-color: {p["ribbon_bg"]};
+                border: none;
+            }}
+            """
         return f"""
         LqRibbonBar, QTabWidget#lqRibbonBar {{
             background: {p["ribbon_bg"]};
@@ -251,17 +348,27 @@ class LqStyle:
         """
 
     @staticmethod
-    def get_window_style(style=RibbonStyle.Office2016Blue):
+    def get_window_style(style=RibbonStyle.Office2016Blue, platform_layout=RibbonPlatformLayout.Classic):
         p = LqStyle.palette(style)
+        platform_layout = _coerce_platform_layout(platform_layout)
+        mac_layout = platform_layout == RibbonPlatformLayout.MacOS
+        status_bg = "#f6f6f6" if mac_layout else p["caption_bg"]
+        status_text = "#5f5f5f" if mac_layout else p["status_text"]
+        display_bg = "#ececec" if mac_layout else p["window_bg"]
+        font_family = (
+            '"SF Pro Text", ".AppleSystemUIFont", "Segoe UI", "Microsoft YaHei", Arial, sans-serif'
+            if mac_layout
+            else '"Segoe UI", "Microsoft YaHei", Arial, sans-serif'
+        )
         return f"""
         QMainWindow {{
-            background-color: {p["window_bg"]};
+            background-color: {display_bg};
         }}
         QWidget {{
-            font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+            font-family: {font_family};
         }}
         QTextEdit#display_area {{
-            background-color: {p["window_bg"]};
+            background-color: {display_bg};
             border: none;
             font-size: 13px;
             font-family: Consolas, Monaco, monospace;
@@ -269,8 +376,8 @@ class LqStyle:
             color: {p["text"]};
         }}
         QStatusBar {{
-            background-color: {p["caption_bg"]};
-            color: {p["status_text"]};
+            background-color: {status_bg};
+            color: {status_text};
             border: none;
             min-height: 22px;
             font-size: 12px;
@@ -349,11 +456,11 @@ class LqStyle:
         """
 
     @staticmethod
-    def get_full_style(style=RibbonStyle.Office2016Blue):
+    def get_full_style(style=RibbonStyle.Office2016Blue, platform_layout=RibbonPlatformLayout.Classic):
         return "\n".join(
             [
-                LqStyle.get_window_style(style),
-                LqStyle.get_ribbon_style(style),
+                LqStyle.get_window_style(style, platform_layout),
+                LqStyle.get_ribbon_style(style, platform_layout),
                 LqStyle.get_group_style(style),
                 LqStyle.get_button_style(style),
             ]

@@ -4,6 +4,7 @@ MainWindow - feature parity demo for the C++ example.
 
 import io
 import json
+import sys
 
 from PySide6.QtCore import QDate, QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import (
@@ -354,7 +355,11 @@ class MainWindow(RibbonMainWindow):
         ribbon.setCurrentPageIndex(ribbon.pageIndex(self.driver_page))
         self.setFrameThemeEnabled(True)
         self.set_search_bar_appearance(SEARCH_BAR_CENTRAL)
-        ribbon.setSearchPlaceholderText("Search commands")
+        ribbon.setSearchPlaceholderText(
+            "Search (Cmd + Ctrl + U)"
+            if sys.platform == "darwin"
+            else "Search commands"
+        )
         ribbon.setRecentSearchLimit(5)
         ribbon.setSearchSuggestions(
             ["Settings", "Connect", "Control Modes", "Center Search"]
@@ -3286,6 +3291,8 @@ class MainWindow(RibbonMainWindow):
         canvas = self.centralWidget()
         if enabled:
             if canvas is not None:
+                if not hasattr(self, "_pre_dark_canvas_style"):
+                    self._pre_dark_canvas_style = canvas.styleSheet()
                 canvas.setStyleSheet(
                     "QWidget { background: #1b1b1b; color: #f3f2f1; } "
                     "QLabel { background: #1b1b1b; color: #f3f2f1; }"
@@ -3300,7 +3307,9 @@ class MainWindow(RibbonMainWindow):
             self._message("Dark Canvas: dark editing surface")
         else:
             if canvas is not None:
-                canvas.setStyleSheet("")
+                canvas.setStyleSheet(getattr(self, "_pre_dark_canvas_style", ""))
+                if hasattr(self, "_pre_dark_canvas_style"):
+                    del self._pre_dark_canvas_style
             self.dark_canvas_preview.setText("Canvas: light")
             self.dark_canvas_preview.setStyleSheet("")
             self.dark_canvas_action.setToolTip(

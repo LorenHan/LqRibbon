@@ -124,7 +124,12 @@ class LqRibbonWindow(QMainWindow):
 
     def apply_styles(self):
         """Apply the active Ribbon style."""
-        self.setStyleSheet(LqStyle.get_full_style(self.ribbon_bar.ribbonStyle()))
+        self.setStyleSheet(
+            LqStyle.get_full_style(
+                self.ribbon_bar.ribbonStyle(),
+                self.ribbon_bar.platformLayout(),
+            )
+        )
 
     def on_action_triggered(self, action_name):
         """Handle action trigger and display in the main area"""

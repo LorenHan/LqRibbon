@@ -12,7 +12,11 @@ import tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(
     0,
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "LqRibbon", "example"),
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "LqRibbonPy",
+        "example",
+    ),
 )
 
 from PySide6.QtCore import QSettings, Qt
@@ -20,7 +24,7 @@ from PySide6.QtGui import QColor, QPalette
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QFrame, QStackedWidget, QWidget, QMdiArea, QVBoxLayout
 
-from LqRibbon import LqStyle, RibbonMainWindow, RibbonStyle
+from LqRibbon import LqStyle, RibbonPlatformLayout, RibbonMainWindow, RibbonStyle
 from main_window import (
     MainWindow,
     SYSTEM_RIBBON_STYLE_VALUE,
@@ -189,6 +193,7 @@ def test_page_command_area_three_sided_border_is_rendered():
     central_layout.addWidget(mdi_area)
     window.setCentralWidget(central)
     ribbon = window.ribbonBar()
+    ribbon.setPlatformLayout(RibbonPlatformLayout.Classic)
     page = ribbon.addPage("General")
     group = page.addGroup("Actions")
     group.addAction(
@@ -265,9 +270,10 @@ def test_page_command_area_three_sided_border_is_rendered():
         expected_corner = outer_color if rounded_corners else expected
         assert all(_close_color(sampled, expected_corner) for sampled in bottom_corner_samples)
 
-    assert_ribbon_side_mask(2)
+    mac_layout = ribbon.platformLayout() == RibbonPlatformLayout.MacOS
+    assert_ribbon_side_mask(0 if mac_layout else 2)
     assert_stack_outer_frame_is_transparent()
-    assert_page_frame_visible(rounded_corners=True)
+    assert_page_frame_visible(rounded_corners=not mac_layout)
     window.showMaximized()
     _app().processEvents()
     assert_ribbon_side_mask(0)
@@ -282,6 +288,7 @@ def test_python_frame_theme_uses_frameless_window_and_buttons():
     _app().processEvents()
 
     assert window.isFrameThemeEnabled()
+    mac_layout = window.ribbonBar().platformLayout() == RibbonPlatformLayout.MacOS
     assert window.isNativeFrameEnabled()
     assert bool(window.windowFlags() & Qt.WindowType.FramelessWindowHint)
     ribbon = window.ribbonBar()
@@ -291,7 +298,10 @@ def test_python_frame_theme_uses_frameless_window_and_buttons():
     )
     assert minimize_button is not None
     if title_button_bar.isVisible():
-        assert title_button_bar.geometry().right() < minimize_button.geometry().left()
+        if mac_layout:
+            assert minimize_button.geometry().left() < title_button_bar.geometry().left()
+        else:
+            assert title_button_bar.geometry().right() < minimize_button.geometry().left()
     for name in (
         "lqRibbonWindowMinimizeButton",
         "lqRibbonWindowMaximizeButton",
@@ -305,6 +315,24 @@ def test_python_frame_theme_uses_frameless_window_and_buttons():
     _app().processEvents()
     assert not window.isNativeFrameEnabled()
     assert not bool(window.windowFlags() & Qt.WindowType.FramelessWindowHint)
+    window.close()
+
+
+def test_macos_platform_layout_keeps_style_choices_with_custom_frame():
+    window = RibbonMainWindow()
+    ribbon = window.ribbonBar()
+    ribbon.setPlatformLayout(RibbonPlatformLayout.MacOS)
+    window.setFrameThemeEnabled(True)
+    window.setRibbonStyle(RibbonStyle.Office2016Blue)
+    blue_style = ribbon.styleSheet()
+    window.setRibbonStyle(RibbonStyle.Microsoft365Dark)
+    dark_style = ribbon.styleSheet()
+
+    assert ribbon.platformLayout() == RibbonPlatformLayout.MacOS
+    assert window.isNativeFrameEnabled()
+    assert bool(window.windowFlags() & Qt.WindowType.FramelessWindowHint)
+    assert "border-bottom: 2px solid #2b579a;" in blue_style
+    assert "#202020" in dark_style
     window.close()
 
 
