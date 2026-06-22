@@ -52,10 +52,12 @@ RIBBON_COMMAND_FRAME_CORNER_RADIUS = 8
 RIBBON_COMMAND_FRAME_LINE_WIDTH = 2
 RIBBON_WINDOW_BUTTON_WIDTH = 46
 RIBBON_WINDOW_BUTTON_HEIGHT = 30
+RIBBON_GROUP_HEIGHT = 98
 RIBBON_MAC_TITLE_HEIGHT = 38
 RIBBON_MAC_TAB_HEIGHT = 32
-RIBBON_MAC_BAR_HEIGHT = 172
+RIBBON_MAC_BAR_HEIGHT = 160
 RIBBON_MAC_SIMPLIFIED_HEIGHT = 116
+RIBBON_MAC_GROUP_HEIGHT = 86
 RIBBON_MAC_WINDOW_BUTTON_SIZE = 12
 RIBBON_MAC_WINDOW_BUTTON_SPACING = 8
 
@@ -485,6 +487,19 @@ class LqRibbonBar(QTabWidget):
     def _simplified_height(self):
         return RIBBON_MAC_SIMPLIFIED_HEIGHT if self._is_macos_layout() else RIBBON_SIMPLIFIED_HEIGHT
 
+    def _apply_group_layout_metrics(self):
+        mac_layout = self._is_macos_layout()
+        group_height = RIBBON_MAC_GROUP_HEIGHT if mac_layout else RIBBON_GROUP_HEIGHT
+        content_margins = (4, 3, 5, 2) if mac_layout else (4, 5, 5, 5)
+        title_height = 16 if mac_layout else 17
+        for page in self.pages:
+            for group in getattr(page, "groups", []):
+                group.setMinimumHeight(group_height)
+                if hasattr(group, "main_layout"):
+                    group.main_layout.setContentsMargins(*content_margins)
+                if hasattr(group, "title_label"):
+                    group.title_label.setFixedHeight(title_height)
+
     def _command_area_stack(self):
         stack = self.findChild(
             QStackedWidget,
@@ -575,6 +590,7 @@ class LqRibbonBar(QTabWidget):
             )
 
     def _update_layout(self):
+        self._apply_group_layout_metrics()
         if self._is_macos_layout():
             self._update_macos_layout()
             return

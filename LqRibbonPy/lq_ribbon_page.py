@@ -376,6 +376,9 @@ class LqRibbonPage(QWidget):
         self._context_group_name = group_name
 
     def updateLayout(self):
+        ribbon_bar = self.ribbonBar()
+        if ribbon_bar and hasattr(ribbon_bar, "_apply_group_layout_metrics"):
+            ribbon_bar._apply_group_layout_metrics()
         self.updateGeometry()
         self.groups_container.updateGeometry()
         self.groups_container.update()

@@ -341,17 +341,18 @@ def test_macos_platform_layout_keeps_group_title_visible():
     ribbon = window.ribbonBar()
     ribbon.setPlatformLayout(RibbonPlatformLayout.MacOS)
     window.setFrameThemeEnabled(True)
+    window.resize(1180, 560)
+    window.show()
+    _app().processEvents()
     page = ribbon.addPage("Draw")
     group = page.addGroup("Tools")
     group.addAction(QIcon(), "Ruler")
-
-    window.resize(1180, 560)
-    window.show()
     _app().processEvents()
 
     title_bottom = group.title_label.mapTo(
         page, group.title_label.rect().bottomLeft()
     ).y()
+    assert ribbon.height() <= 160
     assert title_bottom < page.height()
     window.close()
 
