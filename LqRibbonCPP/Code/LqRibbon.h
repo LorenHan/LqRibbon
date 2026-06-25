@@ -790,6 +790,7 @@ private:
     void recordRecentSearchAction(QAction *action);
     void removeInvalidSearchActions();
     void updateChangedSearchAction();
+    void updatePageTabTitle(const QString &strTitle);
     void rebuildSearchActionIndex();
     QString normalizedSearchText(const QString &strText) const;
     QStringList searchPhraseTokens(const QString &strText) const;

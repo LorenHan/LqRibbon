@@ -2956,12 +2956,8 @@ void RibbonBar::insertPage(int index, RibbonPage *page)
     const int normalizedIndex = index < 0 ? count() : qMin(index, count());
     const int insertedIndex = insertTab(normalizedIndex, page, page->title());
     connect(page, &RibbonPage::titleChanged, this,
-            [this, page](const QString &strNewTitle) {
-        const int pageIndex = indexOf(page);
-        if (pageIndex >= 0) {
-            setTabText(pageIndex, strNewTitle);
-        }
-    }, Qt::UniqueConnection);
+            &RibbonBar::updatePageTabTitle,
+            Qt::UniqueConnection);
     setCurrentIndex(insertedIndex);
     updateRibbonTabGeometry();
 }
@@ -3394,6 +3390,19 @@ void RibbonBar::unregisterSearchAction(QAction *action)
     rebuildSearchActionIndex();
     updateSearchSuggestions();
     updateSearchPopup();
+}
+
+void RibbonBar::updatePageTabTitle(const QString &strTitle)
+{
+    RibbonPage *page = qobject_cast<RibbonPage *>(sender());
+    if (!page) {
+        return;
+    }
+
+    const int pageIndex = indexOf(page);
+    if (pageIndex >= 0) {
+        setTabText(pageIndex, strTitle);
+    }
 }
 
 ///
