@@ -1,4 +1,39 @@
-__pycache__
-/LqRibbonWin/Example/build
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Qt Creator / qmake
+.qmake.stash
+*.pro.user
+*.pro.user.*
+.qtcreator/
+
+# C/C++ build outputs
+build/
+Build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+Makefile
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.app/
+
+# Project-local build directories
+/LqRibbonWin/Example/build/
 /LqRibbonCPP/Example/.qtcreator/
 /LqRibbonCPP/Example/build/
