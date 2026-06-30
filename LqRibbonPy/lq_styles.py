@@ -217,12 +217,31 @@ class LqStyle:
     @staticmethod
     def get_ribbon_style(style=RibbonStyle.Office2016Blue, platform_layout=RibbonPlatformLayout.Classic):
         p = LqStyle.palette(style)
+        style = _coerce_style(style)
         platform_layout = _coerce_platform_layout(platform_layout)
         if platform_layout == RibbonPlatformLayout.MacOS:
-            is_dark = _coerce_style(style) == RibbonStyle.Microsoft365Dark
-            title_bg = "#202020" if is_dark else "#f7f7f7"
-            title_text = p["text"]
-            tab_hover = "#363636" if is_dark else "#ececec"
+            is_dark = style == RibbonStyle.Microsoft365Dark
+            is_legacy_office = style in (
+                RibbonStyle.Office2016Blue,
+                RibbonStyle.Office2019Colorful,
+            )
+            title_bg = (
+                p["caption_bg"]
+                if is_legacy_office
+                else "#202020"
+                if is_dark
+                else "#f7f7f7"
+            )
+            title_text = p["status_text"] if is_legacy_office else p["text"]
+            selected_tab_bg = p["selected_tab_bg"] if is_legacy_office else "transparent"
+            tab_hover = (
+                p["caption_hover"]
+                if is_legacy_office
+                else "#363636"
+                if is_dark
+                else "#ececec"
+            )
+            tab_hover_radius = p["tab_radius"] if is_legacy_office else "4px"
             return f"""
             LqRibbonBar, QTabWidget#lqRibbonBar {{
                 background: {p["ribbon_bg"]};
@@ -248,7 +267,7 @@ class LqStyle:
                 font-size: 12px;
             }}
             QTabBar#lqRibbonTabBar::tab:selected {{
-                background: transparent;
+                background: {selected_tab_bg};
                 color: {p["selected_tab_text"]};
                 border-left: none;
                 border-right: none;
@@ -259,7 +278,7 @@ class LqStyle:
             }}
             QTabBar#lqRibbonTabBar::tab:hover:!selected {{
                 background: {tab_hover};
-                border-radius: 4px;
+                border-radius: {tab_hover_radius};
             }}
             QLineEdit#lqRibbonSearchEdit {{
                 min-height: 22px;

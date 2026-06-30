@@ -1,5 +1,9 @@
 QT += widgets
 
+macx:equals(QMAKE_HOST.arch, arm64):!contains(QMAKE_APPLE_DEVICE_ARCHS, x86_64) {
+    QMAKE_CXXFLAGS += -include arm_acle.h
+}
+
 INCLUDEPATH += \
     $$PWD/Code
 

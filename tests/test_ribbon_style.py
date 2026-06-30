@@ -336,6 +336,48 @@ def test_macos_platform_layout_keeps_style_choices_with_custom_frame():
     window.close()
 
 
+def test_macos_office_styles_keep_colored_caption_styles():
+    blue_style = LqStyle.get_ribbon_style(
+        RibbonStyle.Office2016Blue,
+        RibbonPlatformLayout.MacOS,
+    )
+    colorful_style = LqStyle.get_ribbon_style(
+        RibbonStyle.Office2019Colorful,
+        RibbonPlatformLayout.MacOS,
+    )
+    light_style = LqStyle.get_ribbon_style(
+        RibbonStyle.Microsoft365Light,
+        RibbonPlatformLayout.MacOS,
+    )
+
+    assert "background: #2b579a;" in blue_style
+    assert "color: #ffffff;" in blue_style
+    assert "background: #185abd;" in colorful_style
+    assert "color: #ffffff;" in colorful_style
+    assert "background: #ffffff;" in colorful_style
+    assert "background: #f7f7f7;" in light_style
+
+
+def test_macos_office_caption_paint_uses_theme_color():
+    window = RibbonMainWindow()
+    ribbon = window.ribbonBar()
+    ribbon.setPlatformLayout(RibbonPlatformLayout.MacOS)
+    window.resize(760, 260)
+    window.show()
+    _app().processEvents()
+
+    for style, expected in [
+        (RibbonStyle.Office2016Blue, QColor("#2b579a")),
+        (RibbonStyle.Office2019Colorful, QColor("#185abd")),
+    ]:
+        window.setRibbonStyle(style)
+        _app().processEvents()
+        title_color = ribbon.grab().toImage().pixelColor(100, 10)
+        assert _close_color(title_color, expected, tolerance=4)
+
+    window.close()
+
+
 def test_macos_platform_layout_keeps_group_title_visible():
     window = RibbonMainWindow()
     ribbon = window.ribbonBar()
@@ -372,6 +414,14 @@ def test_fluent_state_timing_tokens_apply_to_m365_only():
 def test_example_combo_switches_style():
     window = MainWindow()
     combo = window.style_combo_control.widget()
+    colorful_index = combo.findData(int(RibbonStyle.Office2019Colorful))
+    combo.setCurrentIndex(colorful_index)
+    assert window.ribbonStyle() == RibbonStyle.Office2019Colorful
+    assert "#185abd" in window.ribbonBar().styleSheet()
+    blue_index = combo.findData(int(RibbonStyle.Office2016Blue))
+    combo.setCurrentIndex(blue_index)
+    assert window.ribbonStyle() == RibbonStyle.Office2016Blue
+    assert "#2b579a" in window.ribbonBar().styleSheet()
     dark_index = combo.findData(int(RibbonStyle.Microsoft365Dark))
     combo.setCurrentIndex(dark_index)
     assert window.ribbonStyle() == RibbonStyle.Microsoft365Dark
@@ -547,6 +597,8 @@ def main():
         test_page_command_area_border_style_tokens_apply_to_all_styles,
         test_page_command_area_three_sided_border_is_rendered,
         test_python_frame_theme_uses_frameless_window_and_buttons,
+        test_macos_office_styles_keep_colored_caption_styles,
+        test_macos_office_caption_paint_uses_theme_color,
         test_fluent_state_timing_tokens_apply_to_m365_only,
         test_example_combo_switches_style,
         test_example_system_combo_follows_palette,

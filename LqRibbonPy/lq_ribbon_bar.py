@@ -318,18 +318,39 @@ class LqRibbonBar(QTabWidget):
         palette = LqStyle.palette(self._ribbon_style)
         painter = QPainter(self)
         if self._is_macos_layout():
-            title_bg = QColor("#202020" if self._ribbon_style == RibbonStyle.Microsoft365Dark else "#f7f7f7")
-            line_color = QColor("#3a3a3a" if self._ribbon_style == RibbonStyle.Microsoft365Dark else "#d8d8d8")
-            painter.fillRect(0, 0, self.width(), self.height(), QColor(palette["ribbon_bg"]))
+            title_bg, line_color, title_text = self._mac_title_colors()
+            painter.fillRect(
+                0,
+                0,
+                self.width(),
+                self.height(),
+                QColor(palette["ribbon_bg"]),
+            )
             painter.fillRect(0, 0, self.width(), RIBBON_MAC_TITLE_HEIGHT, title_bg)
-            painter.fillRect(0, RIBBON_MAC_TITLE_HEIGHT, self.width(), RIBBON_MAC_TAB_HEIGHT, title_bg)
+            painter.fillRect(
+                0,
+                RIBBON_MAC_TITLE_HEIGHT,
+                self.width(),
+                RIBBON_MAC_TAB_HEIGHT,
+                title_bg,
+            )
             painter.setPen(line_color)
-            painter.drawLine(0, RIBBON_MAC_TITLE_HEIGHT - 1, self.width(), RIBBON_MAC_TITLE_HEIGHT - 1)
-            painter.drawLine(0, self._collapsed_height() - 1, self.width(), self._collapsed_height() - 1)
+            painter.drawLine(
+                0,
+                RIBBON_MAC_TITLE_HEIGHT - 1,
+                self.width(),
+                RIBBON_MAC_TITLE_HEIGHT - 1,
+            )
+            painter.drawLine(
+                0,
+                self._collapsed_height() - 1,
+                self.width(),
+                self._collapsed_height() - 1,
+            )
             title_left = 170
             title_width = max(0, self.width() - 560)
             if title_width:
-                painter.setPen(QColor(palette["text"]))
+                painter.setPen(title_text)
                 painter.drawText(
                     title_left,
                     0,
@@ -459,6 +480,34 @@ class LqRibbonBar(QTabWidget):
 
     def _is_macos_layout(self):
         return self._platform_layout == RibbonPlatformLayout.MacOS
+
+    def _is_legacy_office_style(self):
+        return self._ribbon_style in (
+            RibbonStyle.Office2016Blue,
+            RibbonStyle.Office2019Colorful,
+        )
+
+    def _mac_title_colors(self):
+        palette = LqStyle.palette(self._ribbon_style)
+        if self._is_legacy_office_style():
+            return (
+                QColor(palette["caption_bg"]),
+                QColor(palette["caption_hover"]),
+                QColor(palette["status_text"]),
+            )
+        return (
+            QColor(
+                "#202020"
+                if self._ribbon_style == RibbonStyle.Microsoft365Dark
+                else "#f7f7f7"
+            ),
+            QColor(
+                "#3a3a3a"
+                if self._ribbon_style == RibbonStyle.Microsoft365Dark
+                else "#d8d8d8"
+            ),
+            QColor(palette["text"]),
+        )
 
     def platformLayout(self):
         return self._platform_layout
