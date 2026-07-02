@@ -22,7 +22,26 @@ sys.path.insert(
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QColor, QIcon, QPalette
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QFrame, QStackedWidget, QWidget, QMdiArea, QVBoxLayout
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QDateTimeEdit,
+    QDoubleSpinBox,
+    QFrame,
+    QListWidget,
+    QMdiArea,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QStackedWidget,
+    QTableWidget,
+    QTabWidget,
+    QTimeEdit,
+    QTreeWidget,
+    QWidget,
+    QVBoxLayout,
+)
 
 from LqRibbon import LqStyle, RibbonPlatformLayout, RibbonMainWindow, RibbonStyle
 from main_window import (
@@ -73,6 +92,9 @@ def test_window_style_pass_through_updates_full_stylesheet():
     window.setRibbonStyle(RibbonStyle.Microsoft365Dark)
     assert window.ribbonStyle() == RibbonStyle.Microsoft365Dark
     assert "#1f1f1f" in window.styleSheet()
+    assert "QStatusBar QLabel" in window.styleSheet()
+    assert "QStatusBar QSlider::handle:horizontal" in window.styleSheet()
+    assert "QStatusBar QProgressBar::chunk" in window.styleSheet()
     window.close()
 
 
@@ -106,6 +128,49 @@ def test_fluent_soft_borders_apply_to_m365_only():
     assert "border-left: 1px solid #3a3a3a;" in dark_style
     assert "border: 1px solid #3a3a3a;" in dark_style
     assert "border-color: #3a3a3a;" in dark_style
+
+
+def test_common_control_style_is_scoped_and_covers_dark_inputs():
+    style_sheet = LqStyle.get_common_control_style(
+        RibbonStyle.Microsoft365Dark,
+        "lqRibbonDemoSurface",
+    )
+    assert "QWidget#lqRibbonDemoSurface QComboBox" in style_sheet
+    assert "QWidget#lqRibbonDemoSurface QComboBox QAbstractItemView" in style_sheet
+    assert "QWidget#lqRibbonDemoSurface QSpinBox" in style_sheet
+    assert "QWidget#lqRibbonDemoSurface QTableWidget" in style_sheet
+    assert "QWidget#lqRibbonDemoSurface QListWidget" in style_sheet
+    assert "QWidget#lqRibbonDemoSurface QTreeWidget" in style_sheet
+    assert "QWidget#lqRibbonDemoSurface QProgressBar" in style_sheet
+    assert "QWidget#lqRibbonDemoSurface QTabWidget::pane" in style_sheet
+    assert "#1f1f1f" in style_sheet
+    assert "#2d2d2d" in style_sheet
+    assert "QApplication" not in style_sheet
+
+
+def test_common_control_style_uses_fluent_primary_and_checked_glyphs():
+    style_sheet = LqStyle.get_common_control_style(
+        RibbonStyle.Office2016Blue,
+        "lqRibbonDemoSurface",
+    )
+    button_block = _style_block(
+        style_sheet,
+        "QWidget#lqRibbonDemoSurface QPushButton {",
+    )
+    checkbox_block = _style_block(
+        style_sheet,
+        "QWidget#lqRibbonDemoSurface QCheckBox::indicator:checked {",
+    )
+    radio_block = _style_block(
+        style_sheet,
+        "QWidget#lqRibbonDemoSurface QRadioButton::indicator:checked {",
+    )
+
+    assert "background-color: #2b579a;" in button_block
+    assert "color: #ffffff;" in button_block
+    assert "color: #202020;" not in button_block
+    assert "lq_checkbox_checked_white.svg" in checkbox_block
+    assert "lq_radio_checked_white.svg" in radio_block
 
 
 def _close_color(actual, expected, tolerance=3):
@@ -584,6 +649,91 @@ def test_example_style_choice_persists_to_settings():
         window.close()
 
 
+def test_example_default_content_exposes_themed_common_controls():
+    window = MainWindow()
+    window.set_ribbon_style(RibbonStyle.Microsoft365Dark)
+    surface = window.centralWidget()
+
+    assert surface.objectName() == "lqRibbonDemoSurface"
+    assert surface.property("lqRibbonStyleManaged") is True
+    assert "QWidget#lqRibbonDemoSurface QComboBox" in surface.styleSheet()
+    assert "#1f1f1f" in surface.styleSheet()
+    assert "#2d2d2d" in surface.styleSheet()
+    assert surface.findChild(QComboBox, "demoModeCombo") is not None
+    assert surface.findChild(QComboBox, "demoProfileCombo") is not None
+    assert surface.findChild(QSpinBox, "demoSpeedSpin") is not None
+    assert surface.findChild(QDoubleSpinBox, "demoGainSpin") is not None
+    assert surface.findChild(QTimeEdit, "demoTimeEdit") is not None
+    assert surface.findChild(QDateTimeEdit, "demoTimestampEdit") is not None
+    assert surface.findChild(QTabWidget, "demoTabWidget") is not None
+    assert surface.findChild(QListWidget, "demoListWidget") is not None
+    assert surface.findChild(QTreeWidget, "demoTreeWidget") is not None
+    assert surface.findChild(QProgressBar, "demoProgressBar") is not None
+    table = surface.findChild(QTableWidget, "demoParameterTable")
+    assert table is not None
+    assert table.rowCount() == 6
+    assert table.item(1, 1).text() == "Target speed"
+    override_panel = surface.findChild(QFrame, "demoOverridePanel")
+    assert override_panel is not None
+    assert "#107c41" in override_panel.styleSheet()
+    assert override_panel.findChild(QComboBox, "demoOverrideCombo") is not None
+    assert override_panel.findChild(QCheckBox, "demoOverrideCheck") is not None
+    assert override_panel.findChild(QPushButton, "demoOverrideButton") is not None
+    assert window.demo_theme_badge.text() == LqStyle.ribbon_style_name(
+        RibbonStyle.Microsoft365Dark
+    )
+    window.close()
+
+
+def test_example_non_dark_content_styles_stay_light():
+    window = MainWindow()
+    for style in (
+        RibbonStyle.Office2016Blue,
+        RibbonStyle.Office2019Colorful,
+        RibbonStyle.Microsoft365Light,
+    ):
+        window.set_ribbon_style(style)
+        palette = LqStyle.palette(style)
+        style_sheet = window.centralWidget().styleSheet()
+        assert f"background-color: {palette['window_bg']};" in style_sheet
+        assert palette["accent"] in style_sheet
+        assert "#1f1f1f" not in style_sheet
+        assert "#2d2d2d" not in style_sheet
+    window.close()
+
+
+def test_example_host_override_panel_wins_over_ribbon_theme():
+    window = MainWindow()
+    surface = window.centralWidget()
+    override_panel = surface.findChild(QFrame, "demoOverridePanel")
+    assert override_panel is not None
+    original_override = override_panel.styleSheet()
+
+    window.set_ribbon_style(RibbonStyle.Microsoft365Dark)
+
+    assert "#1f1f1f" in surface.styleSheet()
+    assert "#107c41" in override_panel.styleSheet()
+    assert override_panel.styleSheet() == original_override
+    assert "QFrame#demoOverridePanel" in override_panel.styleSheet()
+    window.close()
+
+
+def test_example_content_style_does_not_replace_user_override():
+    window = MainWindow()
+    surface = window.centralWidget()
+    override = (
+        "QWidget#lqRibbonDemoSurface { background: #123456; } "
+        "QComboBox#demoModeCombo { background: #654321; }"
+    )
+    surface.setStyleSheet(override)
+
+    window.set_ribbon_style(RibbonStyle.Microsoft365Dark)
+
+    assert surface.styleSheet() == override
+    assert surface.property("lqRibbonStyleManaged") is False
+    window.close()
+
+
 def main():
     _app()
     tests = [
@@ -593,6 +743,8 @@ def main():
         test_window_style_pass_through_updates_full_stylesheet,
         test_fluent_tab_radius_applies_to_m365_only,
         test_fluent_soft_borders_apply_to_m365_only,
+        test_common_control_style_is_scoped_and_covers_dark_inputs,
+        test_common_control_style_uses_fluent_primary_and_checked_glyphs,
         test_selected_tab_lines_match_office_generation,
         test_page_command_area_border_style_tokens_apply_to_all_styles,
         test_page_command_area_three_sided_border_is_rendered,
@@ -607,6 +759,10 @@ def main():
         test_example_high_contrast_style_preview_pass,
         test_example_touch_mouse_spacing_toggle_tracks_preview,
         test_example_style_choice_persists_to_settings,
+        test_example_default_content_exposes_themed_common_controls,
+        test_example_non_dark_content_styles_stay_light,
+        test_example_host_override_panel_wins_over_ribbon_theme,
+        test_example_content_style_does_not_replace_user_override,
     ]
     for test in tests:
         test()

@@ -5,8 +5,9 @@ MainWindow - feature parity demo for the C++ example.
 import io
 import json
 import sys
+from pathlib import Path
 
-from PySide6.QtCore import QDate, QPoint, QRect, QSize, Qt, QTimer
+from PySide6.QtCore import QDate, QDateTime, QPoint, QRect, QSize, Qt, QTime, QTimer
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -18,18 +19,37 @@ from PySide6.QtGui import (
     QPixmap,
 )
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
+    QDateEdit,
+    QDateTimeEdit,
+    QDoubleSpinBox,
     QFormLayout,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
+    QLineEdit,
+    QListWidget,
     QMdiArea,
     QMenu,
     QMessageBox,
     QPlainTextEdit,
+    QProgressBar,
+    QPushButton,
+    QRadioButton,
+    QSlider,
+    QSpinBox,
     QStyle,
     QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
     QToolButton,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QTimeEdit,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -71,6 +91,10 @@ SEARCH_BAR_CENTRAL = 1
 SEARCH_BAR_COMPACT = 2
 SEARCH_BAR_HIDDEN = 3
 RIBBON_STYLE_SETTINGS_KEY = "Ribbon/Style"
+
+
+def demo_style_asset_url(file_name):
+    return (Path(__file__).resolve().parents[1] / "assets" / file_name).as_posix()
 
 
 def ribbon_style_settings_value(style):
@@ -216,6 +240,7 @@ class MainWindow(RibbonMainWindow):
         self.search_actions = []
         self.high_contrast_style_pass = False
         self.touch_spacing_enabled = False
+        self._demo_surface_style_sheet = ""
         self.create_ribbon()
         self.install_default_content()
 
@@ -3799,10 +3824,436 @@ class MainWindow(RibbonMainWindow):
         )
 
     def install_default_content(self):
-        content = QLabel("LqRibbon PySide6 example")
-        content.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        content = self._create_demo_surface()
         self.setCentralWidget(content)
         self.default_content = content
+        self._apply_demo_surface_style()
+
+    def _create_demo_surface(self):
+        surface = QWidget(self)
+        surface.setObjectName("lqRibbonDemoSurface")
+        surface.setProperty("lqRibbonStyleManaged", True)
+        layout = QVBoxLayout(surface)
+        layout.setContentsMargins(24, 20, 24, 22)
+        layout.setSpacing(16)
+
+        heading_row = QHBoxLayout()
+        heading_row.setContentsMargins(0, 0, 0, 0)
+        heading_row.setSpacing(12)
+        title_block = QVBoxLayout()
+        title_block.setContentsMargins(0, 0, 0, 0)
+        title_block.setSpacing(3)
+        title = QLabel("LqRibbon control surface", surface)
+        title.setObjectName("demoSurfaceTitle")
+        subtitle = QLabel(
+            "Host widgets below the Ribbon inherit the active theme unless "
+            "the application overrides them.",
+            surface,
+        )
+        subtitle.setObjectName("demoSurfaceSubtitle")
+        title_block.addWidget(title)
+        title_block.addWidget(subtitle)
+        heading_row.addLayout(title_block, 1)
+        self.demo_theme_badge = QLabel(surface)
+        self.demo_theme_badge.setObjectName("demoThemeBadge")
+        self.demo_theme_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.demo_theme_badge.setMinimumWidth(170)
+        heading_row.addWidget(self.demo_theme_badge)
+        layout.addLayout(heading_row)
+
+        content_grid = QGridLayout()
+        content_grid.setContentsMargins(0, 0, 0, 0)
+        content_grid.setHorizontalSpacing(16)
+        content_grid.setVerticalSpacing(16)
+        content_grid.addWidget(self._create_demo_control_panel(surface), 0, 0, 2, 1)
+        content_grid.addWidget(self._create_demo_table_panel(surface), 0, 1)
+        content_grid.addWidget(self._create_demo_picker_panel(surface), 1, 1)
+        content_grid.addWidget(self._create_demo_override_panel(surface), 0, 2, 2, 1)
+        content_grid.setColumnStretch(0, 0)
+        content_grid.setColumnStretch(1, 1)
+        content_grid.setColumnStretch(2, 0)
+        content_grid.setRowStretch(0, 1)
+        content_grid.setRowStretch(1, 0)
+        layout.addLayout(content_grid, 1)
+        return surface
+
+    def _create_demo_control_panel(self, parent):
+        panel = QFrame(parent)
+        panel.setObjectName("demoControlPanel")
+        panel.setMinimumWidth(330)
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(18, 16, 18, 18)
+        panel_layout.setSpacing(12)
+
+        title = QLabel("Input controls", panel)
+        title.setObjectName("demoSectionTitle")
+        panel_layout.addWidget(title)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(14)
+        form.setVerticalSpacing(10)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        mode_combo = QComboBox(panel)
+        mode_combo.setObjectName("demoModeCombo")
+        mode_combo.addItems(["Position loop", "Velocity loop", "Torque loop"])
+        form.addRow("Mode", mode_combo)
+
+        profile_combo = QComboBox(panel)
+        profile_combo.setObjectName("demoProfileCombo")
+        profile_combo.setEditable(True)
+        profile_combo.addItems(["Commissioning", "Production", "Diagnostics"])
+        profile_combo.setCurrentText("Commissioning")
+        form.addRow("Profile", profile_combo)
+
+        speed_spin = QSpinBox(panel)
+        speed_spin.setObjectName("demoSpeedSpin")
+        speed_spin.setRange(0, 6000)
+        speed_spin.setValue(1500)
+        speed_spin.setSuffix(" rpm")
+        form.addRow("Speed", speed_spin)
+
+        gain_spin = QDoubleSpinBox(panel)
+        gain_spin.setObjectName("demoGainSpin")
+        gain_spin.setRange(0.0, 20.0)
+        gain_spin.setSingleStep(0.1)
+        gain_spin.setValue(2.4)
+        form.addRow("Gain", gain_spin)
+
+        deadline_edit = QDateEdit(QDate.currentDate(), panel)
+        deadline_edit.setObjectName("demoDeadlineEdit")
+        deadline_edit.setCalendarPopup(True)
+        form.addRow("Date", deadline_edit)
+
+        time_edit = QTimeEdit(QTime.currentTime(), panel)
+        time_edit.setObjectName("demoTimeEdit")
+        form.addRow("Time", time_edit)
+
+        timestamp_edit = QDateTimeEdit(QDateTime.currentDateTime(), panel)
+        timestamp_edit.setObjectName("demoTimestampEdit")
+        timestamp_edit.setCalendarPopup(True)
+        form.addRow("Timestamp", timestamp_edit)
+
+        command_edit = QLineEdit(panel)
+        command_edit.setObjectName("demoCommandEdit")
+        command_edit.setPlaceholderText("Search parameters")
+        form.addRow("Command", command_edit)
+        panel_layout.addLayout(form)
+
+        toggles = QHBoxLayout()
+        toggles.setSpacing(14)
+        enabled_check = QCheckBox("Enabled", panel)
+        enabled_check.setObjectName("demoEnabledCheck")
+        enabled_check.setChecked(True)
+        auto_radio = QRadioButton("Auto", panel)
+        auto_radio.setObjectName("demoAutoRadio")
+        auto_radio.setChecked(True)
+        manual_radio = QRadioButton("Manual", panel)
+        manual_radio.setObjectName("demoManualRadio")
+        toggles.addWidget(enabled_check)
+        toggles.addWidget(auto_radio)
+        toggles.addWidget(manual_radio)
+        panel_layout.addLayout(toggles)
+
+        slider = QSlider(Qt.Orientation.Horizontal, panel)
+        slider.setObjectName("demoLoadSlider")
+        slider.setRange(0, 100)
+        slider.setValue(62)
+        panel_layout.addWidget(slider)
+
+        tool_row = QHBoxLayout()
+        tool_row.setSpacing(8)
+        detail_button = QToolButton(panel)
+        detail_button.setObjectName("demoDetailsToolButton")
+        detail_button.setText("Details")
+        detail_button.setCheckable(True)
+        detail_button.setChecked(True)
+        reset_button = QToolButton(panel)
+        reset_button.setObjectName("demoResetToolButton")
+        reset_button.setText("Reset")
+        tool_row.addWidget(detail_button)
+        tool_row.addWidget(reset_button)
+        panel_layout.addLayout(tool_row)
+
+        notes = QPlainTextEdit(panel)
+        notes.setObjectName("demoNotesEdit")
+        notes.setPlainText(
+            "Dark mode check:\n"
+            "Combo popup, spin arrows, table selection, and focus rings."
+        )
+        notes.setFixedHeight(76)
+        panel_layout.addWidget(notes)
+
+        apply_button = QPushButton("Apply sample", panel)
+        apply_button.setObjectName("demoApplyButton")
+        apply_button.clicked.connect(
+            lambda: self._message("Demo controls: sample applied")
+        )
+        panel_layout.addWidget(apply_button)
+        panel_layout.addStretch(1)
+        return panel
+
+    def _create_demo_table_panel(self, parent):
+        panel = QFrame(parent)
+        panel.setObjectName("demoTablePanel")
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(18, 16, 18, 18)
+        panel_layout.setSpacing(12)
+
+        title = QLabel("Parameter table", panel)
+        title.setObjectName("demoSectionTitle")
+        hint = QLabel(
+            "Selection, headers, alternating rows, and scrollbars are themed "
+            "with the same palette.",
+            panel,
+        )
+        hint.setObjectName("demoFieldHint")
+        panel_layout.addWidget(title)
+        panel_layout.addWidget(hint)
+
+        table = QTableWidget(6, 4, panel)
+        table.setObjectName("demoParameterTable")
+        table.setAlternatingRowColors(True)
+        table.setHorizontalHeaderLabels(["Index", "Parameter", "Value", "State"])
+        table.verticalHeader().setVisible(False)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        rows = [
+            ("01", "Servo enable", "True", "Ready"),
+            ("02", "Target speed", "1500 rpm", "Active"),
+            ("03", "Acceleration", "320 ms", "Ready"),
+            ("04", "Torque limit", "85%", "Warning"),
+            ("05", "Home offset", "12.40 mm", "Ready"),
+            ("06", "Bus voltage", "48.2 V", "Online"),
+        ]
+        for row, values in enumerate(rows):
+            for column, value in enumerate(values):
+                item = QTableWidgetItem(value)
+                if column == 0:
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                table.setItem(row, column, item)
+        table.selectRow(1)
+        panel_layout.addWidget(table, 1)
+        self.demo_parameter_table = table
+        return panel
+
+    def _create_demo_picker_panel(self, parent):
+        panel = QFrame(parent)
+        panel.setObjectName("demoPickerPanel")
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(18, 14, 18, 16)
+        panel_layout.setSpacing(10)
+
+        title = QLabel("Lists and progress", panel)
+        title.setObjectName("demoSectionTitle")
+        panel_layout.addWidget(title)
+
+        view_row = QHBoxLayout()
+        view_row.setContentsMargins(0, 0, 0, 0)
+        view_row.setSpacing(12)
+
+        tabs = QTabWidget(panel)
+        tabs.setObjectName("demoTabWidget")
+
+        list_widget = QListWidget(tabs)
+        list_widget.setObjectName("demoListWidget")
+        list_widget.addItems(["Alarm history", "Motion queue", "Parameter set"])
+        list_widget.setCurrentRow(1)
+        tabs.addTab(list_widget, "List")
+
+        queue_widget = QListWidget(tabs)
+        queue_widget.setObjectName("demoQueueWidget")
+        queue_widget.addItems(["Homing", "Jog +", "Write parameter", "Save"])
+        queue_widget.setCurrentRow(2)
+        tabs.addTab(queue_widget, "Queue")
+
+        tree = QTreeWidget(panel)
+        tree.setObjectName("demoTreeWidget")
+        tree.setHeaderLabels(["Node", "State"])
+        drive = QTreeWidgetItem(["Drive", "Online"])
+        drive.addChild(QTreeWidgetItem(["Axis 1", "Ready"]))
+        drive.addChild(QTreeWidgetItem(["Axis 2", "Jogging"]))
+        io_node = QTreeWidgetItem(["I/O", "Normal"])
+        io_node.addChild(QTreeWidgetItem(["DI-01", "High"]))
+        tree.addTopLevelItem(drive)
+        tree.addTopLevelItem(io_node)
+        tree.expandAll()
+
+        view_row.addWidget(tabs, 1)
+        view_row.addWidget(tree, 1)
+        panel_layout.addLayout(view_row)
+
+        progress = QProgressBar(panel)
+        progress.setObjectName("demoProgressBar")
+        progress.setRange(0, 100)
+        progress.setValue(68)
+        progress.setFormat("Profile load %p%")
+        panel_layout.addWidget(progress)
+        self.demo_list_widget = list_widget
+        self.demo_tree_widget = tree
+        self.demo_progress_bar = progress
+        return panel
+
+    def _create_demo_override_panel(self, parent):
+        panel = QFrame(parent)
+        panel.setObjectName("demoOverridePanel")
+        panel.setMinimumWidth(300)
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(18, 16, 18, 18)
+        panel_layout.setSpacing(12)
+
+        title = QLabel("Host stylesheet override", panel)
+        title.setObjectName("demoSectionTitle")
+        panel_layout.addWidget(title)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(12)
+        form.setVerticalSpacing(10)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        override_combo = QComboBox(panel)
+        override_combo.setObjectName("demoOverrideCombo")
+        override_combo.addItems(["Business green", "Safety review", "Manual hold"])
+        form.addRow("Theme", override_combo)
+
+        override_edit = QLineEdit(panel)
+        override_edit.setObjectName("demoOverrideLineEdit")
+        override_edit.setText("Logic layer")
+        form.addRow("Owner", override_edit)
+
+        override_spin = QSpinBox(panel)
+        override_spin.setObjectName("demoOverrideSpin")
+        override_spin.setRange(0, 100)
+        override_spin.setValue(72)
+        override_spin.setSuffix("%")
+        form.addRow("Limit", override_spin)
+        panel_layout.addLayout(form)
+
+        override_check = QCheckBox("Business stylesheet active", panel)
+        override_check.setObjectName("demoOverrideCheck")
+        override_check.setChecked(True)
+        panel_layout.addWidget(override_check)
+
+        override_button = QPushButton("Apply business rule", panel)
+        override_button.setObjectName("demoOverrideButton")
+        panel_layout.addWidget(override_button)
+
+        table = QTableWidget(3, 2, panel)
+        table.setObjectName("demoOverrideTable")
+        table.setHorizontalHeaderLabels(["Rule", "Result"])
+        table.verticalHeader().setVisible(False)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        for row, values in enumerate(
+            [("Ribbon", "Managed"), ("Host", "Override"), ("Priority", "Host")]
+        ):
+            for column, value in enumerate(values):
+                table.setItem(row, column, QTableWidgetItem(value))
+        table.setFixedHeight(120)
+        panel_layout.addWidget(table)
+        panel_layout.addStretch(1)
+        self.demo_override_panel = panel
+        self._apply_demo_override_style()
+        return panel
+
+    def _apply_demo_override_style(self):
+        panel = getattr(self, "demo_override_panel", None)
+        if panel is None:
+            return
+        panel.setStyleSheet(
+            """
+            QFrame#demoOverridePanel {
+                background-color: #f4fbf6;
+                border: 1px solid #107c41;
+                border-radius: 6px;
+            }
+            QFrame#demoOverridePanel QLabel {
+                color: #0b3d20;
+                background: transparent;
+            }
+            QFrame#demoOverridePanel QComboBox,
+            QFrame#demoOverridePanel QLineEdit,
+            QFrame#demoOverridePanel QSpinBox {
+                min-height: 28px;
+                padding: 2px 8px;
+                color: #0b3d20;
+                background-color: #ffffff;
+                border: 1px solid #107c41;
+                border-radius: 4px;
+                selection-background-color: #107c41;
+                selection-color: #ffffff;
+            }
+            QFrame#demoOverridePanel QCheckBox {
+                color: #0b3d20;
+                spacing: 8px;
+            }
+            QFrame#demoOverridePanel QCheckBox::indicator {
+                width: 15px;
+                height: 15px;
+                border: 1px solid #107c41;
+                border-radius: 3px;
+                background: #ffffff;
+            }
+            QFrame#demoOverridePanel QCheckBox::indicator:checked {
+                background: #107c41;
+                border-color: #107c41;
+                image: url("%s");
+            }
+            QFrame#demoOverridePanel QPushButton {
+                min-height: 30px;
+                padding: 4px 14px;
+                color: #ffffff;
+                background-color: #107c41;
+                border: 1px solid #107c41;
+                border-radius: 4px;
+                font-weight: 600;
+            }
+            QFrame#demoOverridePanel QPushButton:hover {
+                background-color: #0b6a35;
+                border-color: #0b6a35;
+            }
+            QFrame#demoOverridePanel QTableWidget {
+                background-color: #ffffff;
+                color: #0b3d20;
+                border: 1px solid #107c41;
+                border-radius: 4px;
+                gridline-color: #b7dfc4;
+                selection-background-color: #107c41;
+                selection-color: #ffffff;
+            }
+            QFrame#demoOverridePanel QHeaderView::section {
+                background-color: #dff3e5;
+                color: #0b3d20;
+                padding: 5px 7px;
+                border: none;
+                border-right: 1px solid #b7dfc4;
+                border-bottom: 1px solid #b7dfc4;
+                font-weight: 600;
+            }
+            """
+            % demo_style_asset_url("lq_checkbox_checked_white.svg")
+        )
+
+    def _apply_demo_surface_style(self):
+        surface = getattr(self, "default_content", None)
+        if surface is None or surface.objectName() != "lqRibbonDemoSurface":
+            return
+        current_style = surface.styleSheet()
+        if current_style and current_style != self._demo_surface_style_sheet:
+            surface.setProperty("lqRibbonStyleManaged", False)
+            return
+        style_sheet = LqStyle.get_common_control_style(
+            self.ribbonStyle(),
+            "lqRibbonDemoSurface",
+        )
+        surface.setStyleSheet(style_sheet)
+        surface.setProperty("lqRibbonStyleManaged", True)
+        self._demo_surface_style_sheet = style_sheet
+        self._apply_demo_override_style()
+        if hasattr(self, "demo_theme_badge"):
+            self.demo_theme_badge.setText(
+                LqStyle.ribbon_style_name(self.ribbonStyle())
+            )
 
     def show_mdi_content(self, tabbed=False):
         mdi_area = RibbonMdiArea(self)
@@ -3859,6 +4310,10 @@ class MainWindow(RibbonMainWindow):
         index = style_combo.findData(int(style))
         if index >= 0:
             style_combo.setCurrentIndex(index)
+
+    def setRibbonStyle(self, style):
+        super().setRibbonStyle(style)
+        self._apply_demo_surface_style()
 
     def focus_search_preview(self):
         self.ribbonBar().searchLineEdit().setFocus()

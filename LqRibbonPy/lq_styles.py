@@ -3,6 +3,7 @@ LqRibbon style definitions shared by the Python Ribbon widgets.
 """
 
 from enum import IntEnum
+from pathlib import Path
 
 
 class RibbonStyle(IntEnum):
@@ -191,6 +192,12 @@ _STYLE_PALETTES = {
         "pressed_hold_ms": 80,
     },
 }
+
+_STYLE_ASSET_DIR = Path(__file__).resolve().parent / "assets"
+
+
+def _style_asset_url(file_name):
+    return (_STYLE_ASSET_DIR / file_name).as_posix()
 
 
 class LqStyle:
@@ -402,6 +409,357 @@ class LqStyle:
             font-size: 12px;
         }}
         QStatusBar::item {{
+            border: none;
+        }}
+        QStatusBar QLabel {{
+            color: {status_text};
+            background: transparent;
+        }}
+        QStatusBar QToolButton {{
+            min-width: 22px;
+            min-height: 20px;
+            padding: 1px 5px;
+            color: {status_text};
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 3px;
+        }}
+        QStatusBar QToolButton:hover,
+        QStatusBar QToolButton:checked {{
+            background-color: {p["field_bg"]};
+            border-color: {p["control_border"]};
+        }}
+        QStatusBar QSlider::groove:horizontal {{
+            height: 4px;
+            background: {p["border"]};
+            border-radius: 2px;
+        }}
+        QStatusBar QSlider::sub-page:horizontal {{
+            background: {p["accent"]};
+            border-radius: 2px;
+        }}
+        QStatusBar QSlider::handle:horizontal {{
+            width: 12px;
+            margin: -5px 0px;
+            border-radius: 6px;
+            background: {p["field_bg"]};
+            border: 1px solid {p["control_border"]};
+        }}
+        QStatusBar QProgressBar {{
+            background: {p["field_bg"]};
+            color: {status_text};
+            border: 1px solid {p["control_border"]};
+            border-radius: 2px;
+            text-align: center;
+        }}
+        QStatusBar QProgressBar::chunk {{
+            background-color: {p["accent"]};
+            border-radius: 2px;
+        }}
+        """
+
+    @staticmethod
+    def get_common_control_style(
+        style=RibbonStyle.Office2016Blue,
+        root_object_name="lqRibbonDemoSurface",
+    ):
+        """Return a scoped stylesheet for host-app controls below the Ribbon."""
+        p = LqStyle.palette(style)
+        style = _coerce_style(style)
+        is_dark = style == RibbonStyle.Microsoft365Dark
+        surface_bg = "#262626" if is_dark else "#ffffff"
+        panel_bg = "#2b2b2b" if is_dark else "#fafafa"
+        panel_alt_bg = "#242424" if is_dark else "#f5f5f5"
+        muted_text = "#c8c8c8" if is_dark else "#616161"
+        input_bg = p["field_bg"]
+        input_hover = "#343434" if is_dark else "#f8fbff"
+        disabled_bg = "#202020" if is_dark else "#f3f3f3"
+        disabled_text = "#888888" if is_dark else "#8a8a8a"
+        selected_text = "#000000" if is_dark else "#ffffff"
+        progress_text = "#000000" if is_dark else "#ffffff"
+        accent_soft = "#12384a" if is_dark else "#e5f1fb"
+        row_alt = "#292929" if is_dark else "#f8f8f8"
+        primary_bg = "#0f6cbd" if is_dark else p["accent"]
+        primary_hover = "#115ea3" if is_dark else p["focus"]
+        primary_pressed = "#0f548c" if is_dark else p["caption_bg"]
+        check_mark_url = _style_asset_url("lq_checkbox_checked_white.svg")
+        radio_dot_url = _style_asset_url("lq_radio_checked_white.svg")
+        root = root_object_name.replace('"', "").replace("'", "")
+        return f"""
+        QWidget#{root} {{
+            background-color: {p["window_bg"]};
+            color: {p["text"]};
+            font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+            font-size: 12px;
+        }}
+        QWidget#{root} QLabel {{
+            color: {p["text"]};
+            background: transparent;
+        }}
+        QWidget#{root} QLabel#demoSurfaceTitle {{
+            color: {p["text"]};
+            font-size: 18px;
+            font-weight: 600;
+        }}
+        QWidget#{root} QLabel#demoSurfaceSubtitle,
+        QWidget#{root} QLabel#demoFieldHint {{
+            color: {muted_text};
+            font-size: 12px;
+        }}
+        QWidget#{root} QLabel#demoThemeBadge {{
+            color: {p["text"]};
+            background: {accent_soft};
+            border: 1px solid {p["control_border"]};
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-weight: 600;
+        }}
+        QWidget#{root} QFrame#demoControlPanel,
+        QWidget#{root} QFrame#demoTablePanel,
+        QWidget#{root} QFrame#demoPickerPanel,
+        QWidget#{root} QFrame#demoOverridePanel {{
+            background-color: {surface_bg};
+            border: 1px solid {p["control_border"]};
+            border-radius: 6px;
+        }}
+        QWidget#{root} QLabel#demoSectionTitle {{
+            color: {p["text"]};
+            font-size: 13px;
+            font-weight: 600;
+        }}
+        QWidget#{root} QComboBox,
+        QWidget#{root} QLineEdit,
+        QWidget#{root} QDateEdit,
+        QWidget#{root} QTimeEdit,
+        QWidget#{root} QDateTimeEdit,
+        QWidget#{root} QSpinBox,
+        QWidget#{root} QDoubleSpinBox,
+        QWidget#{root} QPlainTextEdit {{
+            background-color: {input_bg};
+            color: {p["text"]};
+            border: 1px solid {p["control_border"]};
+            border-radius: 4px;
+            selection-background-color: {p["accent"]};
+            selection-color: {selected_text};
+        }}
+        QWidget#{root} QComboBox,
+        QWidget#{root} QLineEdit,
+        QWidget#{root} QDateEdit,
+        QWidget#{root} QTimeEdit,
+        QWidget#{root} QDateTimeEdit,
+        QWidget#{root} QSpinBox,
+        QWidget#{root} QDoubleSpinBox {{
+            min-height: 28px;
+            padding: 2px 8px;
+        }}
+        QWidget#{root} QPlainTextEdit {{
+            padding: 8px;
+        }}
+        QWidget#{root} QComboBox:hover,
+        QWidget#{root} QLineEdit:hover,
+        QWidget#{root} QDateEdit:hover,
+        QWidget#{root} QTimeEdit:hover,
+        QWidget#{root} QDateTimeEdit:hover,
+        QWidget#{root} QSpinBox:hover,
+        QWidget#{root} QDoubleSpinBox:hover,
+        QWidget#{root} QPlainTextEdit:hover {{
+            background-color: {input_hover};
+            border-color: {p["focus"]};
+        }}
+        QWidget#{root} QComboBox:focus,
+        QWidget#{root} QLineEdit:focus,
+        QWidget#{root} QDateEdit:focus,
+        QWidget#{root} QTimeEdit:focus,
+        QWidget#{root} QDateTimeEdit:focus,
+        QWidget#{root} QSpinBox:focus,
+        QWidget#{root} QDoubleSpinBox:focus,
+        QWidget#{root} QPlainTextEdit:focus {{
+            border-color: {p["focus"]};
+        }}
+        QWidget#{root} QComboBox:disabled,
+        QWidget#{root} QLineEdit:disabled,
+        QWidget#{root} QDateEdit:disabled,
+        QWidget#{root} QTimeEdit:disabled,
+        QWidget#{root} QDateTimeEdit:disabled,
+        QWidget#{root} QSpinBox:disabled,
+        QWidget#{root} QDoubleSpinBox:disabled,
+        QWidget#{root} QPlainTextEdit:disabled {{
+            background-color: {disabled_bg};
+            color: {disabled_text};
+            border-color: {p["border"]};
+        }}
+        QWidget#{root} QComboBox QAbstractItemView {{
+            background-color: {input_bg};
+            color: {p["text"]};
+            border: 1px solid {p["control_border"]};
+            outline: 0px;
+            selection-background-color: {p["accent"]};
+            selection-color: {selected_text};
+        }}
+        QWidget#{root} QToolButton {{
+            min-height: 28px;
+            padding: 3px 10px;
+            color: {p["text"]};
+            background-color: {input_bg};
+            border: 1px solid {p["control_border"]};
+            border-radius: 4px;
+        }}
+        QWidget#{root} QToolButton:hover,
+        QWidget#{root} QToolButton:checked {{
+            background-color: {input_hover};
+            border-color: {p["focus"]};
+        }}
+        QWidget#{root} QPushButton {{
+            min-height: 30px;
+            padding: 4px 14px;
+            color: #ffffff;
+            background-color: {primary_bg};
+            border: 1px solid {primary_bg};
+            border-radius: 4px;
+            font-weight: 600;
+        }}
+        QWidget#{root} QPushButton:hover {{
+            background-color: {primary_hover};
+            border-color: {primary_hover};
+            color: #ffffff;
+        }}
+        QWidget#{root} QPushButton:pressed {{
+            background-color: {primary_pressed};
+            border-color: {primary_pressed};
+            color: #ffffff;
+        }}
+        QWidget#{root} QCheckBox,
+        QWidget#{root} QRadioButton {{
+            color: {p["text"]};
+            spacing: 8px;
+        }}
+        QWidget#{root} QCheckBox::indicator,
+        QWidget#{root} QRadioButton::indicator {{
+            width: 15px;
+            height: 15px;
+            border: 1px solid {p["control_border"]};
+            background: {input_bg};
+        }}
+        QWidget#{root} QCheckBox::indicator {{
+            border-radius: 3px;
+        }}
+        QWidget#{root} QRadioButton::indicator {{
+            border-radius: 8px;
+        }}
+        QWidget#{root} QCheckBox::indicator:checked {{
+            background: {primary_bg};
+            border-color: {primary_bg};
+            image: url("{check_mark_url}");
+        }}
+        QWidget#{root} QRadioButton::indicator:checked {{
+            background: {primary_bg};
+            border-color: {primary_bg};
+            image: url("{radio_dot_url}");
+        }}
+        QWidget#{root} QSlider::groove:horizontal {{
+            height: 4px;
+            background: {p["control_border"]};
+            border-radius: 2px;
+        }}
+        QWidget#{root} QSlider::sub-page:horizontal {{
+            background: {p["accent"]};
+            border-radius: 2px;
+        }}
+        QWidget#{root} QSlider::handle:horizontal {{
+            width: 16px;
+            margin: -6px 0px;
+            border-radius: 8px;
+            background: {p["field_bg"]};
+            border: 2px solid {p["accent"]};
+        }}
+        QWidget#{root} QProgressBar {{
+            min-height: 18px;
+            background: {input_bg};
+            color: {progress_text};
+            border: 1px solid {p["control_border"]};
+            border-radius: 4px;
+            text-align: center;
+        }}
+        QWidget#{root} QProgressBar::chunk {{
+            background-color: {p["accent"]};
+            border-radius: 3px;
+        }}
+        QWidget#{root} QTableWidget,
+        QWidget#{root} QListWidget,
+        QWidget#{root} QTreeWidget {{
+            background-color: {input_bg};
+            alternate-background-color: {row_alt};
+            color: {p["text"]};
+            border: 1px solid {p["control_border"]};
+            border-radius: 4px;
+            gridline-color: {p["border"]};
+            selection-background-color: {p["accent"]};
+            selection-color: {selected_text};
+        }}
+        QWidget#{root} QTableWidget::item,
+        QWidget#{root} QListWidget::item,
+        QWidget#{root} QTreeWidget::item {{
+            padding: 5px 7px;
+            border: none;
+        }}
+        QWidget#{root} QTableWidget::item:selected,
+        QWidget#{root} QListWidget::item:selected,
+        QWidget#{root} QTreeWidget::item:selected {{
+            background: {p["accent"]};
+            color: {selected_text};
+        }}
+        QWidget#{root} QHeaderView::section {{
+            background-color: {panel_alt_bg};
+            color: {p["text"]};
+            padding: 6px 7px;
+            border: none;
+            border-right: 1px solid {p["border"]};
+            border-bottom: 1px solid {p["border"]};
+            font-weight: 600;
+        }}
+        QWidget#{root} QTabWidget::pane {{
+            background: {input_bg};
+            border: 1px solid {p["control_border"]};
+            border-radius: 4px;
+            top: -1px;
+        }}
+        QWidget#{root} QTabBar::tab {{
+            min-height: 26px;
+            min-width: 78px;
+            padding: 4px 10px;
+            color: {p["text"]};
+            background: {panel_alt_bg};
+            border: 1px solid {p["control_border"]};
+            border-bottom: none;
+        }}
+        QWidget#{root} QTabBar::tab:selected {{
+            background: {input_bg};
+            color: {p["text"]};
+            border-top: 2px solid {p["accent"]};
+        }}
+        QWidget#{root} QScrollBar:vertical,
+        QWidget#{root} QScrollBar:horizontal {{
+            background: {panel_bg};
+            border: none;
+            width: 12px;
+            height: 12px;
+        }}
+        QWidget#{root} QScrollBar::handle:vertical,
+        QWidget#{root} QScrollBar::handle:horizontal {{
+            background: {p["border"]};
+            border-radius: 6px;
+            min-height: 24px;
+            min-width: 24px;
+        }}
+        QWidget#{root} QScrollBar::handle:vertical:hover,
+        QWidget#{root} QScrollBar::handle:horizontal:hover {{
+            background: {p["focus"]};
+        }}
+        QWidget#{root} QScrollBar::add-line,
+        QWidget#{root} QScrollBar::sub-line,
+        QWidget#{root} QScrollBar::add-page,
+        QWidget#{root} QScrollBar::sub-page {{
+            background: transparent;
             border: none;
         }}
         """
