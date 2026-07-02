@@ -711,7 +711,7 @@ class LqRibbonBar(QTabWidget):
         else:
             self._title_button_bar.hide()
 
-        if not self._quick_access_bar.isHidden() and not quick_access_below:
+        if not self._quick_access_bar.isHidden():
             quick_height = 24
             if quick_access_below:
                 quick_x = 8
