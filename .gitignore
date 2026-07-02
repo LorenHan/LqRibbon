@@ -37,3 +37,7 @@ Makefile
 /LqRibbonWin/Example/build/
 /LqRibbonCPP/Example/.qtcreator/
 /LqRibbonCPP/Example/build/
+
+# Local verification artifacts
+/*_preview.png
+/LqRibbonCPP/Example/resources_rc.py
