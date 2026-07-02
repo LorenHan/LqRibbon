@@ -1,19 +1,26 @@
 #include <QApplication>
 #include <QActionGroup>
 #include <QBuffer>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QContextMenuEvent>
 #include <QDate>
+#include <QDateEdit>
+#include <QDateTime>
+#include <QDateTimeEdit>
 #include <QDebug>
 #include <QDir>
+#include <QDoubleSpinBox>
 #include <QEventLoop>
 #include <QFile>
 #include <QFormLayout>
 #include <QFontComboBox>
 #include <QFontDatabase>
 #include <QFrame>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHash>
+#include <QHeaderView>
 #include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -21,6 +28,8 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
 #include <QListView>
 #include <QMouseEvent>
 #include <QPalette>
@@ -31,18 +40,29 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QRadioButton>
 #include <QSettings>
 #include <QSignalBlocker>
+#include <QSlider>
+#include <QSpinBox>
 #include <QStyle>
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QTabBar>
+#include <QTabWidget>
 #include <QTableWidget>
+#include <QTableWidgetItem>
 #include <QTemporaryDir>
 #include <QTextStream>
 #include <QTimer>
 #include <QToolButton>
 #include <QToolBar>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
+#include <QTime>
+#include <QTimeEdit>
 #include <QVBoxLayout>
 
 #include <functional>
@@ -5381,6 +5401,1054 @@ RibbonStylePreviewPalette ribbonStylePreviewPalette(
     }
 }
 
+QString commonControlStyleSheet(LqRibbon::RibbonBar::RibbonStyle style,
+                                const QString &rootObjectName)
+{
+    const RibbonStylePreviewPalette palette = ribbonStylePreviewPalette(style);
+    const RibbonStyleStatePalette statePalette = ribbonStyleStatePalette(style);
+    const bool isDark = style == LqRibbon::RibbonBar::Microsoft365Dark;
+    const QString strRoot = QString(rootObjectName)
+                                .remove(QLatin1Char('"'))
+                                .remove(QLatin1Char('\''));
+    const QString strSurfaceBg =
+        isDark ? QStringLiteral("#262626") : QStringLiteral("#ffffff");
+    const QString strPanelBg =
+        isDark ? QStringLiteral("#2b2b2b") : QStringLiteral("#fafafa");
+    const QString strPanelAltBg =
+        isDark ? QStringLiteral("#242424") : QStringLiteral("#f5f5f5");
+    const QString strMutedText =
+        isDark ? QStringLiteral("#c8c8c8") : QStringLiteral("#616161");
+    const QString strInputHover =
+        isDark ? QStringLiteral("#343434") : QStringLiteral("#f8fbff");
+    const QString strDisabledBg =
+        isDark ? QStringLiteral("#202020") : QStringLiteral("#f3f3f3");
+    const QString strDisabledText =
+        isDark ? QStringLiteral("#888888") : QStringLiteral("#8a8a8a");
+    const QString strSelectedText =
+        isDark ? QStringLiteral("#000000") : QStringLiteral("#ffffff");
+    const QString strProgressText =
+        isDark ? QStringLiteral("#000000") : QStringLiteral("#ffffff");
+    const QString strAccentSoft =
+        isDark ? QStringLiteral("#12384a") : QStringLiteral("#e5f1fb");
+    const QString strRowAlt =
+        isDark ? QStringLiteral("#292929") : QStringLiteral("#f8f8f8");
+    const QString strPrimaryBg =
+        isDark ? QStringLiteral("#0f6cbd") : palette.accent;
+    const QString strPrimaryHover =
+        isDark ? QStringLiteral("#115ea3")
+               : (style == LqRibbon::RibbonBar::Office2016Blue
+                      ? QStringLiteral("#386caf")
+                      : (style == LqRibbon::RibbonBar::Office2019Colorful
+                             ? QStringLiteral("#2f6fca")
+                             : QStringLiteral("#115ea3")));
+    const QString strPrimaryPressed =
+        isDark ? QStringLiteral("#0f548c")
+               : (style == LqRibbon::RibbonBar::Office2016Blue
+                      ? QStringLiteral("#1d3f73")
+                      : (style == LqRibbon::RibbonBar::Office2019Colorful
+                             ? QStringLiteral("#124a9f")
+                             : QStringLiteral("#0f548c")));
+
+    QString styleSheet = QString::fromLatin1(R"qss(
+        QWidget#$root {
+            background-color: $windowBg;
+            color: $text;
+            font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+            font-size: 12px;
+        }
+        QWidget#$root QLabel {
+            color: $text;
+            background: transparent;
+        }
+        QWidget#$root QLabel#demoSurfaceTitle {
+            color: $text;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        QWidget#$root QLabel#demoSurfaceSubtitle,
+        QWidget#$root QLabel#demoFieldHint {
+            color: $mutedText;
+            font-size: 12px;
+        }
+        QWidget#$root QLabel#demoThemeBadge {
+            color: $text;
+            background: $accentSoft;
+            border: 1px solid $controlBorder;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-weight: 600;
+        }
+        QWidget#$root QFrame#demoControlPanel,
+        QWidget#$root QFrame#demoTablePanel,
+        QWidget#$root QFrame#demoPickerPanel,
+        QWidget#$root QFrame#demoOverridePanel {
+            background-color: $surfaceBg;
+            border: 1px solid $controlBorder;
+            border-radius: 6px;
+        }
+        QWidget#$root QLabel#demoSectionTitle {
+            color: $text;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        QWidget#$root QComboBox,
+        QWidget#$root QLineEdit,
+        QWidget#$root QDateEdit,
+        QWidget#$root QTimeEdit,
+        QWidget#$root QDateTimeEdit,
+        QWidget#$root QSpinBox,
+        QWidget#$root QDoubleSpinBox,
+        QWidget#$root QPlainTextEdit {
+            background-color: $fieldBg;
+            color: $text;
+            border: 1px solid $controlBorder;
+            border-radius: 4px;
+            selection-background-color: $accent;
+            selection-color: $selectedText;
+        }
+        QWidget#$root QComboBox,
+        QWidget#$root QLineEdit,
+        QWidget#$root QDateEdit,
+        QWidget#$root QTimeEdit,
+        QWidget#$root QDateTimeEdit,
+        QWidget#$root QSpinBox,
+        QWidget#$root QDoubleSpinBox {
+            min-height: 28px;
+            padding: 2px 8px;
+        }
+        QWidget#$root QPlainTextEdit {
+            padding: 8px;
+        }
+        QWidget#$root QComboBox:hover,
+        QWidget#$root QLineEdit:hover,
+        QWidget#$root QDateEdit:hover,
+        QWidget#$root QTimeEdit:hover,
+        QWidget#$root QDateTimeEdit:hover,
+        QWidget#$root QSpinBox:hover,
+        QWidget#$root QDoubleSpinBox:hover,
+        QWidget#$root QPlainTextEdit:hover {
+            background-color: $inputHover;
+            border-color: $focus;
+        }
+        QWidget#$root QComboBox:focus,
+        QWidget#$root QLineEdit:focus,
+        QWidget#$root QDateEdit:focus,
+        QWidget#$root QTimeEdit:focus,
+        QWidget#$root QDateTimeEdit:focus,
+        QWidget#$root QSpinBox:focus,
+        QWidget#$root QDoubleSpinBox:focus,
+        QWidget#$root QPlainTextEdit:focus {
+            border-color: $focus;
+        }
+        QWidget#$root QComboBox:disabled,
+        QWidget#$root QLineEdit:disabled,
+        QWidget#$root QDateEdit:disabled,
+        QWidget#$root QTimeEdit:disabled,
+        QWidget#$root QDateTimeEdit:disabled,
+        QWidget#$root QSpinBox:disabled,
+        QWidget#$root QDoubleSpinBox:disabled,
+        QWidget#$root QPlainTextEdit:disabled {
+            background-color: $disabledBg;
+            color: $disabledText;
+            border-color: $border;
+        }
+        QWidget#$root QComboBox QAbstractItemView {
+            background-color: $fieldBg;
+            color: $text;
+            border: 1px solid $controlBorder;
+            outline: 0px;
+            selection-background-color: $accent;
+            selection-color: $selectedText;
+        }
+        QWidget#$root QToolButton {
+            min-height: 28px;
+            padding: 3px 10px;
+            color: $text;
+            background-color: $fieldBg;
+            border: 1px solid $controlBorder;
+            border-radius: 4px;
+        }
+        QWidget#$root QToolButton:hover,
+        QWidget#$root QToolButton:checked {
+            background-color: $inputHover;
+            border-color: $focus;
+        }
+        QWidget#$root QPushButton {
+            min-height: 30px;
+            padding: 4px 14px;
+            color: #ffffff;
+            background-color: $primaryBg;
+            border: 1px solid $primaryBg;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        QWidget#$root QPushButton:hover {
+            background-color: $primaryHover;
+            border-color: $primaryHover;
+            color: #ffffff;
+        }
+        QWidget#$root QPushButton:pressed {
+            background-color: $primaryPressed;
+            border-color: $primaryPressed;
+            color: #ffffff;
+        }
+        QWidget#$root QCheckBox,
+        QWidget#$root QRadioButton {
+            color: $text;
+            spacing: 8px;
+        }
+        QWidget#$root QCheckBox::indicator,
+        QWidget#$root QRadioButton::indicator {
+            width: 15px;
+            height: 15px;
+            border: 1px solid $controlBorder;
+            background: $fieldBg;
+        }
+        QWidget#$root QCheckBox::indicator {
+            border-radius: 3px;
+        }
+        QWidget#$root QRadioButton::indicator {
+            border-radius: 8px;
+        }
+        QWidget#$root QCheckBox::indicator:checked {
+            background: $primaryBg;
+            border-color: $primaryBg;
+            image: url(:/lqribbon/example/assets/lq_checkbox_checked_white.svg);
+        }
+        QWidget#$root QRadioButton::indicator:checked {
+            background: $primaryBg;
+            border-color: $primaryBg;
+            image: url(:/lqribbon/example/assets/lq_radio_checked_white.svg);
+        }
+        QWidget#$root QSlider::groove:horizontal {
+            height: 4px;
+            background: $controlBorder;
+            border-radius: 2px;
+        }
+        QWidget#$root QSlider::sub-page:horizontal {
+            background: $accent;
+            border-radius: 2px;
+        }
+        QWidget#$root QSlider::handle:horizontal {
+            width: 16px;
+            margin: -6px 0px;
+            border-radius: 8px;
+            background: $fieldBg;
+            border: 2px solid $accent;
+        }
+        QWidget#$root QProgressBar {
+            min-height: 18px;
+            background: $fieldBg;
+            color: $progressText;
+            border: 1px solid $controlBorder;
+            border-radius: 4px;
+            text-align: center;
+        }
+        QWidget#$root QProgressBar::chunk {
+            background-color: $accent;
+            border-radius: 3px;
+        }
+        QWidget#$root QTableWidget,
+        QWidget#$root QListWidget,
+        QWidget#$root QTreeWidget {
+            background-color: $fieldBg;
+            alternate-background-color: $rowAlt;
+            color: $text;
+            border: 1px solid $controlBorder;
+            border-radius: 4px;
+            gridline-color: $border;
+            selection-background-color: $accent;
+            selection-color: $selectedText;
+        }
+        QWidget#$root QTableWidget::item,
+        QWidget#$root QListWidget::item,
+        QWidget#$root QTreeWidget::item {
+            padding: 5px 7px;
+            border: none;
+        }
+        QWidget#$root QTableWidget::item:selected,
+        QWidget#$root QListWidget::item:selected,
+        QWidget#$root QTreeWidget::item:selected {
+            background: $accent;
+            color: $selectedText;
+        }
+        QWidget#$root QHeaderView::section {
+            background-color: $panelAltBg;
+            color: $text;
+            padding: 6px 7px;
+            border: none;
+            border-right: 1px solid $border;
+            border-bottom: 1px solid $border;
+            font-weight: 600;
+        }
+        QWidget#$root QTabWidget::pane {
+            background: $fieldBg;
+            border: 1px solid $controlBorder;
+            border-radius: 4px;
+            top: -1px;
+        }
+        QWidget#$root QTabBar::tab {
+            min-height: 26px;
+            min-width: 78px;
+            padding: 4px 10px;
+            color: $text;
+            background: $panelAltBg;
+            border: 1px solid $controlBorder;
+            border-bottom: none;
+        }
+        QWidget#$root QTabBar::tab:selected {
+            background: $fieldBg;
+            color: $text;
+            border-top: 2px solid $accent;
+        }
+        QWidget#$root QScrollBar:vertical,
+        QWidget#$root QScrollBar:horizontal {
+            background: $panelBg;
+            border: none;
+            width: 12px;
+            height: 12px;
+        }
+        QWidget#$root QScrollBar::handle:vertical,
+        QWidget#$root QScrollBar::handle:horizontal {
+            background: $border;
+            border-radius: 6px;
+            min-height: 24px;
+            min-width: 24px;
+        }
+        QWidget#$root QScrollBar::handle:vertical:hover,
+        QWidget#$root QScrollBar::handle:horizontal:hover {
+            background: $focus;
+        }
+        QWidget#$root QScrollBar::add-line,
+        QWidget#$root QScrollBar::sub-line,
+        QWidget#$root QScrollBar::add-page,
+        QWidget#$root QScrollBar::sub-page {
+            background: transparent;
+            border: none;
+        }
+)qss");
+
+    const struct Replacement
+    {
+        const char *token;
+        QString value;
+    } replacements[] = {
+        {"$root", strRoot},
+        {"$windowBg", palette.ribbon},
+        {"$surfaceBg", strSurfaceBg},
+        {"$panelBg", strPanelBg},
+        {"$panelAltBg", strPanelAltBg},
+        {"$mutedText", strMutedText},
+        {"$fieldBg", palette.field},
+        {"$inputHover", strInputHover},
+        {"$disabledBg", strDisabledBg},
+        {"$disabledText", strDisabledText},
+        {"$selectedText", strSelectedText},
+        {"$progressText", strProgressText},
+        {"$accentSoft", strAccentSoft},
+        {"$rowAlt", strRowAlt},
+        {"$accent", palette.accent},
+        {"$text", palette.text},
+        {"$border", palette.border},
+        {"$controlBorder", statePalette.border},
+        {"$focus", palette.accent},
+        {"$pressed", statePalette.pressed},
+        {"$primaryBg", strPrimaryBg},
+        {"$primaryHover", strPrimaryHover},
+        {"$primaryPressed", strPrimaryPressed},
+    };
+
+    for (const Replacement &replacement : replacements) {
+        styleSheet.replace(QLatin1String(replacement.token),
+                           replacement.value);
+    }
+
+    return styleSheet;
+}
+
+QString demoStatusBarStyleSheet(LqRibbon::RibbonBar::RibbonStyle style,
+                                const QString &rootObjectName)
+{
+    const RibbonStylePreviewPalette palette = ribbonStylePreviewPalette(style);
+    const RibbonStyleStatePalette statePalette = ribbonStyleStatePalette(style);
+    const bool isDark = style == LqRibbon::RibbonBar::Microsoft365Dark;
+    const bool isOfficeBlue = style == LqRibbon::RibbonBar::Office2016Blue;
+    const QString strRoot = QString(rootObjectName)
+                                .remove(QLatin1Char('"'))
+                                .remove(QLatin1Char('\''));
+    const QString strStatusBg =
+        isDark ? palette.ribbon : (isOfficeBlue ? palette.accent
+                                                : QStringLiteral("#f3f3f3"));
+    const QString strStatusText =
+        isOfficeBlue ? QStringLiteral("#ffffff") : palette.text;
+    const QString strFieldBg =
+        isDark ? palette.field : QStringLiteral("#ffffff");
+    const QString strTrack =
+        isDark ? palette.border : QStringLiteral("#d0d0d0");
+
+    QString styleSheet = QString::fromLatin1(R"qss(
+        QStatusBar#$root,
+        LqRibbon--RibbonStatusBar#$root {
+            background-color: $statusBg;
+            color: $statusText;
+            border: none;
+            min-height: 22px;
+            font-size: 12px;
+        }
+        QStatusBar#$root::item,
+        LqRibbon--RibbonStatusBar#$root::item {
+            border: none;
+        }
+        QStatusBar#$root QToolBar,
+        LqRibbon--RibbonStatusBar#$root QToolBar {
+            background: transparent;
+            border: none;
+            spacing: 1px;
+        }
+        QStatusBar#$root QLabel,
+        LqRibbon--RibbonStatusBar#$root QLabel {
+            color: $statusText;
+            background: transparent;
+        }
+        QStatusBar#$root QToolButton,
+        QStatusBar#$root QPushButton,
+        LqRibbon--RibbonStatusBar#$root QToolButton,
+        LqRibbon--RibbonStatusBar#$root QPushButton {
+            min-width: 22px;
+            min-height: 20px;
+            padding: 1px 5px;
+            color: $statusText;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 3px;
+        }
+        QStatusBar#$root QToolButton:hover,
+        QStatusBar#$root QToolButton:checked,
+        QStatusBar#$root QPushButton:hover,
+        LqRibbon--RibbonStatusBar#$root QToolButton:hover,
+        LqRibbon--RibbonStatusBar#$root QToolButton:checked,
+        LqRibbon--RibbonStatusBar#$root QPushButton:hover {
+            background-color: $fieldBg;
+            border-color: $controlBorder;
+            color: $text;
+        }
+        QStatusBar#$root QSlider::groove:horizontal,
+        LqRibbon--RibbonStatusBar#$root QSlider::groove:horizontal {
+            height: 4px;
+            background: $track;
+            border-radius: 2px;
+        }
+        QStatusBar#$root QSlider::sub-page:horizontal,
+        LqRibbon--RibbonStatusBar#$root QSlider::sub-page:horizontal {
+            background: $accent;
+            border-radius: 2px;
+        }
+        QStatusBar#$root QSlider::handle:horizontal,
+        LqRibbon--RibbonStatusBar#$root QSlider::handle:horizontal {
+            width: 12px;
+            margin: -5px 0px;
+            border-radius: 6px;
+            background: $fieldBg;
+            border: 1px solid $controlBorder;
+        }
+        QStatusBar#$root QProgressBar,
+        LqRibbon--RibbonStatusBar#$root QProgressBar {
+            background: $fieldBg;
+            color: $statusText;
+            border: 1px solid $controlBorder;
+            border-radius: 2px;
+            text-align: center;
+        }
+        QStatusBar#$root QProgressBar::chunk,
+        LqRibbon--RibbonStatusBar#$root QProgressBar::chunk {
+            background-color: $accent;
+            border-radius: 2px;
+        }
+)qss");
+
+    const struct Replacement
+    {
+        const char *token;
+        QString value;
+    } replacements[] = {
+        {"$root", strRoot},
+        {"$statusBg", strStatusBg},
+        {"$statusText", strStatusText},
+        {"$fieldBg", strFieldBg},
+        {"$track", strTrack},
+        {"$accent", palette.accent},
+        {"$text", palette.text},
+        {"$controlBorder", statePalette.border},
+    };
+
+    for (const Replacement &replacement : replacements) {
+        styleSheet.replace(QLatin1String(replacement.token),
+                           replacement.value);
+    }
+
+    return styleSheet;
+}
+
+void applyDemoStatusPalette(QWidget *widget,
+                            const QColor &text,
+                            const QColor &window,
+                            const QColor &field)
+{
+    if (!widget) {
+        return;
+    }
+
+    QPalette palette = widget->palette();
+    palette.setColor(QPalette::WindowText, text);
+    palette.setColor(QPalette::ButtonText, text);
+    palette.setColor(QPalette::Text, text);
+    palette.setColor(QPalette::HighlightedText, Qt::white);
+    palette.setColor(QPalette::Window, window);
+    palette.setColor(QPalette::Button, field);
+    palette.setColor(QPalette::Base, field);
+    widget->setPalette(palette);
+}
+
+void applyDemoOverrideStyle(QWidget *surface)
+{
+    if (!surface) {
+        return;
+    }
+    QFrame *panel = surface->findChild<QFrame *>(
+        QStringLiteral("demoOverridePanel"));
+    if (!panel) {
+        return;
+    }
+    panel->setStyleSheet(QString::fromLatin1(R"qss(
+        QFrame#demoOverridePanel {
+            background-color: #f4fbf6;
+            border: 1px solid #107c41;
+            border-radius: 6px;
+        }
+        QFrame#demoOverridePanel QLabel {
+            color: #0b3d20;
+            background: transparent;
+        }
+        QFrame#demoOverridePanel QComboBox,
+        QFrame#demoOverridePanel QLineEdit,
+        QFrame#demoOverridePanel QSpinBox {
+            min-height: 28px;
+            padding: 2px 8px;
+            color: #0b3d20;
+            background-color: #ffffff;
+            border: 1px solid #107c41;
+            border-radius: 4px;
+            selection-background-color: #107c41;
+            selection-color: #ffffff;
+        }
+        QFrame#demoOverridePanel QCheckBox {
+            color: #0b3d20;
+            spacing: 8px;
+        }
+        QFrame#demoOverridePanel QCheckBox::indicator {
+            width: 15px;
+            height: 15px;
+            border: 1px solid #107c41;
+            border-radius: 3px;
+            background: #ffffff;
+        }
+        QFrame#demoOverridePanel QCheckBox::indicator:checked {
+            background: #107c41;
+            border-color: #107c41;
+            image: url(:/lqribbon/example/assets/lq_checkbox_checked_white.svg);
+        }
+        QFrame#demoOverridePanel QPushButton {
+            min-height: 30px;
+            padding: 4px 14px;
+            color: #ffffff;
+            background-color: #107c41;
+            border: 1px solid #107c41;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        QFrame#demoOverridePanel QPushButton:hover {
+            background-color: #0b6a35;
+            border-color: #0b6a35;
+        }
+        QFrame#demoOverridePanel QTableWidget {
+            background-color: #ffffff;
+            color: #0b3d20;
+            border: 1px solid #107c41;
+            border-radius: 4px;
+            gridline-color: #b7dfc4;
+            selection-background-color: #107c41;
+            selection-color: #ffffff;
+        }
+        QFrame#demoOverridePanel QHeaderView::section {
+            background-color: #dff3e5;
+            color: #0b3d20;
+            padding: 5px 7px;
+            border: none;
+            border-right: 1px solid #b7dfc4;
+            border-bottom: 1px solid #b7dfc4;
+            font-weight: 600;
+        }
+)qss"));
+}
+
+void applyDemoSurfaceStyle(QWidget *surface,
+                           LqRibbon::RibbonBar::RibbonStyle style,
+                           QString *managedStyleSheet)
+{
+    if (!surface
+        || surface->objectName() != QStringLiteral("lqRibbonDemoSurface")) {
+        return;
+    }
+
+    const QString strCurrentStyleSheet = surface->styleSheet();
+    const bool looksLikeManagedStyle =
+        strCurrentStyleSheet.contains(
+            QStringLiteral("QWidget#lqRibbonDemoSurface QComboBox"))
+        && strCurrentStyleSheet.contains(
+            QStringLiteral("QWidget#lqRibbonDemoSurface QSpinBox"))
+        && strCurrentStyleSheet.contains(
+            QStringLiteral("QWidget#lqRibbonDemoSurface QTableWidget"))
+        && strCurrentStyleSheet.contains(
+            QStringLiteral("QLabel#demoThemeBadge"));
+    if (!strCurrentStyleSheet.isEmpty()
+        && managedStyleSheet
+        && !managedStyleSheet->isEmpty()
+        && strCurrentStyleSheet != *managedStyleSheet) {
+        if (!looksLikeManagedStyle) {
+            surface->setProperty("lqRibbonStyleManaged", false);
+            return;
+        }
+    }
+
+    const QString strStyleSheet = commonControlStyleSheet(
+        style,
+        QStringLiteral("lqRibbonDemoSurface"));
+    surface->setStyleSheet(strStyleSheet);
+    surface->setProperty("lqRibbonStyleManaged", true);
+    if (managedStyleSheet) {
+        *managedStyleSheet = strStyleSheet;
+    }
+    applyDemoOverrideStyle(surface);
+    if (QLabel *badge = surface->findChild<QLabel *>(
+            QStringLiteral("demoThemeBadge"))) {
+        badge->setText(LqRibbon::RibbonBar::ribbonStyleName(style));
+    }
+}
+
+void applyDemoStatusBarStyle(QStatusBar *statusBar,
+                             LqRibbon::RibbonBar::RibbonStyle style)
+{
+    if (!statusBar
+        || statusBar->objectName()
+            != QStringLiteral("lqRibbonDemoStatusBar")) {
+        return;
+    }
+    statusBar->setStyleSheet(demoStatusBarStyleSheet(
+        style,
+        QStringLiteral("lqRibbonDemoStatusBar")));
+
+    const RibbonStylePreviewPalette palette = ribbonStylePreviewPalette(style);
+    const bool isDark = style == LqRibbon::RibbonBar::Microsoft365Dark;
+    const bool isOfficeBlue = style == LqRibbon::RibbonBar::Office2016Blue;
+    const QColor statusBg(
+        isDark ? palette.ribbon : (isOfficeBlue ? palette.accent
+                                                : QStringLiteral("#f3f3f3")));
+    const QColor statusText(
+        isOfficeBlue ? QStringLiteral("#ffffff") : palette.text);
+    const QColor fieldBg(
+        isDark ? palette.field : QStringLiteral("#ffffff"));
+
+    statusBar->setAutoFillBackground(true);
+    applyDemoStatusPalette(statusBar, statusText, statusBg, fieldBg);
+    const QList<QWidget *> children = statusBar->findChildren<QWidget *>();
+    for (QWidget *child : children) {
+        applyDemoStatusPalette(child, statusText, statusBg, fieldBg);
+    }
+}
+
+QFrame *createDemoControlPanel(QWidget *parent)
+{
+    QFrame *panel = new QFrame(parent);
+    panel->setObjectName(QStringLiteral("demoControlPanel"));
+    panel->setMinimumWidth(330);
+    QVBoxLayout *panelLayout = new QVBoxLayout(panel);
+    panelLayout->setContentsMargins(18, 16, 18, 18);
+    panelLayout->setSpacing(12);
+
+    QLabel *title = new QLabel(QObject::tr("Input controls"), panel);
+    title->setObjectName(QStringLiteral("demoSectionTitle"));
+    panelLayout->addWidget(title);
+
+    QFormLayout *formLayout = new QFormLayout;
+    formLayout->setContentsMargins(0, 0, 0, 0);
+    formLayout->setHorizontalSpacing(14);
+    formLayout->setVerticalSpacing(10);
+    formLayout->setLabelAlignment(Qt::AlignRight);
+
+    QComboBox *modeCombo = new QComboBox(panel);
+    modeCombo->setObjectName(QStringLiteral("demoModeCombo"));
+    modeCombo->addItems(QStringList()
+                        << QObject::tr("Position loop")
+                        << QObject::tr("Velocity loop")
+                        << QObject::tr("Torque loop"));
+    formLayout->addRow(QObject::tr("Mode"), modeCombo);
+
+    QComboBox *profileCombo = new QComboBox(panel);
+    profileCombo->setObjectName(QStringLiteral("demoProfileCombo"));
+    profileCombo->setEditable(true);
+    profileCombo->addItems(QStringList()
+                           << QObject::tr("Commissioning")
+                           << QObject::tr("Production")
+                           << QObject::tr("Diagnostics"));
+    profileCombo->setCurrentText(QObject::tr("Commissioning"));
+    formLayout->addRow(QObject::tr("Profile"), profileCombo);
+
+    QSpinBox *speedSpin = new QSpinBox(panel);
+    speedSpin->setObjectName(QStringLiteral("demoSpeedSpin"));
+    speedSpin->setRange(0, 6000);
+    speedSpin->setValue(1500);
+    speedSpin->setSuffix(QObject::tr(" rpm"));
+    formLayout->addRow(QObject::tr("Speed"), speedSpin);
+
+    QDoubleSpinBox *gainSpin = new QDoubleSpinBox(panel);
+    gainSpin->setObjectName(QStringLiteral("demoGainSpin"));
+    gainSpin->setRange(0.0, 20.0);
+    gainSpin->setSingleStep(0.1);
+    gainSpin->setValue(2.4);
+    formLayout->addRow(QObject::tr("Gain"), gainSpin);
+
+    QDateEdit *deadlineEdit = new QDateEdit(QDate::currentDate(), panel);
+    deadlineEdit->setObjectName(QStringLiteral("demoDeadlineEdit"));
+    deadlineEdit->setCalendarPopup(true);
+    formLayout->addRow(QObject::tr("Date"), deadlineEdit);
+
+    QTimeEdit *timeEdit = new QTimeEdit(QTime::currentTime(), panel);
+    timeEdit->setObjectName(QStringLiteral("demoTimeEdit"));
+    formLayout->addRow(QObject::tr("Time"), timeEdit);
+
+    QDateTimeEdit *timestampEdit =
+        new QDateTimeEdit(QDateTime::currentDateTime(), panel);
+    timestampEdit->setObjectName(QStringLiteral("demoTimestampEdit"));
+    timestampEdit->setCalendarPopup(true);
+    formLayout->addRow(QObject::tr("Timestamp"), timestampEdit);
+
+    QLineEdit *commandEdit = new QLineEdit(panel);
+    commandEdit->setObjectName(QStringLiteral("demoCommandEdit"));
+    commandEdit->setPlaceholderText(QObject::tr("Search parameters"));
+    formLayout->addRow(QObject::tr("Command"), commandEdit);
+    panelLayout->addLayout(formLayout);
+
+    QHBoxLayout *toggleLayout = new QHBoxLayout;
+    toggleLayout->setSpacing(14);
+    QCheckBox *enabledCheck = new QCheckBox(QObject::tr("Enabled"), panel);
+    enabledCheck->setObjectName(QStringLiteral("demoEnabledCheck"));
+    enabledCheck->setChecked(true);
+    QRadioButton *autoRadio = new QRadioButton(QObject::tr("Auto"), panel);
+    autoRadio->setObjectName(QStringLiteral("demoAutoRadio"));
+    autoRadio->setChecked(true);
+    QRadioButton *manualRadio = new QRadioButton(QObject::tr("Manual"), panel);
+    manualRadio->setObjectName(QStringLiteral("demoManualRadio"));
+    toggleLayout->addWidget(enabledCheck);
+    toggleLayout->addWidget(autoRadio);
+    toggleLayout->addWidget(manualRadio);
+    panelLayout->addLayout(toggleLayout);
+
+    QSlider *loadSlider = new QSlider(Qt::Horizontal, panel);
+    loadSlider->setObjectName(QStringLiteral("demoLoadSlider"));
+    loadSlider->setRange(0, 100);
+    loadSlider->setValue(62);
+    panelLayout->addWidget(loadSlider);
+
+    QHBoxLayout *toolLayout = new QHBoxLayout;
+    toolLayout->setSpacing(8);
+    QToolButton *detailButton = new QToolButton(panel);
+    detailButton->setObjectName(QStringLiteral("demoDetailsToolButton"));
+    detailButton->setText(QObject::tr("Details"));
+    detailButton->setCheckable(true);
+    detailButton->setChecked(true);
+    QToolButton *resetButton = new QToolButton(panel);
+    resetButton->setObjectName(QStringLiteral("demoResetToolButton"));
+    resetButton->setText(QObject::tr("Reset"));
+    toolLayout->addWidget(detailButton);
+    toolLayout->addWidget(resetButton);
+    panelLayout->addLayout(toolLayout);
+
+    QPlainTextEdit *notesEdit = new QPlainTextEdit(panel);
+    notesEdit->setObjectName(QStringLiteral("demoNotesEdit"));
+    notesEdit->setPlainText(QObject::tr(
+        "Dark mode check:\n"
+        "Combo popup, spin arrows, table selection, and focus rings."));
+    notesEdit->setFixedHeight(76);
+    panelLayout->addWidget(notesEdit);
+
+    QPushButton *applyButton = new QPushButton(QObject::tr("Apply sample"),
+                                               panel);
+    applyButton->setObjectName(QStringLiteral("demoApplyButton"));
+    panelLayout->addWidget(applyButton);
+    panelLayout->addStretch(1);
+    return panel;
+}
+
+QFrame *createDemoTablePanel(QWidget *parent)
+{
+    QFrame *panel = new QFrame(parent);
+    panel->setObjectName(QStringLiteral("demoTablePanel"));
+    QVBoxLayout *panelLayout = new QVBoxLayout(panel);
+    panelLayout->setContentsMargins(18, 16, 18, 18);
+    panelLayout->setSpacing(12);
+
+    QLabel *title = new QLabel(QObject::tr("Parameter table"), panel);
+    title->setObjectName(QStringLiteral("demoSectionTitle"));
+    QLabel *hint = new QLabel(
+        QObject::tr("Selection, headers, alternating rows, and scrollbars are "
+                    "themed with the same palette."),
+        panel);
+    hint->setObjectName(QStringLiteral("demoFieldHint"));
+    panelLayout->addWidget(title);
+    panelLayout->addWidget(hint);
+
+    QTableWidget *tableWidget = new QTableWidget(6, 4, panel);
+    tableWidget->setObjectName(QStringLiteral("demoParameterTable"));
+    tableWidget->setAlternatingRowColors(true);
+    tableWidget->setHorizontalHeaderLabels(QStringList()
+                                           << QObject::tr("Index")
+                                           << QObject::tr("Parameter")
+                                           << QObject::tr("Value")
+                                           << QObject::tr("State"));
+    tableWidget->verticalHeader()->setVisible(false);
+    tableWidget->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::Stretch);
+    const QString rows[][4] = {
+        {QStringLiteral("01"), QObject::tr("Servo enable"),
+         QStringLiteral("True"), QObject::tr("Ready")},
+        {QStringLiteral("02"), QObject::tr("Target speed"),
+         QObject::tr("1500 rpm"), QObject::tr("Active")},
+        {QStringLiteral("03"), QObject::tr("Acceleration"),
+         QObject::tr("320 ms"), QObject::tr("Ready")},
+        {QStringLiteral("04"), QObject::tr("Torque limit"),
+         QStringLiteral("85%"), QObject::tr("Warning")},
+        {QStringLiteral("05"), QObject::tr("Home offset"),
+         QObject::tr("12.40 mm"), QObject::tr("Ready")},
+        {QStringLiteral("06"), QObject::tr("Bus voltage"),
+         QObject::tr("48.2 V"), QObject::tr("Online")},
+    };
+    for (int row = 0; row < 6; ++row) {
+        for (int column = 0; column < 4; ++column) {
+            QTableWidgetItem *item = new QTableWidgetItem(rows[row][column]);
+            if (column == 0) {
+                item->setTextAlignment(Qt::AlignCenter);
+            }
+            tableWidget->setItem(row, column, item);
+        }
+    }
+    tableWidget->selectRow(1);
+    panelLayout->addWidget(tableWidget, 1);
+    return panel;
+}
+
+QFrame *createDemoPickerPanel(QWidget *parent)
+{
+    QFrame *panel = new QFrame(parent);
+    panel->setObjectName(QStringLiteral("demoPickerPanel"));
+    QVBoxLayout *panelLayout = new QVBoxLayout(panel);
+    panelLayout->setContentsMargins(18, 14, 18, 16);
+    panelLayout->setSpacing(10);
+
+    QLabel *title = new QLabel(QObject::tr("Lists and progress"), panel);
+    title->setObjectName(QStringLiteral("demoSectionTitle"));
+    panelLayout->addWidget(title);
+
+    QHBoxLayout *viewLayout = new QHBoxLayout;
+    viewLayout->setContentsMargins(0, 0, 0, 0);
+    viewLayout->setSpacing(12);
+
+    QTabWidget *tabs = new QTabWidget(panel);
+    tabs->setObjectName(QStringLiteral("demoTabWidget"));
+    QListWidget *listWidget = new QListWidget(tabs);
+    listWidget->setObjectName(QStringLiteral("demoListWidget"));
+    listWidget->addItems(QStringList()
+                         << QObject::tr("Alarm history")
+                         << QObject::tr("Motion queue")
+                         << QObject::tr("Parameter set"));
+    listWidget->setCurrentRow(1);
+    tabs->addTab(listWidget, QObject::tr("List"));
+
+    QListWidget *queueWidget = new QListWidget(tabs);
+    queueWidget->setObjectName(QStringLiteral("demoQueueWidget"));
+    queueWidget->addItems(QStringList()
+                          << QObject::tr("Homing")
+                          << QObject::tr("Jog +")
+                          << QObject::tr("Write parameter")
+                          << QObject::tr("Save"));
+    queueWidget->setCurrentRow(2);
+    tabs->addTab(queueWidget, QObject::tr("Queue"));
+
+    QTreeWidget *treeWidget = new QTreeWidget(panel);
+    treeWidget->setObjectName(QStringLiteral("demoTreeWidget"));
+    treeWidget->setHeaderLabels(QStringList()
+                                << QObject::tr("Node")
+                                << QObject::tr("State"));
+    QTreeWidgetItem *driveItem =
+        new QTreeWidgetItem(QStringList() << QObject::tr("Drive")
+                                          << QObject::tr("Online"));
+    driveItem->addChild(new QTreeWidgetItem(
+        QStringList() << QObject::tr("Axis 1") << QObject::tr("Ready")));
+    driveItem->addChild(new QTreeWidgetItem(
+        QStringList() << QObject::tr("Axis 2") << QObject::tr("Jogging")));
+    QTreeWidgetItem *ioItem =
+        new QTreeWidgetItem(QStringList() << QObject::tr("I/O")
+                                          << QObject::tr("Normal"));
+    ioItem->addChild(new QTreeWidgetItem(
+        QStringList() << QObject::tr("DI-01") << QObject::tr("High")));
+    treeWidget->addTopLevelItem(driveItem);
+    treeWidget->addTopLevelItem(ioItem);
+    treeWidget->expandAll();
+
+    viewLayout->addWidget(tabs, 1);
+    viewLayout->addWidget(treeWidget, 1);
+    panelLayout->addLayout(viewLayout);
+
+    QProgressBar *progressBar = new QProgressBar(panel);
+    progressBar->setObjectName(QStringLiteral("demoProgressBar"));
+    progressBar->setRange(0, 100);
+    progressBar->setValue(68);
+    progressBar->setFormat(QObject::tr("Profile load %p%"));
+    panelLayout->addWidget(progressBar);
+    return panel;
+}
+
+QFrame *createDemoOverridePanel(QWidget *parent)
+{
+    QFrame *panel = new QFrame(parent);
+    panel->setObjectName(QStringLiteral("demoOverridePanel"));
+    panel->setMinimumWidth(300);
+    QVBoxLayout *panelLayout = new QVBoxLayout(panel);
+    panelLayout->setContentsMargins(18, 16, 18, 18);
+    panelLayout->setSpacing(12);
+
+    QLabel *title = new QLabel(QObject::tr("Host stylesheet override"), panel);
+    title->setObjectName(QStringLiteral("demoSectionTitle"));
+    panelLayout->addWidget(title);
+
+    QFormLayout *formLayout = new QFormLayout;
+    formLayout->setContentsMargins(0, 0, 0, 0);
+    formLayout->setHorizontalSpacing(12);
+    formLayout->setVerticalSpacing(10);
+    formLayout->setLabelAlignment(Qt::AlignRight);
+
+    QComboBox *overrideCombo = new QComboBox(panel);
+    overrideCombo->setObjectName(QStringLiteral("demoOverrideCombo"));
+    overrideCombo->addItems(QStringList()
+                            << QObject::tr("Business green")
+                            << QObject::tr("Safety review")
+                            << QObject::tr("Manual hold"));
+    formLayout->addRow(QObject::tr("Theme"), overrideCombo);
+
+    QLineEdit *overrideEdit = new QLineEdit(panel);
+    overrideEdit->setObjectName(QStringLiteral("demoOverrideLineEdit"));
+    overrideEdit->setText(QObject::tr("Logic layer"));
+    formLayout->addRow(QObject::tr("Owner"), overrideEdit);
+
+    QSpinBox *overrideSpin = new QSpinBox(panel);
+    overrideSpin->setObjectName(QStringLiteral("demoOverrideSpin"));
+    overrideSpin->setRange(0, 100);
+    overrideSpin->setValue(72);
+    overrideSpin->setSuffix(QStringLiteral("%"));
+    formLayout->addRow(QObject::tr("Limit"), overrideSpin);
+    panelLayout->addLayout(formLayout);
+
+    QCheckBox *overrideCheck =
+        new QCheckBox(QObject::tr("Business stylesheet active"), panel);
+    overrideCheck->setObjectName(QStringLiteral("demoOverrideCheck"));
+    overrideCheck->setChecked(true);
+    panelLayout->addWidget(overrideCheck);
+
+    QPushButton *overrideButton =
+        new QPushButton(QObject::tr("Apply business rule"), panel);
+    overrideButton->setObjectName(QStringLiteral("demoOverrideButton"));
+    panelLayout->addWidget(overrideButton);
+
+    QTableWidget *overrideTable = new QTableWidget(3, 2, panel);
+    overrideTable->setObjectName(QStringLiteral("demoOverrideTable"));
+    overrideTable->setHorizontalHeaderLabels(QStringList()
+                                             << QObject::tr("Rule")
+                                             << QObject::tr("Result"));
+    overrideTable->verticalHeader()->setVisible(false);
+    overrideTable->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::Stretch);
+    const QString rows[][2] = {
+        {QObject::tr("Ribbon"), QObject::tr("Managed")},
+        {QObject::tr("Host"), QObject::tr("Override")},
+        {QObject::tr("Priority"), QObject::tr("Host")},
+    };
+    for (int row = 0; row < 3; ++row) {
+        for (int column = 0; column < 2; ++column) {
+            overrideTable->setItem(row,
+                                   column,
+                                   new QTableWidgetItem(rows[row][column]));
+        }
+    }
+    overrideTable->setFixedHeight(120);
+    panelLayout->addWidget(overrideTable);
+    panelLayout->addStretch(1);
+    applyDemoOverrideStyle(parent);
+    return panel;
+}
+
+QWidget *createDemoControlSurface(LqRibbon::RibbonMainWindow *mainWindow,
+                                  LqRibbon::RibbonBar::RibbonStyle style,
+                                  QString *managedStyleSheet)
+{
+    QWidget *surface = new QWidget(mainWindow);
+    surface->setObjectName(QStringLiteral("lqRibbonDemoSurface"));
+    surface->setProperty("lqRibbonStyleManaged", true);
+    QVBoxLayout *layout = new QVBoxLayout(surface);
+    layout->setContentsMargins(24, 20, 24, 22);
+    layout->setSpacing(16);
+
+    QHBoxLayout *headingLayout = new QHBoxLayout;
+    headingLayout->setContentsMargins(0, 0, 0, 0);
+    headingLayout->setSpacing(12);
+    QVBoxLayout *titleLayout = new QVBoxLayout;
+    titleLayout->setContentsMargins(0, 0, 0, 0);
+    titleLayout->setSpacing(3);
+    QLabel *title = new QLabel(QObject::tr("LqRibbon control surface"),
+                               surface);
+    title->setObjectName(QStringLiteral("demoSurfaceTitle"));
+    QLabel *subtitle = new QLabel(
+        QObject::tr("Host widgets below the Ribbon inherit the active theme "
+                    "unless the application overrides them."),
+        surface);
+    subtitle->setObjectName(QStringLiteral("demoSurfaceSubtitle"));
+    titleLayout->addWidget(title);
+    titleLayout->addWidget(subtitle);
+    headingLayout->addLayout(titleLayout, 1);
+    QLabel *badge = new QLabel(surface);
+    badge->setObjectName(QStringLiteral("demoThemeBadge"));
+    badge->setAlignment(Qt::AlignCenter);
+    badge->setMinimumWidth(170);
+    headingLayout->addWidget(badge);
+    layout->addLayout(headingLayout);
+
+    QGridLayout *contentLayout = new QGridLayout;
+    contentLayout->setContentsMargins(0, 0, 0, 0);
+    contentLayout->setHorizontalSpacing(16);
+    contentLayout->setVerticalSpacing(16);
+    contentLayout->addWidget(createDemoControlPanel(surface), 0, 0, 2, 1);
+    contentLayout->addWidget(createDemoTablePanel(surface), 0, 1);
+    contentLayout->addWidget(createDemoPickerPanel(surface), 1, 1);
+    contentLayout->addWidget(createDemoOverridePanel(surface), 0, 2, 2, 1);
+    contentLayout->setColumnStretch(0, 0);
+    contentLayout->setColumnStretch(1, 1);
+    contentLayout->setColumnStretch(2, 0);
+    contentLayout->setRowStretch(0, 1);
+    contentLayout->setRowStretch(1, 0);
+    layout->addLayout(contentLayout, 1);
+
+    applyDemoSurfaceStyle(surface, style, managedStyleSheet);
+    return surface;
+}
+
 class FluentStateTimingPreview : public QToolButton
 {
 public:
@@ -5967,6 +7035,65 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
         return 1;
     }
 
+    QWidget *demoSurface = mainWindow.findChild<QWidget *>(
+        QStringLiteral("lqRibbonDemoSurface"));
+    const bool demoSurfaceReady =
+        demoSurface
+        && demoSurface->property("lqRibbonStyleManaged").toBool();
+    if (!require(demoSurfaceReady,
+                 QStringLiteral("example exposes themed common-control surface"))) {
+        return 1;
+    }
+    if (!require(demoSurface->findChild<QComboBox *>(
+                         QStringLiteral("demoModeCombo"))
+                     && demoSurface->findChild<QComboBox *>(
+                         QStringLiteral("demoProfileCombo"))
+                     && demoSurface->findChild<QSpinBox *>(
+                         QStringLiteral("demoSpeedSpin"))
+                     && demoSurface->findChild<QDoubleSpinBox *>(
+                         QStringLiteral("demoGainSpin"))
+                     && demoSurface->findChild<QTimeEdit *>(
+                         QStringLiteral("demoTimeEdit"))
+                     && demoSurface->findChild<QDateTimeEdit *>(
+                         QStringLiteral("demoTimestampEdit"))
+                     && demoSurface->findChild<QTabWidget *>(
+                         QStringLiteral("demoTabWidget"))
+                     && demoSurface->findChild<QListWidget *>(
+                         QStringLiteral("demoListWidget"))
+                     && demoSurface->findChild<QTreeWidget *>(
+                         QStringLiteral("demoTreeWidget"))
+                     && demoSurface->findChild<QProgressBar *>(
+                         QStringLiteral("demoProgressBar"))
+                     && demoSurface->findChild<QTableWidget *>(
+                         QStringLiteral("demoParameterTable")),
+                 QStringLiteral("common-control surface contains common widgets"))) {
+        return 1;
+    }
+    QTableWidget *demoTable = demoSurface->findChild<QTableWidget *>(
+        QStringLiteral("demoParameterTable"));
+    if (!require(demoTable
+                     && demoTable->rowCount() == 6
+                     && demoTable->item(1, 1)
+                     && demoTable->item(1, 1)->text()
+                         == QStringLiteral("Target speed"),
+                 QStringLiteral("common-control table contains sample data"))) {
+        return 1;
+    }
+    QFrame *overridePanel = demoSurface->findChild<QFrame *>(
+        QStringLiteral("demoOverridePanel"));
+    if (!require(overridePanel
+                     && overridePanel->styleSheet().contains(
+                         QStringLiteral("#107c41"))
+                     && overridePanel->findChild<QComboBox *>(
+                         QStringLiteral("demoOverrideCombo"))
+                     && overridePanel->findChild<QCheckBox *>(
+                         QStringLiteral("demoOverrideCheck"))
+                     && overridePanel->findChild<QPushButton *>(
+                         QStringLiteral("demoOverrideButton")),
+                 QStringLiteral("host override panel exposes business controls"))) {
+        return 1;
+    }
+
     QTemporaryDir settingsDir;
     if (!require(settingsDir.isValid(),
                  QStringLiteral("style settings temp directory exists"))) {
@@ -6000,7 +7127,15 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
     };
 
     for (LqRibbon::RibbonBar::RibbonStyle style : styles) {
+        mainWindow.showNormal();
+        processCollapseTestEvents();
         mainWindow.setRibbonStyle(style);
+        ribbonBar->updateLayout();
+        if (LqRibbon::RibbonPage *currentPage =
+                qobject_cast<LqRibbon::RibbonPage *>(ribbonBar->currentWidget())) {
+            currentPage->updateLayout();
+        }
+        processCollapseTestEvents();
         if (!require(ribbonBar->ribbonStyle() == style,
                      QStringLiteral("set style %1")
                          .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
@@ -6068,6 +7203,135 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                        : (style == LqRibbon::RibbonBar::Office2019Colorful
                               ? QStringLiteral("#f3f2f1")
                               : QStringLiteral("#f3f3f3")));
+        const QString strExpectedDemoBackground =
+            ribbonStylePreviewPalette(style).ribbon;
+        demoSurface = mainWindow.findChild<QWidget *>(
+            QStringLiteral("lqRibbonDemoSurface"));
+        const QString strDemoStyleSheet =
+            demoSurface ? demoSurface->styleSheet() : QString();
+        QLabel *themeBadge = demoSurface
+            ? demoSurface->findChild<QLabel *>(QStringLiteral("demoThemeBadge"))
+            : nullptr;
+        if (!require(demoSurface
+                         && strDemoStyleSheet.contains(
+                             QStringLiteral("QWidget#lqRibbonDemoSurface QComboBox"))
+                         && strDemoStyleSheet.contains(
+                             QStringLiteral("QWidget#lqRibbonDemoSurface QSpinBox"))
+                         && strDemoStyleSheet.contains(
+                             QStringLiteral("QWidget#lqRibbonDemoSurface QTableWidget"))
+                         && strDemoStyleSheet.contains(
+                             QStringLiteral("QWidget#lqRibbonDemoSurface QListWidget"))
+                         && strDemoStyleSheet.contains(
+                             QStringLiteral("QWidget#lqRibbonDemoSurface QTreeWidget"))
+                         && strDemoStyleSheet.contains(
+                             QStringLiteral("QWidget#lqRibbonDemoSurface QProgressBar"))
+                         && strDemoStyleSheet.contains(
+                             QStringLiteral("QWidget#lqRibbonDemoSurface QTabWidget::pane"))
+                         && strDemoStyleSheet.contains(
+                             QStringLiteral("color: #ffffff;"))
+                         && strDemoStyleSheet.contains(
+                             QStringLiteral("lq_checkbox_checked_white.svg"))
+                         && strDemoStyleSheet.contains(
+                             QStringLiteral("lq_radio_checked_white.svg"))
+                         && themeBadge
+                         && themeBadge->text()
+                             == LqRibbon::RibbonBar::ribbonStyleName(style),
+                     QStringLiteral("common-control surface follows %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        if (style == LqRibbon::RibbonBar::Microsoft365Dark) {
+            if (!require(strDemoStyleSheet.contains(QStringLiteral("#1f1f1f"))
+                             && strDemoStyleSheet.contains(QStringLiteral("#2d2d2d")),
+                         QStringLiteral("common-control surface is dark for M365 Dark"))) {
+                return 1;
+            }
+        } else {
+            if (!require(strDemoStyleSheet.contains(strExpectedDemoBackground)
+                             && !strDemoStyleSheet.contains(QStringLiteral("#1f1f1f"))
+                             && !strDemoStyleSheet.contains(QStringLiteral("#2d2d2d")),
+                         QStringLiteral("common-control surface stays light for %1")
+                             .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+                return 1;
+            }
+            if (style == LqRibbon::RibbonBar::Office2016Blue
+                && !require(strDemoStyleSheet.contains(
+                                QStringLiteral("background-color: #2b579a;"))
+                                && strDemoStyleSheet.contains(
+                                    QStringLiteral("color: #ffffff;")),
+                            QStringLiteral("Office 2016 Blue uses flat blue primary controls"))) {
+                return 1;
+            }
+        }
+        overridePanel = demoSurface ? demoSurface->findChild<QFrame *>(
+                            QStringLiteral("demoOverridePanel"))
+                                    : nullptr;
+        if (!require(overridePanel
+                         && overridePanel->styleSheet().contains(
+                             QStringLiteral("#107c41"))
+                         && overridePanel->styleSheet().contains(
+                             QStringLiteral("QFrame#demoOverridePanel")),
+                     QStringLiteral("host override stylesheet wins for %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        const QString strStatusStyleSheet =
+            mainWindow.statusBar() ? mainWindow.statusBar()->styleSheet()
+                                   : QString();
+        if (!require(mainWindow.statusBar()
+                         && mainWindow.statusBar()->objectName()
+                             == QStringLiteral("lqRibbonDemoStatusBar")
+                         && strStatusStyleSheet.contains(
+                             QStringLiteral("QStatusBar#lqRibbonDemoStatusBar QLabel"))
+                         && strStatusStyleSheet.contains(
+                             QStringLiteral("LqRibbon--RibbonStatusBar#lqRibbonDemoStatusBar QToolButton"))
+                         && strStatusStyleSheet.contains(
+                             QStringLiteral("QStatusBar#lqRibbonDemoStatusBar QSlider::handle:horizontal"))
+                         && strStatusStyleSheet.contains(
+                             QStringLiteral("QStatusBar#lqRibbonDemoStatusBar QProgressBar::chunk")),
+                     QStringLiteral("status bar child controls follow %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        const QString strExpectedStatusText =
+            style == LqRibbon::RibbonBar::Office2016Blue
+                ? QStringLiteral("#ffffff")
+                : ribbonStylePreviewPalette(style).text;
+        QLabel *statusLabel = mainWindow.statusBar()
+            ? mainWindow.statusBar()->findChild<QLabel *>(
+                QStringLiteral("collaborationStatusText"))
+            : nullptr;
+        QToolButton *statusToolButton = mainWindow.statusBar()
+            ? mainWindow.statusBar()->findChild<QToolButton *>()
+            : nullptr;
+        if (!require(statusLabel
+                         && statusToolButton
+                         && statusLabel->palette()
+                                .color(QPalette::WindowText)
+                                .name(QColor::HexRgb)
+                             == strExpectedStatusText
+                         && statusToolButton->palette()
+                                .color(QPalette::ButtonText)
+                                .name(QColor::HexRgb)
+                             == strExpectedStatusText,
+                     QStringLiteral("status bar palette text follows %1")
+                         .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+            return 1;
+        }
+        if (style == LqRibbon::RibbonBar::Microsoft365Dark) {
+            if (!require(strStatusStyleSheet.contains(QStringLiteral("#1f1f1f"))
+                             && strStatusStyleSheet.contains(QStringLiteral("#2d2d2d")),
+                         QStringLiteral("status bar is dark for M365 Dark"))) {
+                return 1;
+            }
+        } else {
+            if (!require(!strStatusStyleSheet.contains(QStringLiteral("#1f1f1f"))
+                             && !strStatusStyleSheet.contains(QStringLiteral("#2d2d2d")),
+                         QStringLiteral("status bar stays non-dark for %1")
+                             .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
+                return 1;
+            }
+        }
         QCoreApplication::processEvents();
         QStackedWidget *commandArea = ribbonBar->findChild<QStackedWidget *>(
             QStringLiteral("lqRibbonCommandArea"),
@@ -6166,6 +7430,25 @@ int runStyleTests(LqRibbon::RibbonMainWindow &mainWindow,
                          .arg(LqRibbon::RibbonBar::ribbonStyleName(style)))) {
             return 1;
         }
+    }
+
+    mainWindow.setRibbonStyle(LqRibbon::RibbonBar::Office2016Blue);
+    processCollapseTestEvents();
+    demoSurface = mainWindow.findChild<QWidget *>(
+        QStringLiteral("lqRibbonDemoSurface"));
+    const QString strUserOverride =
+        QStringLiteral("QWidget#lqRibbonDemoSurface { background: #123456; } "
+                       "QComboBox#demoModeCombo { background: #654321; }");
+    if (demoSurface) {
+        demoSurface->setStyleSheet(strUserOverride);
+    }
+    mainWindow.setRibbonStyle(LqRibbon::RibbonBar::Microsoft365Dark);
+    QCoreApplication::processEvents();
+    if (!require(demoSurface
+                     && demoSurface->styleSheet() == strUserOverride
+                     && !demoSurface->property("lqRibbonStyleManaged").toBool(),
+                 QStringLiteral("host central stylesheet overrides Ribbon control surface"))) {
+        return 1;
     }
 
     updateFluentStateTimingPreview(stateTimingPreview,
@@ -9968,14 +11251,35 @@ int runLqRibbonExampleMainWindow(QApplication &application,
 
         mainWindow.setCentralWidget(mdiArea);
     } else {
-        QLabel *contentLabel = new QLabel(
-            QObject::tr("LqRibbon Qt 5.15.2 C++ example"));
-        contentLabel->setAlignment(Qt::AlignCenter);
-        mainWindow.setCentralWidget(contentLabel);
+        QString *managedDemoSurfaceStyleSheet = new QString;
+        QWidget *contentSurface = createDemoControlSurface(
+            &mainWindow,
+            previewRibbonStyle,
+            managedDemoSurfaceStyleSheet);
+        mainWindow.setCentralWidget(contentSurface);
+        QObject::connect(mainWindow.ribbonBar(),
+                         &LqRibbon::RibbonBar::ribbonStyleChanged,
+                         contentSurface,
+                         [&mainWindow,
+                          contentSurface,
+                          managedDemoSurfaceStyleSheet](
+                             LqRibbon::RibbonBar::RibbonStyle style) {
+            applyDemoSurfaceStyle(contentSurface,
+                                  style,
+                                  managedDemoSurfaceStyleSheet);
+            applyDemoStatusBarStyle(mainWindow.statusBar(), style);
+        });
+        QObject::connect(contentSurface,
+                         &QObject::destroyed,
+                         contentSurface,
+                         [managedDemoSurfaceStyleSheet]() {
+            delete managedDemoSurfaceStyleSheet;
+        });
     }
 
     LqRibbon::RibbonStatusBar *ribbonStatusBar =
         new LqRibbon::RibbonStatusBar(&mainWindow);
+    ribbonStatusBar->setObjectName(QStringLiteral("lqRibbonDemoStatusBar"));
     ribbonStatusBar->addAction(QObject::tr("Ready"));
     ribbonStatusBar->addSeparator();
     ribbonStatusBar->addAction(QObject::tr("Online"));
@@ -10100,6 +11404,7 @@ int runLqRibbonExampleMainWindow(QApplication &application,
     ribbonStatusBar->addPermanentWidget(zoomSlider);
     ribbonStatusBar->addPermanentWidget(progressBar);
     mainWindow.setStatusBar(ribbonStatusBar);
+    applyDemoStatusBarStyle(ribbonStatusBar, previewRibbonStyle);
     updateCollapseStatePreview();
     updateResponsiveLabelsPreview();
     updateQuickAccessPreview();

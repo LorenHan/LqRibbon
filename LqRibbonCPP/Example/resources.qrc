@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/lqribbon/example">
+        <file>assets/lq_checkbox_checked_white.svg</file>
+        <file>assets/lq_radio_checked_white.svg</file>
+    </qresource>
+</RCC>
