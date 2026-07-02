@@ -4,7 +4,7 @@ LqRibbonBar - Ribbon bar container that holds ribbon pages
 
 from PySide6.QtWidgets import QTabWidget, QWidget, QHBoxLayout
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QPainter, QBrush, QColor
+from PySide6.QtGui import QPainter, QBrush, QColor, QIcon
 
 from .lq_styles import LqStyle
 
@@ -83,6 +83,59 @@ class LqRibbonBar(QTabWidget):
         self.addTab(page, title)
 
         return page
+
+    def page(self, title):
+        """Create or return a page by title."""
+        existing = self.get_page_by_title(title)
+        return existing if existing is not None else self.add_page(title)
+
+    def group(self, page_title, group_title):
+        """Create or return a group by page and group title."""
+        page = self.page(page_title)
+        existing = page.get_group_by_title(group_title)
+        return existing if existing is not None else page.add_group(group_title)
+
+    def action(self, page_title, group_title, text, triggered=None, icon=None, tooltip=None, style=None):
+        """Create an action with one call.
+
+        Missing pages and groups are created automatically so application code can
+        focus on connecting business callbacks.
+        """
+        group = self.group(page_title, group_title)
+        action = group.addAction(icon or QIcon(), text, tooltip, style)
+        if triggered is not None:
+            action.triggered.connect(triggered)
+        return action
+
+    def actions(self, page_title, group_title, actions, icon=None, style=None):
+        """Create multiple actions in the same page and group.
+
+        Each item can be a dict or a tuple in this form:
+        ``(text, triggered, tooltip=None, style=None, icon=None)``.
+        """
+        created = []
+        for item in actions:
+            if isinstance(item, dict):
+                created.append(
+                    self.action(
+                        page_title,
+                        group_title,
+                        item["text"],
+                        item.get("triggered"),
+                        item.get("icon", icon),
+                        item.get("tooltip"),
+                        item.get("style", style),
+                    )
+                )
+                continue
+
+            text = item[0]
+            triggered = item[1] if len(item) > 1 else None
+            tooltip = item[2] if len(item) > 2 else None
+            item_style = item[3] if len(item) > 3 else style
+            item_icon = item[4] if len(item) > 4 else icon
+            created.append(self.action(page_title, group_title, text, triggered, item_icon, tooltip, item_style))
+        return created
 
     def get_page(self, index):
         """Get a page by index

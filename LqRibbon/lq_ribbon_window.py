@@ -8,7 +8,7 @@ import sys
 import time
 from ctypes import wintypes
 
-from PySide6.QtCore import QEasingCurve, QEvent, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QFile, QObject, QEasingCurve, QEvent, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QCursor, QPainter, QPen
 from PySide6.QtWidgets import (
     QApplication,
@@ -403,9 +403,14 @@ class LqRibbonWindow(QMainWindow):
 
     action_triggered = Signal(str)  # Signal emitted when an action is triggered
 
-    def __init__(self, parent=None, frameless=True):
+    def __init__(self, parent=None, frameless=True, ui_file=None, default_content=True):
         super().__init__(parent)
         self._frameless = frameless
+        self._default_content = default_content
+        self._lq_shell_ready = False
+        self._lq_root_widget = None
+        self._lq_main_layout = None
+        self._content_widget = None
         self._resize_margin = 8 if IS_WINDOWS else 6
         self._resizing_edges = Qt.Edge(0)
         self._resize_start_pos = QPoint()
@@ -424,6 +429,8 @@ class LqRibbonWindow(QMainWindow):
         self._was_maximized = False
         self._restore_generation = 0
         self.init_ui()
+        if ui_file:
+            self.load_ui(ui_file)
         self.apply_styles()
 
     def _debug(self, message):
@@ -464,11 +471,13 @@ class LqRibbonWindow(QMainWindow):
         central_widget.setObjectName("lq_ribbon_root")
         central_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         central_widget.setMouseTracking(True)
-        self.setCentralWidget(central_widget)
+        self._lq_root_widget = central_widget
+        super().setCentralWidget(central_widget)
 
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
+        self._lq_main_layout = main_layout
 
         if self._frameless:
             self.title_bar = LqTitleBar(self)
@@ -482,17 +491,146 @@ class LqRibbonWindow(QMainWindow):
         self.ribbon_bar = LqRibbonBar(self)
         main_layout.addWidget(self.ribbon_bar)
 
-        self.display_area = QTextEdit()
-        self.display_area.setObjectName("display_area")
-        self.display_area.setReadOnly(True)
-        self.display_area.setPlaceholderText("Click any action button to see its name here...")
-        main_layout.addWidget(self.display_area, 1)
+        self.display_area = None
+        if self._default_content:
+            self.display_area = QTextEdit()
+            self.display_area.setObjectName("display_area")
+            self.display_area.setReadOnly(True)
+            self.display_area.setPlaceholderText("Click any action button to see its name here...")
+            self.set_content_widget(self.display_area)
 
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Ready")
 
         self.action_triggered.connect(self.on_action_triggered)
+        self._lq_shell_ready = True
+
+    def setCentralWidget(self, widget):
+        """Route application content into the ribbon shell after initialization.
+
+        This keeps Qt Designer generated ``setupUi(self)`` calls usable: when the
+        generated code calls ``setCentralWidget()``, the widget becomes the area
+        below the ribbon instead of replacing the title bar and ribbon shell.
+        """
+        if self._lq_shell_ready and widget is not self._lq_root_widget:
+            self.set_content_widget(widget)
+            return
+        super().setCentralWidget(widget)
+
+    def set_content_widget(self, widget, stretch=1):
+        """Set the widget shown below the ribbon bar."""
+        if widget is None:
+            return None
+
+        previous = self._content_widget
+        if previous is widget:
+            return widget
+
+        if previous is not None:
+            self._lq_main_layout.removeWidget(previous)
+            previous.setParent(None)
+            if previous.objectName() == "display_area":
+                previous.deleteLater()
+                if self.display_area is previous:
+                    self.display_area = None
+
+        widget.setParent(self._lq_root_widget)
+        widget.setMouseTracking(True)
+        self._lq_main_layout.addWidget(widget, stretch)
+        self._content_widget = widget
+        return widget
+
+    def set_display_widget(self, widget):
+        """Set the widget used by display helper methods."""
+        self.display_area = widget
+        return widget
+
+    def load_ui(self, ui_file):
+        """Load a Qt Designer ``.ui`` file into the ribbon window.
+
+        The loaded central widget is installed below the ribbon, and named child
+        objects are exposed as attributes on the window for concise business code.
+        """
+        try:
+            from PySide6.QtUiTools import QUiLoader
+        except ImportError as exc:
+            raise RuntimeError("PySide6.QtUiTools is required to load .ui files at runtime") from exc
+
+        file = QFile(str(ui_file))
+        if not file.open(QFile.OpenModeFlag.ReadOnly):
+            raise OSError(f"Unable to open UI file: {ui_file}")
+
+        loader = QUiLoader()
+        try:
+            loaded = loader.load(file)
+        except RuntimeError as exc:
+            error = loader.errorString()
+            raise RuntimeError(f"Unable to load UI file: {ui_file}: {error}") from exc
+        finally:
+            file.close()
+
+        if loaded is None:
+            raise RuntimeError(f"Unable to load UI file: {ui_file}: {loader.errorString()}")
+
+        self._apply_loaded_ui(loaded)
+        loaded.deleteLater()
+        return self._content_widget
+
+    def _apply_loaded_ui(self, loaded):
+        if loaded.windowTitle():
+            self.setWindowTitle(loaded.windowTitle())
+        if loaded.size().isValid():
+            self.resize(loaded.size())
+        if loaded.minimumSize().isValid():
+            self.setMinimumSize(loaded.minimumSize())
+
+        if isinstance(loaded, QMainWindow):
+            content = loaded.takeCentralWidget()
+            if content is not None:
+                self.set_content_widget(content)
+
+            menu_bar = loaded.menuBar()
+            if menu_bar is not None and menu_bar.actions():
+                menu_bar.setParent(None)
+                self.setMenuBar(menu_bar)
+
+            status_bar = loaded.statusBar()
+            if status_bar is not None:
+                status_bar.setParent(None)
+                self.setStatusBar(status_bar)
+                self.status_bar = status_bar
+        else:
+            self.set_content_widget(loaded)
+
+        self._bind_named_ui_objects(self._content_widget)
+        if hasattr(self, "outputTextEdit"):
+            self.set_display_widget(self.outputTextEdit)
+
+    def _bind_named_ui_objects(self, root):
+        if root is None:
+            return
+
+        for obj in [root, *root.findChildren(QObject)]:
+            name = obj.objectName()
+            if name and not hasattr(self, name):
+                setattr(self, name, obj)
+
+    def add_ribbon_page(self, title):
+        """Create or return a ribbon page by title."""
+        return self.ribbon_bar.page(title)
+
+    def add_ribbon_group(self, page_title, group_title):
+        """Create or return a ribbon group by page and group title."""
+        return self.ribbon_bar.group(page_title, group_title)
+
+    def add_ribbon_action(self, page_title, group_title, text, triggered=None, icon=None, tooltip=None, style=None):
+        """Create an action, creating the target page and group if needed."""
+        return self.ribbon_bar.action(page_title, group_title, text, triggered, icon, tooltip, style)
+
+    def add_ribbon_actions(self, page_title, group_title, actions, icon=None, style=None):
+        """Create multiple actions in the same page and group."""
+        return self.ribbon_bar.actions(page_title, group_title, actions, icon, style)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -1445,8 +1583,9 @@ class LqRibbonWindow(QMainWindow):
     def on_action_triggered(self, action_name):
         """Handle action trigger and display in the main area."""
         message = f"Action triggered: {action_name}"
-        self.display_area.append(message)
-        self.status_bar.showMessage(f"Executed: {action_name}", 3000)
+        self.append_display_text(message)
+        if self.statusBar():
+            self.statusBar().showMessage(f"Executed: {action_name}", 3000)
 
     def get_ribbon_bar(self):
         """Get the ribbon bar instance."""
@@ -1454,8 +1593,26 @@ class LqRibbonWindow(QMainWindow):
 
     def set_display_text(self, text):
         """Set text in the display area."""
-        self.display_area.setPlainText(text)
+        if self.display_area is None:
+            if self.statusBar():
+                self.statusBar().showMessage(text)
+            return
+        if hasattr(self.display_area, "setPlainText"):
+            self.display_area.setPlainText(text)
+        elif hasattr(self.display_area, "setText"):
+            self.display_area.setText(text)
 
     def append_display_text(self, text):
         """Append text to the display area."""
-        self.display_area.append(text)
+        if self.display_area is None:
+            if self.statusBar():
+                self.statusBar().showMessage(text)
+            return
+        if hasattr(self.display_area, "append"):
+            self.display_area.append(text)
+        elif hasattr(self.display_area, "setPlainText") and hasattr(self.display_area, "toPlainText"):
+            current = self.display_area.toPlainText()
+            self.display_area.setPlainText(f"{current}\n{text}" if current else text)
+        elif hasattr(self.display_area, "setText") and hasattr(self.display_area, "text"):
+            current = self.display_area.text()
+            self.display_area.setText(f"{current}\n{text}" if current else text)

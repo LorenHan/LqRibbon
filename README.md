@@ -20,24 +20,19 @@ pip install -r example/requirements.txt
 ## Quick Start
 
 ```python
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon
-from LqRibbon import LqRibbonWindow, LqRibbonBar
+from pathlib import Path
+
+from LqRibbon import LqRibbonWindow
 
 class MyWindow(LqRibbonWindow):
     def __init__(self):
-        super().__init__()
-        ribbon_bar = self.get_ribbon_bar()
+        super().__init__(frameless=True, default_content=False)
+        self.load_ui(Path(__file__).with_name("mainwindow.ui"))
 
-        # Add pages
-        page = ribbon_bar.add_page("Home")
+        self.add_ribbon_action("Home", "File", "Settings", self.on_settings, "settings.svg")
 
-        # Add groups
-        group = page.add_group("File")
-
-        # Add actions (One-liner)
-        settings_act = group.addAction(QIcon("settings.svg"), "Settings", Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-        settings_act.triggered.connect(self.on_settings)
+    def on_settings(self):
+        self.append_display_text("Open settings")
 ```
 
 `LqRibbonWindow` uses a frameless window by default. If you need the native system frame,
@@ -67,6 +62,9 @@ Run the example application to see LqRibbon in action:
 ```bash
 python example/main.py
 ```
+
+The example loads its business area from `example/mainwindow.ui`; the ribbon is
+added by `LqRibbonWindow` above that UI content.
 
 Run the frameless window regression checks on Windows:
 
@@ -128,22 +126,13 @@ Customizable button that supports standard `Qt.ToolButtonStyle` enums:
 ## Usage Example
 
 ```python
-# Import the library
 from LqRibbon import LqRibbonWindow
-
-# Import page implementations
-from example.view.pages import PageGeneral, PageHelp
 
 class MainWindow(LqRibbonWindow):
     def __init__(self):
-        super().__init__()
-
-        # Get ribbon bar
-        ribbon_bar = self.get_ribbon_bar()
-
-        # Add pages with groups and actions
-        PageGeneral(ribbon_bar, self)
-        PageHelp(ribbon_bar, self)
+        super().__init__(default_content=False)
+        self.load_ui("mainwindow.ui")
+        self.add_ribbon_action("General", "View", "Full Screen", self.toggle_fullscreen)
 ```
 
 ## Action Handling
