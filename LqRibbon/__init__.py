@@ -1,24 +1,9 @@
 """
-LqRibbon - A PySide6 Ribbon library with blue flat style
+Compatibility package for the public LqRibbon import path.
+
+The source package currently lives in LqRibbonPy, while the README, example,
+and tests expose ``from LqRibbon import ...`` as the public API.
 """
 
-from .lq_ribbon_window import LqRibbonWindow
-from .lq_ribbon_bar import LqRibbonBar
-from .lq_ribbon_page import LqRibbonPage
-from .lq_ribbon_group import LqRibbonGroup
-from .lq_ribbon_button import LqRibbonButton
-from .lq_styles import LqStyle
-from .lq_icon_generator import LqIconGenerator
+from LqRibbonPy import *  # noqa: F401,F403
 
-__version__ = "1.0.0"
-__author__ = "LqRibbon"
-
-__all__ = [
-    "LqRibbonWindow",
-    "LqRibbonBar",
-    "LqRibbonPage",
-    "LqRibbonGroup",
-    "LqRibbonButton",
-    "LqStyle",
-    "LqIconGenerator"
-]

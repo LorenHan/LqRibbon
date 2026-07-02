@@ -14,7 +14,7 @@ A modern, blue flat-style ribbon interface library for PySide6 applications.
 This repo is not packaged on PyPI by default. For the demo app, install runtime deps:
 
 ```bash
-pip install -r example/requirements.txt
+python3 -m pip install -r LqRibbonPy/example/requirements.txt
 ```
 
 ## Quick Start
@@ -60,7 +60,7 @@ The frameless implementation keeps the common native frame behaviors:
 Run the example application to see LqRibbon in action:
 
 ```bash
-python example/main.py
+python3 LqRibbonPy/example/main.py
 ```
 
 The example loads its business area from `example/mainwindow.ui`; the ribbon is
@@ -76,7 +76,8 @@ python tools/verify_frameless_window.py
 
 ```
 .
-├── LqRibbon/                  # Core library
+├── LqRibbon/                  # Public import compatibility package
+├── LqRibbonPy/                # Core library
 │   ├── __init__.py
 │   ├── lq_ribbon_window.py    # Main window class
 │   ├── lq_ribbon_bar.py       # Ribbon bar container
