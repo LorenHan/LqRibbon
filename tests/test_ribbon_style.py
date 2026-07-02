@@ -137,6 +137,8 @@ def test_common_control_style_is_scoped_and_covers_dark_inputs():
     )
     assert "QWidget#lqRibbonDemoSurface QComboBox" in style_sheet
     assert "QWidget#lqRibbonDemoSurface QComboBox QAbstractItemView" in style_sheet
+    assert "QWidget#lqRibbonDemoSurface QComboBox::down-arrow" in style_sheet
+    assert "QWidget#lqRibbonDemoSurface QAbstractSpinBox::up-arrow" in style_sheet
     assert "QWidget#lqRibbonDemoSurface QSpinBox" in style_sheet
     assert "QWidget#lqRibbonDemoSurface QTableWidget" in style_sheet
     assert "QWidget#lqRibbonDemoSurface QListWidget" in style_sheet
@@ -145,6 +147,8 @@ def test_common_control_style_is_scoped_and_covers_dark_inputs():
     assert "QWidget#lqRibbonDemoSurface QTabWidget::pane" in style_sheet
     assert "#1f1f1f" in style_sheet
     assert "#2d2d2d" in style_sheet
+    assert "lq_arrow_down_m365_cyan.svg" in style_sheet
+    assert "lq_arrow_up_m365_cyan.svg" in style_sheet
     assert "QApplication" not in style_sheet
 
 
@@ -181,10 +185,61 @@ def _close_color(actual, expected, tolerance=3):
     )
 
 
+def _sample_widget_lightness(widget, x_start, x_end):
+    image = widget.grab().toImage()
+    values = []
+    for x in range(max(1, x_start), min(image.width() - 1, x_end)):
+        for y in range(5, max(6, image.height() - 5)):
+            color = image.pixelColor(x, y)
+            values.append(color.lightness())
+    return sum(values) / len(values)
+
+
 def _style_block(style_sheet, selector):
     start = style_sheet.index(selector)
     end = style_sheet.index("}", start)
     return style_sheet[start:end]
+
+
+def test_ribbon_embedded_controls_follow_active_style():
+    dark_style = LqStyle.get_ribbon_style(RibbonStyle.Microsoft365Dark)
+    assert "LqRibbonBar QComboBox" in dark_style
+    assert "LqRibbonBar QComboBox QAbstractItemView" in dark_style
+    assert "LqRibbonBar QComboBox::down-arrow" in dark_style
+    assert "LqRibbonBar QAbstractSpinBox" in dark_style
+    assert "LqRibbonBar QAbstractSpinBox::up-arrow" in dark_style
+    assert "LqRibbonBar QRadioButton" in dark_style
+    assert "LqRibbonBar QSlider::groove:horizontal" in dark_style
+    assert "background-color: #2d2d2d;" in dark_style
+    assert "lq_arrow_down_m365_cyan.svg" in dark_style
+    assert "lq_arrow_up_m365_cyan.svg" in dark_style
+
+    window = MainWindow()
+    window.resize(1180, 560)
+    window.select_preview_page(style=True)
+    window.show()
+    _app().processEvents()
+
+    combo = window.style_combo_control.widget()
+    window.set_ribbon_style(RibbonStyle.Office2016Blue)
+    _app().processEvents()
+    light_sample = _sample_widget_lightness(
+        combo,
+        combo.width() - 42,
+        combo.width() - 24,
+    )
+
+    window.set_ribbon_style(RibbonStyle.Microsoft365Dark)
+    _app().processEvents()
+    dark_sample = _sample_widget_lightness(
+        combo,
+        combo.width() - 42,
+        combo.width() - 24,
+    )
+
+    assert light_sample > 180
+    assert dark_sample < 90
+    window.close()
 
 
 def test_selected_tab_lines_match_office_generation():
@@ -713,6 +768,8 @@ def test_example_host_override_panel_wins_over_ribbon_theme():
 
     assert "#1f1f1f" in surface.styleSheet()
     assert "#107c41" in override_panel.styleSheet()
+    assert "lq_arrow_down_business_green.svg" in override_panel.styleSheet()
+    assert "lq_arrow_up_business_green.svg" in override_panel.styleSheet()
     assert override_panel.styleSheet() == original_override
     assert "QFrame#demoOverridePanel" in override_panel.styleSheet()
     window.close()
@@ -745,6 +802,7 @@ def main():
         test_fluent_soft_borders_apply_to_m365_only,
         test_common_control_style_is_scoped_and_covers_dark_inputs,
         test_common_control_style_uses_fluent_primary_and_checked_glyphs,
+        test_ribbon_embedded_controls_follow_active_style,
         test_selected_tab_lines_match_office_generation,
         test_page_command_area_border_style_tokens_apply_to_all_styles,
         test_page_command_area_three_sided_border_is_rendered,

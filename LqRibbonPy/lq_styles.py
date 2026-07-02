@@ -200,6 +200,21 @@ def _style_asset_url(file_name):
     return (_STYLE_ASSET_DIR / file_name).as_posix()
 
 
+def _style_arrow_urls(style):
+    style = _coerce_style(style)
+    asset_prefixes = {
+        RibbonStyle.Office2016Blue: "office2016_blue",
+        RibbonStyle.Office2019Colorful: "office2019_blue",
+        RibbonStyle.Microsoft365Light: "m365_blue",
+        RibbonStyle.Microsoft365Dark: "m365_cyan",
+    }
+    prefix = asset_prefixes[style]
+    return (
+        _style_asset_url(f"lq_arrow_down_{prefix}.svg"),
+        _style_asset_url(f"lq_arrow_up_{prefix}.svg"),
+    )
+
+
 class LqStyle:
     """Ribbon style sheet factory."""
 
@@ -222,10 +237,176 @@ class LqStyle:
         return names[_coerce_style(style)]
 
     @staticmethod
+    def get_ribbon_control_style(style=RibbonStyle.Office2016Blue):
+        """Return scoped styling for ordinary Qt widgets embedded in the Ribbon."""
+        p = LqStyle.palette(style)
+        style = _coerce_style(style)
+        is_dark = style == RibbonStyle.Microsoft365Dark
+        input_hover = "#343434" if is_dark else "#f8fbff"
+        disabled_bg = "#202020" if is_dark else "#f3f3f3"
+        disabled_text = "#888888" if is_dark else "#8a8a8a"
+        selected_text = "#000000" if is_dark else "#ffffff"
+        button_text = "#000000" if is_dark else "#ffffff"
+        check_mark_url = _style_asset_url("lq_checkbox_checked_white.svg")
+        radio_dot_url = _style_asset_url("lq_radio_checked_white.svg")
+        arrow_down_url, arrow_up_url = _style_arrow_urls(style)
+        return f"""
+        LqRibbonBar QComboBox,
+        LqRibbonBar QLineEdit,
+        LqRibbonBar QAbstractSpinBox {{
+            min-height: 22px;
+            padding: 1px 8px;
+            background-color: {p["field_bg"]};
+            color: {p["text"]};
+            border: 1px solid {p["control_border"]};
+            border-radius: 2px;
+            selection-background-color: {p["accent"]};
+            selection-color: {selected_text};
+        }}
+        LqRibbonBar QComboBox:hover,
+        LqRibbonBar QLineEdit:hover,
+        LqRibbonBar QAbstractSpinBox:hover,
+        LqRibbonBar QComboBox:focus,
+        LqRibbonBar QLineEdit:focus,
+        LqRibbonBar QAbstractSpinBox:focus {{
+            background-color: {input_hover};
+            border-color: {p["focus"]};
+        }}
+        LqRibbonBar QComboBox:disabled,
+        LqRibbonBar QLineEdit:disabled,
+        LqRibbonBar QAbstractSpinBox:disabled {{
+            background-color: {disabled_bg};
+            color: {disabled_text};
+            border-color: {p["border"]};
+        }}
+        LqRibbonBar QComboBox::drop-down {{
+            width: 18px;
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+            border-left: 1px solid {p["control_border"]};
+            background: transparent;
+        }}
+        LqRibbonBar QComboBox::down-arrow {{
+            width: 9px;
+            height: 6px;
+            image: url("{arrow_down_url}");
+        }}
+        LqRibbonBar QComboBox QAbstractItemView {{
+            background-color: {p["popup_bg"]};
+            color: {p["text"]};
+            border: 1px solid {p["control_border"]};
+            outline: 0px;
+            selection-background-color: {p["popup_selection"]};
+            selection-color: {p["text"]};
+        }}
+        LqRibbonBar QAbstractSpinBox::up-button,
+        LqRibbonBar QAbstractSpinBox::down-button {{
+            width: 16px;
+            background: transparent;
+            border-left: 1px solid {p["control_border"]};
+            subcontrol-origin: border;
+        }}
+        LqRibbonBar QAbstractSpinBox::up-button {{
+            subcontrol-position: top right;
+        }}
+        LqRibbonBar QAbstractSpinBox::down-button {{
+            subcontrol-position: bottom right;
+        }}
+        LqRibbonBar QAbstractSpinBox::up-button:hover,
+        LqRibbonBar QAbstractSpinBox::down-button:hover {{
+            background: {input_hover};
+        }}
+        LqRibbonBar QAbstractSpinBox::up-arrow {{
+            width: 9px;
+            height: 6px;
+            image: url("{arrow_up_url}");
+        }}
+        LqRibbonBar QAbstractSpinBox::down-arrow {{
+            width: 9px;
+            height: 6px;
+            image: url("{arrow_down_url}");
+        }}
+        LqRibbonBar QPushButton {{
+            min-height: 22px;
+            padding: 2px 12px;
+            color: {button_text};
+            background-color: {p["accent"]};
+            border: 1px solid {p["accent"]};
+            border-radius: 2px;
+        }}
+        LqRibbonBar QPushButton:hover {{
+            background-color: {p["focus"]};
+            border-color: {p["focus"]};
+        }}
+        LqRibbonBar QPushButton:disabled {{
+            background-color: {disabled_bg};
+            border-color: {p["border"]};
+            color: {disabled_text};
+        }}
+        LqRibbonBar QCheckBox,
+        LqRibbonBar QRadioButton {{
+            color: {p["text"]};
+            spacing: 5px;
+        }}
+        LqRibbonBar QCheckBox::indicator,
+        LqRibbonBar QRadioButton::indicator {{
+            width: 13px;
+            height: 13px;
+            background: {p["field_bg"]};
+            border: 1px solid {p["control_border"]};
+        }}
+        LqRibbonBar QCheckBox::indicator {{
+            border-radius: 2px;
+        }}
+        LqRibbonBar QRadioButton::indicator {{
+            border-radius: 7px;
+        }}
+        LqRibbonBar QCheckBox::indicator:checked {{
+            background: {p["accent"]};
+            border-color: {p["accent"]};
+            image: url("{check_mark_url}");
+        }}
+        LqRibbonBar QRadioButton::indicator:checked {{
+            background: {p["accent"]};
+            border-color: {p["accent"]};
+            image: url("{radio_dot_url}");
+        }}
+        LqRibbonBar QSlider::groove:horizontal {{
+            height: 4px;
+            background: {p["control_border"]};
+            border-radius: 2px;
+        }}
+        LqRibbonBar QSlider::sub-page:horizontal {{
+            background: {p["accent"]};
+            border-radius: 2px;
+        }}
+        LqRibbonBar QSlider::handle:horizontal {{
+            width: 12px;
+            margin: -5px 0px;
+            border-radius: 6px;
+            background: {p["field_bg"]};
+            border: 1px solid {p["focus"]};
+        }}
+        LqRibbonBar QProgressBar {{
+            min-height: 16px;
+            background: {p["field_bg"]};
+            color: {button_text};
+            border: 1px solid {p["control_border"]};
+            border-radius: 2px;
+            text-align: center;
+        }}
+        LqRibbonBar QProgressBar::chunk {{
+            background-color: {p["accent"]};
+            border-radius: 2px;
+        }}
+        """
+
+    @staticmethod
     def get_ribbon_style(style=RibbonStyle.Office2016Blue, platform_layout=RibbonPlatformLayout.Classic):
         p = LqStyle.palette(style)
         style = _coerce_style(style)
         platform_layout = _coerce_platform_layout(platform_layout)
+        control_style = LqStyle.get_ribbon_control_style(style)
         if platform_layout == RibbonPlatformLayout.MacOS:
             is_dark = style == RibbonStyle.Microsoft365Dark
             is_legacy_office = style in (
@@ -312,6 +493,7 @@ class LqStyle:
                 background-color: {p["ribbon_bg"]};
                 border: none;
             }}
+            {control_style}
             """
         return f"""
         LqRibbonBar, QTabWidget#lqRibbonBar {{
@@ -371,6 +553,7 @@ class LqStyle:
             background-color: {p["ribbon_bg"]};
             border: none;
         }}
+        {control_style}
         """
 
     @staticmethod
@@ -484,6 +667,7 @@ class LqStyle:
         primary_pressed = "#0f548c" if is_dark else p["caption_bg"]
         check_mark_url = _style_asset_url("lq_checkbox_checked_white.svg")
         radio_dot_url = _style_asset_url("lq_radio_checked_white.svg")
+        arrow_down_url, arrow_up_url = _style_arrow_urls(style)
         root = root_object_name.replace('"', "").replace("'", "")
         return f"""
         QWidget#{root} {{
@@ -595,6 +779,45 @@ class LqStyle:
             outline: 0px;
             selection-background-color: {p["accent"]};
             selection-color: {selected_text};
+        }}
+        QWidget#{root} QComboBox::drop-down {{
+            width: 20px;
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+            border-left: 1px solid {p["control_border"]};
+            background: transparent;
+        }}
+        QWidget#{root} QComboBox::down-arrow {{
+            width: 9px;
+            height: 6px;
+            image: url("{arrow_down_url}");
+        }}
+        QWidget#{root} QAbstractSpinBox::up-button,
+        QWidget#{root} QAbstractSpinBox::down-button {{
+            width: 18px;
+            background: transparent;
+            border-left: 1px solid {p["control_border"]};
+            subcontrol-origin: border;
+        }}
+        QWidget#{root} QAbstractSpinBox::up-button {{
+            subcontrol-position: top right;
+        }}
+        QWidget#{root} QAbstractSpinBox::down-button {{
+            subcontrol-position: bottom right;
+        }}
+        QWidget#{root} QAbstractSpinBox::up-button:hover,
+        QWidget#{root} QAbstractSpinBox::down-button:hover {{
+            background: {input_hover};
+        }}
+        QWidget#{root} QAbstractSpinBox::up-arrow {{
+            width: 9px;
+            height: 6px;
+            image: url("{arrow_up_url}");
+        }}
+        QWidget#{root} QAbstractSpinBox::down-arrow {{
+            width: 9px;
+            height: 6px;
+            image: url("{arrow_down_url}");
         }}
         QWidget#{root} QToolButton {{
             min-height: 28px;

@@ -4183,6 +4183,41 @@ class MainWindow(RibbonMainWindow):
                 selection-background-color: #107c41;
                 selection-color: #ffffff;
             }
+            QFrame#demoOverridePanel QComboBox::drop-down {
+                width: 20px;
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                border-left: 1px solid #107c41;
+                background: transparent;
+            }
+            QFrame#demoOverridePanel QComboBox::down-arrow {
+                width: 9px;
+                height: 6px;
+                image: url("%s");
+            }
+            QFrame#demoOverridePanel QSpinBox::up-button,
+            QFrame#demoOverridePanel QSpinBox::down-button {
+                width: 18px;
+                background: transparent;
+                border-left: 1px solid #107c41;
+                subcontrol-origin: border;
+            }
+            QFrame#demoOverridePanel QSpinBox::up-button {
+                subcontrol-position: top right;
+            }
+            QFrame#demoOverridePanel QSpinBox::down-button {
+                subcontrol-position: bottom right;
+            }
+            QFrame#demoOverridePanel QSpinBox::up-arrow {
+                width: 9px;
+                height: 6px;
+                image: url("%s");
+            }
+            QFrame#demoOverridePanel QSpinBox::down-arrow {
+                width: 9px;
+                height: 6px;
+                image: url("%s");
+            }
             QFrame#demoOverridePanel QCheckBox {
                 color: #0b3d20;
                 spacing: 8px;
@@ -4231,7 +4266,12 @@ class MainWindow(RibbonMainWindow):
                 font-weight: 600;
             }
             """
-            % demo_style_asset_url("lq_checkbox_checked_white.svg")
+            % (
+                demo_style_asset_url("lq_arrow_down_business_green.svg"),
+                demo_style_asset_url("lq_arrow_up_business_green.svg"),
+                demo_style_asset_url("lq_arrow_down_business_green.svg"),
+                demo_style_asset_url("lq_checkbox_checked_white.svg"),
+            )
         )
 
     def _apply_demo_surface_style(self):
