@@ -51,6 +51,11 @@ class LqStyle:
         """Get the main ribbon style sheet"""
         return """
         /* Tab Widget */
+        QTabWidget {
+            background-color: #FFFFFF;
+            border: none;
+        }
+
         QTabWidget::pane {
             background-color: #FFFFFF;
             border: none;
