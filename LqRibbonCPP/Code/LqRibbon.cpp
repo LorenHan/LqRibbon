@@ -4268,10 +4268,8 @@ void RibbonBar::paintEvent(QPaintEvent *event)
 {
     if (m_frameThemeEnabled) {
         updateWindowControlState();
-        updateWindowControlGeometry();
     }
 
-    updateRibbonTabGeometry();
     QTabWidget::paintEvent(event);
 
     if (QStackedWidget *commandArea = commandAreaStack(this)) {
@@ -5895,10 +5893,23 @@ bool RibbonMainWindow::eventFilter(QObject *object, QEvent *event)
         return true;
     }
 
+    QWidget *eventWidget = qobject_cast<QWidget *>(object);
+    const bool objectBelongsToThisWindow =
+        object == this
+        || object == m_rootWidget
+        || object == m_ribbonBar
+        || (eventWidget && eventWidget->window() == this);
+    if (!objectBelongsToThisWindow) {
+        return false;
+    }
+
     if (event->type() == QEvent::ChildAdded) {
         QChildEvent *childEvent = static_cast<QChildEvent *>(event);
         polishMdiObject(childEvent->child());
-        polishMdiObject(object);
+        if (qobject_cast<QMdiArea *>(object)
+            || qobject_cast<QMdiSubWindow *>(object)) {
+            polishMdiObject(object);
+        }
     } else if (event->type() == QEvent::Show
                || event->type() == QEvent::Polish
                || event->type() == QEvent::LayoutRequest
@@ -5908,7 +5919,10 @@ bool RibbonMainWindow::eventFilter(QObject *object, QEvent *event)
                || event->type() == QEvent::WindowStateChange
                || event->type() == QEvent::WindowTitleChange
                || event->type() == QEvent::WindowIconChange) {
-        polishMdiObject(object);
+        if (qobject_cast<QMdiArea *>(object)
+            || qobject_cast<QMdiSubWindow *>(object)) {
+            polishMdiObject(object);
+        }
     }
 
     return false;
@@ -5925,6 +5939,11 @@ void RibbonMainWindow::polishMdiObject(QObject *object)
         return;
     }
 
+    QWidget *eventWidget = qobject_cast<QWidget *>(object);
+    if (eventWidget && eventWidget->window() != this) {
+        return;
+    }
+
     QMdiArea *mdiArea = qobject_cast<QMdiArea *>(object);
     if (mdiArea) {
         polishMdiArea(mdiArea);
@@ -5937,18 +5956,18 @@ void RibbonMainWindow::polishMdiObject(QObject *object)
         return;
     }
 
-    QWidget *widget = qobject_cast<QWidget *>(object);
-    if (!widget) {
+    if (!eventWidget) {
         return;
     }
 
-    const QList<QMdiArea *> mdiAreaList = widget->findChildren<QMdiArea *>();
+    const QList<QMdiArea *> mdiAreaList =
+        eventWidget->findChildren<QMdiArea *>();
     for (QMdiArea *childMdiArea : mdiAreaList) {
         polishMdiArea(childMdiArea);
     }
 
     const QList<QMdiSubWindow *> subWindowList =
-        widget->findChildren<QMdiSubWindow *>();
+        eventWidget->findChildren<QMdiSubWindow *>();
     for (QMdiSubWindow *childSubWindow : subWindowList) {
         polishMdiSubWindow(childSubWindow);
     }
