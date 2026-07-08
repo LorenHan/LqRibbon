@@ -211,6 +211,8 @@ private:
     int normalizedColumnCount() const;
     int visibleItemCount() const;
     int visibleIndexToItemIndex(int visibleIndex) const;
+    int itemIndexToVisibleIndex(int itemIndex) const;
+    QRect rectForVisibleIndex(int visibleIndex) const;
 
 private:
     QPointer<RibbonGalleryGroup> m_group;

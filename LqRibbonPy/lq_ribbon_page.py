@@ -225,8 +225,11 @@ class LqRibbonPage(QWidget):
         else:
             return None
         if group in self.groups:
+            old_index = self.groups.index(group)
             self.groups.remove(group)
             self.groups_layout.removeWidget(group)
+            if old_index < index:
+                index -= 1
         if index < 0 or index > len(self.groups):
             index = len(self.groups)
         self.groups.insert(index, group)

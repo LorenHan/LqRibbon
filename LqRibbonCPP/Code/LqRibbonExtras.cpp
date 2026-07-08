@@ -67,6 +67,15 @@ QString cleanActionText(const QString &text)
     return result.trimmed();
 }
 
+QPoint mouseGlobalPosition(QMouseEvent *event)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return event->globalPosition().toPoint();
+#else
+    return event->globalPos();
+#endif
+}
+
 } // namespace
 
 namespace LqRibbon {
@@ -1265,7 +1274,7 @@ void OfficePopupMenu::mousePressEvent(QMouseEvent *event)
 {
     if (m_gripVisible && event->button() == Qt::LeftButton) {
         m_dragging = true;
-        m_dragStartPos = event->globalPos() - pos();
+        m_dragStartPos = mouseGlobalPosition(event) - pos();
     }
     QMenu::mousePressEvent(event);
 }
@@ -1273,7 +1282,7 @@ void OfficePopupMenu::mousePressEvent(QMouseEvent *event)
 void OfficePopupMenu::mouseMoveEvent(QMouseEvent *event)
 {
     if (m_dragging) {
-        move(event->globalPos() - m_dragStartPos);
+        move(mouseGlobalPosition(event) - m_dragStartPos);
         event->accept();
         return;
     }

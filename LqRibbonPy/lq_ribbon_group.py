@@ -86,6 +86,29 @@ class LqRibbonGroup(QGroupBox):
         self.grid_column = 0
         self.grid_row = 0
 
+    def _ensure_grid_layout(self):
+        if self.main_layout.indexOf(self.grid_layout) == -1:
+            self.main_layout.addLayout(self.grid_layout)
+
+    def _append_small_button(self, button):
+        self.grid_layout.addWidget(button, self.grid_row, self.grid_column)
+        self.grid_row += 1
+        if self.grid_row >= 3:
+            self.grid_row = 0
+            self.grid_column += 1
+        self._ensure_grid_layout()
+
+    def _forget_action_widget(self, action, widget):
+        self.main_layout.removeWidget(widget)
+        self.grid_layout.removeWidget(widget)
+        if widget in self.buttons:
+            self.buttons.remove(widget)
+        if widget in self._controls:
+            self._controls.remove(widget)
+        self._action_widgets.pop(action, None)
+        if action in self.actions:
+            self.actions.remove(action)
+
     def addAction(self, icon, text, tooltip=None, style=None):
         """Add an action button to the group (One-liner)
 
@@ -170,22 +193,9 @@ class LqRibbonGroup(QGroupBox):
         self.actions.append(action)
         self._action_widgets[action] = button
 
-        # Add to layout based on style
         if button_style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
-            # Add to grid layout for ToolButtonTextBesideIcon buttons - vertical arrangement (3 rows per column)
-            self.grid_layout.addWidget(button, self.grid_row, self.grid_column)
-            self.grid_row += 1
-
-            # After 3 rows, move to next column
-            if self.grid_row >= 3:
-                self.grid_row = 0
-                self.grid_column += 1
-
-            # Ensure grid layout is added to main layout
-            if self.main_layout.indexOf(self.grid_layout) == -1:
-                self.main_layout.addLayout(self.grid_layout)
+            self._append_small_button(button)
         else:
-            # Add directly to main layout for large buttons (ToolButtonTextUnderIcon style)
             self.main_layout.addWidget(button)
 
         return button
@@ -325,12 +335,11 @@ class LqRibbonGroup(QGroupBox):
 
     def clear_actions(self):
         """Remove all actions from the group"""
-        for button in self.buttons:
-            self.main_layout.removeWidget(button)
-            button.deleteLater()
-        self.buttons.clear()
-        self.actions.clear()
-        self._action_widgets.clear()
+        for action, widget in list(self._action_widgets.items()):
+            self._forget_action_widget(action, widget)
+            widget.deleteLater()
+        self.grid_row = 0
+        self.grid_column = 0
 
     def clear(self):
         self.clear_actions()
@@ -426,14 +435,11 @@ class LqRibbonGroup(QGroupBox):
         return self._action_widgets.get(action)
 
     def removeAction(self, action):
-        widget = self._action_widgets.pop(action, None)
+        widget = self._action_widgets.get(action)
         if widget is not None:
-            self.main_layout.removeWidget(widget)
-            self.grid_layout.removeWidget(widget)
-            if widget in self.buttons:
-                self.buttons.remove(widget)
+            self._forget_action_widget(action, widget)
             widget.deleteLater()
-        if action in self.actions:
+        elif action in self.actions:
             self.actions.remove(action)
 
     def controlByWidget(self, widget):
@@ -450,14 +456,21 @@ class LqRibbonGroup(QGroupBox):
             self.remove(control)
 
     def remove(self, widget):
-        self.main_layout.removeWidget(widget)
-        if widget in self.buttons:
-            self.buttons.remove(widget)
+        action = None
         for action, action_widget in list(self._action_widgets.items()):
             if action_widget is widget:
-                self._action_widgets.pop(action, None)
-                if action in self.actions:
-                    self.actions.remove(action)
+                break
+        else:
+            action = None
+        if action is not None:
+            self._forget_action_widget(action, widget)
+        else:
+            self.main_layout.removeWidget(widget)
+            self.grid_layout.removeWidget(widget)
+            if widget in self.buttons:
+                self.buttons.remove(widget)
+            if widget in self._controls:
+                self._controls.remove(widget)
         widget.deleteLater()
 
     def titleElideMode(self):

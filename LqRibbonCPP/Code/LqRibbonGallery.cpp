@@ -577,33 +577,12 @@ QMargins RibbonGallery::margins() const
 
 QRect RibbonGallery::getDrawItemRect(int index) const
 {
-    if (index < 0 || index >= itemCount()) {
+    const int visibleIndex = itemIndexToVisibleIndex(index);
+    if (visibleIndex < 0) {
         return QRect();
     }
 
-    int visibleIndex = 0;
-    for (int itemIndex = 0; itemIndex < itemCount(); ++itemIndex) {
-        RibbonGalleryItem *currentItem = item(itemIndex);
-        if (!currentItem || !currentItem->isVisible()) {
-            continue;
-        }
-        if (itemIndex == index) {
-            break;
-        }
-        ++visibleIndex;
-    }
-
-    const QRect itemsRect = getItemsRect();
-    const int columns = normalizedColumnCount();
-    const int row = visibleIndex / columns;
-    const int column = visibleIndex % columns;
-    return QRect(itemsRect.left() + (column * m_itemSize.width()),
-                 itemsRect.top() + (row * m_itemSize.height()),
-                 m_itemSize.width(),
-                 m_itemSize.height()).adjusted(m_itemMargins.left(),
-                                               m_itemMargins.top(),
-                                               -m_itemMargins.right(),
-                                               -m_itemMargins.bottom());
+    return rectForVisibleIndex(visibleIndex);
 }
 
 bool RibbonGallery::isResizable() const
@@ -777,12 +756,26 @@ void RibbonGallery::mouseMoveEvent(QMouseEvent *event)
 void RibbonGallery::wheelEvent(QWheelEvent *event)
 {
     const int delta = event->angleDelta().y();
-    if (delta > 0) {
-        setSelectedItem(qMax(0, m_selectedIndex - normalizedColumnCount()));
-    } else if (delta < 0) {
-        setSelectedItem(qMin(itemCount() - 1,
-                             m_selectedIndex + normalizedColumnCount()));
+    if (delta == 0) {
+        return;
     }
+
+    const int lastVisibleIndex = visibleItemCount() - 1;
+    if (lastVisibleIndex < 0) {
+        return;
+    }
+
+    const int currentVisibleIndex =
+        qMax(0, itemIndexToVisibleIndex(m_selectedIndex));
+    int nextVisibleIndex = currentVisibleIndex;
+    if (delta > 0) {
+        nextVisibleIndex -= normalizedColumnCount();
+    } else if (delta < 0) {
+        nextVisibleIndex += normalizedColumnCount();
+    }
+
+    setSelectedItem(visibleIndexToItemIndex(
+        qBound(0, nextVisibleIndex, lastVisibleIndex)));
 }
 
 void RibbonGallery::leaveEvent(QEvent *event)
@@ -805,19 +798,20 @@ void RibbonGallery::resizeEvent(QResizeEvent *event)
 
 void RibbonGallery::keyPressEvent(QKeyEvent *event)
 {
-    int nextIndex = m_selectedIndex < 0 ? 0 : m_selectedIndex;
+    const int lastVisibleIndex = visibleItemCount() - 1;
+    int nextVisibleIndex = qMax(0, itemIndexToVisibleIndex(m_selectedIndex));
     switch (event->key()) {
     case Qt::Key_Left:
-        --nextIndex;
+        --nextVisibleIndex;
         break;
     case Qt::Key_Right:
-        ++nextIndex;
+        ++nextVisibleIndex;
         break;
     case Qt::Key_Up:
-        nextIndex -= normalizedColumnCount();
+        nextVisibleIndex -= normalizedColumnCount();
         break;
     case Qt::Key_Down:
-        nextIndex += normalizedColumnCount();
+        nextVisibleIndex += normalizedColumnCount();
         break;
     case Qt::Key_Return:
     case Qt::Key_Enter:
@@ -832,7 +826,12 @@ void RibbonGallery::keyPressEvent(QKeyEvent *event)
         return;
     }
 
-    setSelectedItem(qBound(0, nextIndex, itemCount() - 1));
+    if (lastVisibleIndex < 0) {
+        return;
+    }
+
+    setSelectedItem(visibleIndexToItemIndex(
+        qBound(0, nextVisibleIndex, lastVisibleIndex)));
 }
 
 int RibbonGallery::normalizedColumnCount() const
@@ -868,6 +867,46 @@ int RibbonGallery::visibleIndexToItemIndex(int visibleIndex) const
         ++currentVisibleIndex;
     }
     return -1;
+}
+
+int RibbonGallery::itemIndexToVisibleIndex(int itemIndex) const
+{
+    if (itemIndex < 0 || itemIndex >= itemCount()) {
+        return -1;
+    }
+
+    RibbonGalleryItem *targetItem = item(itemIndex);
+    if (!targetItem || !targetItem->isVisible()) {
+        return -1;
+    }
+
+    int visibleIndex = 0;
+    for (int index = 0; index < itemIndex; ++index) {
+        RibbonGalleryItem *galleryItem = item(index);
+        if (galleryItem && galleryItem->isVisible()) {
+            ++visibleIndex;
+        }
+    }
+    return visibleIndex;
+}
+
+QRect RibbonGallery::rectForVisibleIndex(int visibleIndex) const
+{
+    if (visibleIndex < 0) {
+        return QRect();
+    }
+
+    const QRect itemsRect = getItemsRect();
+    const int columns = normalizedColumnCount();
+    const int row = visibleIndex / columns;
+    const int column = visibleIndex % columns;
+    return QRect(itemsRect.left() + (column * m_itemSize.width()),
+                 itemsRect.top() + (row * m_itemSize.height()),
+                 m_itemSize.width(),
+                 m_itemSize.height()).adjusted(m_itemMargins.left(),
+                                               m_itemMargins.top(),
+                                               -m_itemMargins.right(),
+                                               -m_itemMargins.bottom());
 }
 
 RibbonGalleryControl::RibbonGalleryControl(RibbonGroup *parent,

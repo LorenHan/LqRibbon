@@ -79,6 +79,15 @@ const char ribbonBarObjectName[] = "lqRibbonBar";
 const char ribbonTabBarObjectName[] = "lqRibbonTabBar";
 const char ribbonCommandAreaObjectName[] = "lqRibbonCommandArea";
 
+QPoint mouseGlobalPosition(QMouseEvent *event)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return event->globalPosition().toPoint();
+#else
+    return event->globalPos();
+#endif
+}
+
 enum RibbonSearchPopupKind
 {
     SearchPopupHeaderItem = 0,
@@ -828,7 +837,7 @@ void RibbonMdiTitleBar::mouseMoveEvent(QMouseEvent *event)
         return;
     }
 
-    const QPoint delta = event->globalPos() - m_dragGlobalPos;
+    const QPoint delta = mouseGlobalPosition(event) - m_dragGlobalPos;
     m_subWindow->move(m_dragWindowPos + delta);
     event->accept();
 }
@@ -846,7 +855,7 @@ void RibbonMdiTitleBar::mousePressEvent(QMouseEvent *event)
         }
 
         m_dragging = true;
-        m_dragGlobalPos = event->globalPos();
+        m_dragGlobalPos = mouseGlobalPosition(event);
         m_dragWindowPos = m_subWindow->pos();
         grabMouse();
         event->accept();
@@ -1925,7 +1934,18 @@ void RibbonGroup::remove(QWidget *widget)
     if (action) {
         m_actionWidgetHash.remove(action);
         QWidget::removeAction(action);
+        for (auto it = m_actionTriggeredActionList.begin();
+             it != m_actionTriggeredActionList.end();) {
+            if (it->isNull() || it->data() == action) {
+                it = m_actionTriggeredActionList.erase(it);
+            } else {
+                ++it;
+            }
+        }
         action->deleteLater();
+    }
+    if (RibbonControl *control = qobject_cast<RibbonControl *>(widget)) {
+        m_controlList.removeAll(control);
     }
     m_contentLayout->removeWidget(widget);
     if (m_smallButtonLayout) {
@@ -2092,7 +2112,11 @@ RibbonControl *RibbonGroup::controlByAction(QAction *action) const
 
 RibbonWidgetControl *RibbonGroup::controlByWidget(QWidget *widget) const
 {
-    return qobject_cast<RibbonWidgetControl *>(widget);
+    RibbonWidgetControl *control = qobject_cast<RibbonWidgetControl *>(widget);
+    return control && m_widgetActionHash.contains(widget)
+            && m_controlList.contains(control)
+        ? control
+        : nullptr;
 }
 
 Qt::TextElideMode RibbonGroup::titleElideMode() const
@@ -6141,7 +6165,7 @@ bool RibbonMainWindow::handleNativeFrameEvent(QObject *object, QEvent *event)
     switch (event->type()) {
     case QEvent::MouseMove: {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
-        updateNativeFrameCursor(mouseEvent->globalPos());
+        updateNativeFrameCursor(mouseGlobalPosition(mouseEvent));
         return false;
     }
     case QEvent::Leave:
@@ -6151,7 +6175,7 @@ bool RibbonMainWindow::handleNativeFrameEvent(QObject *object, QEvent *event)
         QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
         if (widget == m_ribbonBar && mouseEvent->button() == Qt::LeftButton) {
             const QPoint ribbonPoint =
-                m_ribbonBar->mapFromGlobal(mouseEvent->globalPos());
+                m_ribbonBar->mapFromGlobal(mouseGlobalPosition(mouseEvent));
             if (m_ribbonBar->isWindowControlPoint(ribbonPoint)) {
                 const int controlLeft = visibleWidgetRight(this)
                     - (ribbonWindowButtonWidth * 3);
@@ -6176,7 +6200,7 @@ bool RibbonMainWindow::handleNativeFrameEvent(QObject *object, QEvent *event)
     case QEvent::MouseButtonDblClick: {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
         if (mouseEvent->button() == Qt::LeftButton
-            && isNativeCaptionPoint(mouseEvent->globalPos())
+            && isNativeCaptionPoint(mouseGlobalPosition(mouseEvent))
             && canNativeMaximize()) {
             isMaximized() ? showNormal() : showMaximized();
             return true;
@@ -6185,7 +6209,7 @@ bool RibbonMainWindow::handleNativeFrameEvent(QObject *object, QEvent *event)
     }
     case QEvent::MouseButtonPress: {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
-        const QPoint globalPoint = mouseEvent->globalPos();
+        const QPoint globalPoint = mouseGlobalPosition(mouseEvent);
         if (mouseEvent->button() == Qt::LeftButton) {
             if (nativeResizeEdges(globalPoint) != Qt::Edges()) {
                 return startNativeSystemResize(globalPoint);
